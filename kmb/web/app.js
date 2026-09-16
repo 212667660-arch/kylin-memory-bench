@@ -850,6 +850,67 @@
     return opt ? opt.text : "选择…";
   }
 
+  function getSelectPopupLayer() {
+    let layer = document.getElementById("select-popup-layer");
+    if (!layer) {
+      layer = document.createElement("div");
+      layer.id = "select-popup-layer";
+      layer.className = "select-popup-layer";
+      document.body.appendChild(layer);
+    }
+    return layer;
+  }
+
+  function scrollOptionIntoPopup(popup, el) {
+    if (!popup || !el) return;
+    const pRect = popup.getBoundingClientRect();
+    const eRect = el.getBoundingClientRect();
+    if (eRect.top < pRect.top) {
+      popup.scrollTop += eRect.top - pRect.top;
+    } else if (eRect.bottom > pRect.bottom) {
+      popup.scrollTop += eRect.bottom - pRect.bottom;
+    }
+  }
+
+  function positionSelectPopup(trigger, popup) {
+    const layer = getSelectPopupLayer();
+    if (popup.parentElement !== layer) layer.appendChild(popup);
+    popup.style.visibility = "hidden";
+    popup.style.display = "block";
+    popup.style.left = "0px";
+    popup.style.top = "0px";
+    popup.style.width = "auto";
+    popup.style.maxHeight = "";
+
+    const tRect = trigger.getBoundingClientRect();
+    const gap = 6;
+    const viewportPad = 8;
+    const desiredWidth = Math.max(tRect.width, 220);
+    const maxHDown = Math.max(120, window.innerHeight - tRect.bottom - gap - viewportPad);
+    const maxHUp = Math.max(120, tRect.top - gap - viewportPad);
+    const natural = popup.scrollHeight;
+    const wantDown = natural <= maxHDown || maxHDown >= maxHUp;
+    const maxHeight = Math.min(320, wantDown ? maxHDown : maxHUp);
+
+    let top = wantDown ? tRect.bottom + gap : Math.max(viewportPad, tRect.top - gap - Math.min(natural, maxHeight));
+    let left = tRect.left;
+    let width = desiredWidth;
+    if (left + width > window.innerWidth - viewportPad) {
+      left = Math.max(viewportPad, window.innerWidth - viewportPad - width);
+    }
+    if (width > window.innerWidth - viewportPad * 2) {
+      width = window.innerWidth - viewportPad * 2;
+      left = viewportPad;
+    }
+
+    popup.style.left = Math.round(left) + "px";
+    popup.style.top = Math.round(top) + "px";
+    popup.style.width = Math.round(width) + "px";
+    popup.style.maxHeight = Math.round(maxHeight) + "px";
+    popup.dataset.side = wantDown ? "down" : "up";
+    popup.style.visibility = "";
+  }
+
   function ensureSelectMenu(select) {
     let wrap = select.closest(".select-menu");
     if (!wrap) {
@@ -872,6 +933,8 @@
       trigger.innerHTML = '<span class="select-trigger-text"></span><span class="select-chevron" aria-hidden="true">▾</span>';
       wrap.appendChild(trigger);
     }
+
+    // Popup lives in a body layer when open so overflow:hidden cannot clip it.
     let popup = wrap.querySelector(":scope > .select-popup");
     if (!popup) {
       popup = document.createElement("div");
@@ -880,6 +943,10 @@
       popup.tabIndex = -1;
       wrap.appendChild(popup);
     }
+    if (!wrap.dataset.menuId) {
+      wrap.dataset.menuId = "m" + Math.random().toString(36).slice(2, 10);
+    }
+    popup.dataset.menuId = wrap.dataset.menuId;
 
     const syncLabel = () => {
       trigger.querySelector(".select-trigger-text").textContent = selectTriggerLabel(select);
@@ -915,7 +982,7 @@
           syncLabel();
           rebuildOptions();
           closeSelectMenus();
-          trigger.focus();
+          trigger.focus({ preventScroll: true });
         });
         popup.appendChild(btn);
         items.push(btn);
@@ -927,40 +994,100 @@
       };
       setActive(active);
       popup.onkeydown = (event) => {
-        if (event.key === "ArrowDown") { event.preventDefault(); active = Math.min(items.length - 1, active + 1); setActive(active); items[active]?.scrollIntoView({ block: "nearest" }); }
-        if (event.key === "ArrowUp") { event.preventDefault(); active = Math.max(0, active - 1); setActive(active); items[active]?.scrollIntoView({ block: "nearest" }); }
-        if (event.key === "Home") { event.preventDefault(); active = 0; setActive(active); items[0]?.scrollIntoView({ block: "nearest" }); }
-        if (event.key === "End") { event.preventDefault(); active = items.length - 1; setActive(active); items[active]?.scrollIntoView({ block: "nearest" }); }
-        if (event.key === "Enter" || event.key === " ") { event.preventDefault(); items[active]?.click(); }
-        if (event.key === "Escape") { closeSelectMenus(); trigger.focus(); }
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          active = Math.min(items.length - 1, active + 1);
+          setActive(active);
+          scrollOptionIntoPopup(popup, items[active]);
+        }
+        if (event.key === "ArrowUp") {
+          event.preventDefault();
+          active = Math.max(0, active - 1);
+          setActive(active);
+          scrollOptionIntoPopup(popup, items[active]);
+        }
+        if (event.key === "Home") {
+          event.preventDefault();
+          active = 0;
+          setActive(active);
+          scrollOptionIntoPopup(popup, items[0]);
+        }
+        if (event.key === "End") {
+          event.preventDefault();
+          active = items.length - 1;
+          setActive(active);
+          scrollOptionIntoPopup(popup, items[active]);
+        }
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          items[active]?.click();
+        }
+        if (event.key === "Escape") {
+          closeSelectMenus();
+          trigger.focus({ preventScroll: true });
+        }
       };
     };
     rebuildOptions();
+
+    const openMenu = () => {
+      closeSelectMenus();
+      wrap.classList.add("open");
+      wrap.setAttribute("data-last-open", "1");
+      trigger.setAttribute("aria-expanded", "true");
+      popup.dataset.menuId = wrap.dataset.menuId;
+      positionSelectPopup(trigger, popup);
+      // Only scroll inside popup; never page/outer containers.
+      const selected = popup.querySelector(".select-option.selected") || popup.querySelector(".select-option");
+      if (selected) {
+        popup.scrollTop = 0;
+        scrollOptionIntoPopup(popup, selected);
+      }
+      popup.focus({ preventScroll: true });
+    };
 
     if (!trigger.dataset.bound) {
       trigger.dataset.bound = "1";
       trigger.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
-        const willOpen = !wrap.classList.contains("open");
-        closeSelectMenus();
-        if (willOpen) {
-          wrap.classList.add("open");
-          trigger.setAttribute("aria-expanded", "true");
-          const selected = popup.querySelector(".select-option.selected") || popup.querySelector(".select-option");
-          if (selected) selected.scrollIntoView({ block: "nearest" });
-          popup.focus({ preventScroll: true });
+        if (wrap.classList.contains("open")) {
+          closeSelectMenus();
+          return;
         }
+        openMenu();
       });
     }
 
     select.addEventListener("change", () => {
       syncLabel();
       rebuildOptions();
-    }, { once: false });
+    });
 
     return wrap;
   }
+
+  let selectScrollBound = false;
+  function bindSelectOverlayListeners() {
+    if (selectScrollBound) return;
+    selectScrollBound = true;
+    document.addEventListener("click", (event) => {
+      if (event.target && event.target.closest && (event.target.closest(".select-menu") || event.target.closest(".select-popup"))) return;
+      closeSelectMenus();
+    }, true);
+    window.addEventListener("resize", () => closeSelectMenus());
+    window.addEventListener(
+      "scroll",
+      (event) => {
+        if (!document.querySelector(".select-menu.open")) return;
+        const popup = document.getElementById("select-popup-layer");
+        if (popup && event.target && popup.contains(event.target)) return;
+        closeSelectMenus();
+      },
+      true
+    );
+  }
+  bindSelectOverlayListeners();
 
   function enhanceSelectMenus() {
     document.querySelectorAll("#view-root select").forEach(ensureSelectMenu);
@@ -972,7 +1099,28 @@
       const t = el.querySelector(".select-trigger");
       if (t) t.setAttribute("aria-expanded", "false");
     });
+    const layer = document.getElementById("select-popup-layer");
+    if (!layer) return;
+    Array.from(layer.querySelectorAll(":scope > .select-popup")).forEach((popup) => {
+      const menu = popup.closest(".select-menu") || document.querySelector(".select-menu.open") || null;
+      // Prefer returning popup to its original menu wrapper when we can find it via data
+      const wrapId = popup.dataset.menuId;
+      let target = wrapId ? document.querySelector('.select-menu[data-menu-id="' + wrapId + '"]') : null;
+      if (!target) {
+        // last open menu
+        target = document.querySelector('.select-menu[data-last-open="1"]');
+      }
+      if (target) {
+        popup.removeAttribute("style");
+        popup.dataset.side = "";
+        target.appendChild(popup);
+      } else {
+        popup.remove();
+      }
+    });
+    document.querySelectorAll(".select-menu[data-last-open]").forEach((el) => el.removeAttribute("data-last-open"));
   }
+
 
   function bindViewEvents() {
     document.querySelectorAll("#view-root [data-view]").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));

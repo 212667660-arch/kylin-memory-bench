@@ -1705,3 +1705,31 @@ td strong { color: var(--foreground); font-weight: 600; }
 .compare-workspace,
 .field { min-width: 0; }
 .agent-compare-grid { overflow: visible; }
+
+
+/* Select popup: fixed layer, immune to card overflow:hidden clipping */
+.select-popup-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+}
+.select-popup-layer > .select-popup {
+  position: fixed;
+  pointer-events: auto;
+  display: block;
+  z-index: 80;
+  margin: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--popover);
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+}
+.select-menu > .select-popup { display: none !important; }
+.workspace-surface,
+.compare-workspace {
+  overflow: hidden;
+}
