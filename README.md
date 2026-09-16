@@ -4,11 +4,18 @@ KylinMemoryBench 是面向 openKylin 的智能体长期记忆自动化评测 Ben
 
 ## 快速开始
 
-需要 Python 3.9+ 和 PyYAML 6。当前目录已可直接运行：
+需要 Python 3.9+ 和 PyYAML 6。评审可先跑**无云凭据离线闭环**（约 5 分钟，说明见 [docs/judge-reproduction-card.md](docs/judge-reproduction-card.md)）：
+
+```bash
+bash scripts/run_offline_demo.sh runs/offline-demo
+```
+
+或逐步执行：
 
 ```bash
 python -m unittest discover -s tests -v
-python -m kmb.cli run --agent configs/agent-reference.yaml --suite suites/core-zh.yaml --out runs/reference
+python -m kmb.cli validate --strict --suite suites/core-zh.yaml
+python -m kmb.cli validate --strict --suite suites/core-zh-expanded.yaml
 python -m kmb.cli compare --agents configs/agent-reference.yaml configs/agent-flawed.yaml --suite suites/core-zh.yaml --out runs/compare
 ```
 

@@ -18,6 +18,7 @@
 | 内容 | SHA-256 |
 |---|---|
 | `suites/core-zh.yaml` | `b2f698e997d73ad17c89c8372c4a9dd780655af990b4fbd5ba0e48df4101f7f2` |
+| `suites/core-zh-expanded.yaml` | 待正式冻结时用 `Get-FileHash`/`sha256sum` 写入（每类 +3，共 18 案例） |
 | `suites/core-en.yaml` | `0011a45df20b25a6f9875cd5068b19732a1a2009f988191d568291561604bf5a` |
 | `suites/adversarial/core.yaml` | `1bcdcfe6c66396295ff61b8e2875e81e0ab20b109b2f9456b01f77c2e20e9304` |
 | `suites/adversarial/core-en.yaml` | `0441bb6b55f04fb6de08542a5ff2b100803dcfb0a12c31733a9f54401cc1e166` |
@@ -58,6 +59,16 @@
 每个真实 Agent 结果必须同时检查 `result.json`、`evidence.jsonl` 和 `verify_run.py --strict` 输出。`source=wrapper` 只证明外部控制器执行；当前真实轨道 `native_memory_events=0`，不得称为模型原生长期记忆。
 
 ## 最终非视频命令
+
+评审无凭据闭环（新增，不改动既有指纹文件）：
+
+```bash
+bash scripts/run_offline_demo.sh runs/offline-demo
+# 或逐步：validate suites/core-zh-expanded.yaml + reference/flawed compare
+# 说明：docs/judge-reproduction-card.md
+```
+
+既有验收命令：
 
 ```bash
 python -m unittest discover -s tests -v

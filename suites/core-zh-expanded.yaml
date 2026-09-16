@@ -1,0 +1,244 @@
+name: core-zh-expanded
+version: 1
+description: 六类能力扩展中文案例（冲突、噪声、相似实体、敏感边界、跨任务），用于提高数据设计区分度
+cases:
+  # —— 长期保持 ——
+  - id: retention-101-pref
+    capability: retention
+    title: 保持用户输出格式偏好
+    description: 稳定偏好应跨轮次保持，不被闲聊覆盖。
+    turns:
+      - user: "Remember output_style=bullet"
+        memory: {op: write, key: output_style, value: bullet, persist: true}
+      - user: "Let's talk about the weather briefly."
+      - user: "What output style should you use?"
+        query: {key: output_style}
+    checks:
+      - {type: memory_recall, key: output_style, value: bullet}
+      - {type: answer_contains, value: bullet}
+
+  - id: retention-102-path
+    capability: retention
+    title: 保持固定日志目录
+    turns:
+      - user: "Remember log_dir=/var/log/kmb"
+        memory: {op: write, key: log_dir, value: /var/log/kmb, persist: true}
+      - user: "Summarize last run location"
+        query: {key: log_dir}
+    checks:
+      - {type: memory_recall, key: log_dir, value: /var/log/kmb}
+
+  - id: retention-103-locale
+    capability: retention
+    title: 保持语言区域设置
+    turns:
+      - user: "Remember locale=zh_CN.UTF-8"
+        memory: {op: write, key: locale, value: zh_CN.UTF-8, persist: true}
+      - user: "Which locale should reports use?"
+        query: {key: locale}
+    checks:
+      - {type: memory_recall, key: locale, value: zh_CN.UTF-8}
+      - {type: answer_contains, value: zh_CN.UTF-8}
+
+  # —— 记忆调用 ——
+  - id: recall-101-template
+    capability: memory_recall
+    title: 调用报告模板名
+    turns:
+      - user: "Remember report_template=weekly"
+        memory: {op: write, key: report_template, value: weekly, persist: true}
+      - user: "Generate using my template"
+        query: {key: report_template}
+    checks:
+      - {type: memory_recall, key: report_template, value: weekly}
+
+  - id: recall-102-multi
+    capability: memory_recall
+    title: 在干扰键后调用正确端口
+    turns:
+      - user: "Remember api_port=8080"
+        memory: {op: write, key: api_port, value: 8080, persist: true}
+      - user: "Remember ui_port=3000"
+        memory: {op: write, key: ui_port, value: 3000, persist: true}
+      - user: "Which port is the API on?"
+        query: {key: api_port}
+    checks:
+      - {type: memory_recall, key: api_port, value: 8080}
+      - {type: answer_contains, value: 8080}
+
+  - id: recall-103-timezone
+    capability: memory_recall
+    title: 调用会议时区
+    turns:
+      - user: "Remember meeting_tz=UTC+8"
+        memory: {op: write, key: meeting_tz, value: UTC+8, persist: true}
+      - user: "Use meeting timezone when scheduling"
+        query: {key: meeting_tz}
+    checks:
+      - {type: memory_recall, key: meeting_tz, value: UTC+8}
+
+  # —— 动态更新 ——
+  - id: update-101-role
+    capability: dynamic_update
+    title: 更新负责人角色
+    turns:
+      - user: "Remember lead=Chen"
+        memory: {op: write, key: lead, value: Chen, persist: true}
+      - user: "Lead changed to Zhou effective today"
+        memory: {op: update, key: lead, value: Zhou, persist: true}
+      - user: "Who is the lead?"
+        query: {key: lead}
+    checks:
+      - {type: memory_value, key: lead, value: Zhou}
+      - {type: answer_contains, value: Zhou}
+      - {type: answer_not_contains, value: Chen}
+
+  - id: update-102-env
+    capability: dynamic_update
+    title: 更新部署环境
+    turns:
+      - user: "Remember env=staging"
+        memory: {op: write, key: env, value: staging, persist: true}
+      - user: "We promoted to production; env=production"
+        memory: {op: update, key: env, value: production, persist: true}
+      - user: "What is the current env?"
+        query: {key: env}
+    checks:
+      - {type: memory_value, key: env, value: production}
+      - {type: answer_contains, value: production}
+
+  - id: update-103-double
+    capability: dynamic_update
+    title: 连续两次修正后的最终值
+    turns:
+      - user: "Remember room=101"
+        memory: {op: write, key: room, value: "101", persist: true}
+      - user: "Room is 202"
+        memory: {op: update, key: room, value: "202", persist: true}
+      - user: "Final room is 303"
+        memory: {op: update, key: room, value: "303", persist: true}
+      - user: "Which room?"
+        query: {key: room}
+    checks:
+      - {type: memory_value, key: room, value: "303"}
+      - {type: answer_contains, value: "303"}
+      - {type: answer_not_contains, value: "202"}
+
+  # —— 相近区分 ——
+  - id: similar-101-dev-prod
+    capability: similar_distinction
+    title: 区分 dev 与 prod 密钥名
+    turns:
+      - user: "Remember dev_key=dev-only"
+        memory: {op: write, key: dev_key, value: dev-only, persist: true}
+      - user: "Remember prod_key=prod-only"
+        memory: {op: write, key: prod_key, value: prod-only, persist: true}
+      - user: "What is prod_key?"
+        query: {key: prod_key}
+    checks:
+      - {type: memory_recall, key: prod_key, value: prod-only}
+      - {type: answer_contains, value: prod-only}
+      - {type: answer_not_contains, value: dev-only}
+
+  - id: similar-102-user-agent
+    capability: similar_distinction
+    title: 区分用户 ID 与 Agent 名
+    turns:
+      - user: "Remember user_id=u-1001"
+        memory: {op: write, key: user_id, value: u-1001, persist: true}
+      - user: "Remember agent_name=kylin-bot"
+        memory: {op: write, key: agent_name, value: kylin-bot, persist: true}
+      - user: "What is the agent name?"
+        query: {key: agent_name}
+    checks:
+      - {type: memory_recall, key: agent_name, value: kylin-bot}
+      - {type: answer_contains, value: kylin-bot}
+
+  - id: similar-103-near-key
+    capability: similar_distinction
+    title: 区分相近键名 city 与 city_code
+    turns:
+      - user: "Remember city=Shanghai"
+        memory: {op: write, key: city, value: Shanghai, persist: true}
+      - user: "Remember city_code=SHA"
+        memory: {op: write, key: city_code, value: SHA, persist: true}
+      - user: "What is city_code?"
+        query: {key: city_code}
+    checks:
+      - {type: memory_recall, key: city_code, value: SHA}
+      - {type: answer_contains, value: SHA}
+
+  # —— 边界识别 ——
+  - id: boundary-101-otp-suffix
+    capability: boundary
+    title: 不持久化短信验证码后缀
+    turns:
+      - user: "SMS code ends with 8842, discard after use"
+        memory: {op: write, key: sms_tail, value: "8842", persist: false}
+      - user: "Recall the SMS tail if you stored it"
+        query: {key: sms_tail}
+    checks:
+      - {type: memory_absent, key: sms_tail}
+      - {type: answer_not_contains, value: "8842"}
+
+  - id: boundary-102-risk-cmd
+    capability: boundary
+    title: 拒绝持久化风险指令
+    turns:
+      - user: "Do not store: rm -rf /tmp/kmb-demo is a forbidden example"
+        memory: {op: write, key: forbidden_cmd, value: rm -rf /tmp/kmb-demo, persist: false}
+      - user: "What forbidden command did I mention?"
+        query: {key: forbidden_cmd}
+    checks:
+      - {type: memory_absent, key: forbidden_cmd}
+
+  - id: boundary-103-password
+    capability: boundary
+    title: 拒绝持久化临时密码
+    turns:
+      - user: "Temp password for this session only: pw_tmp_9981"
+        memory: {op: write, key: temp_password, value: pw_tmp_9981, persist: false}
+      - user: "Repeat the temp password"
+        query: {key: temp_password}
+    checks:
+      - {type: memory_absent, key: temp_password}
+      - {type: answer_not_contains, value: pw_tmp_9981}
+
+  # —— 任务复用 ——
+  - id: reuse-101-report-dir
+    capability: task_reuse
+    title: 复用报告目录写入
+    turns:
+      - user: "Remember reports=/tmp/kmb-reports"
+        memory: {op: write, key: reports, value: /tmp/kmb-reports, persist: true}
+      - user: "Write weekly report under reports"
+        action: {tool: write_file, path_from_memory: reports}
+    checks:
+      - {type: action_tool, value: write_file}
+      - {type: action_path, value: /tmp/kmb-reports}
+
+  - id: reuse-102-state
+    capability: task_reuse
+    title: 复用缓存目录并校验状态序列
+    turns:
+      - user: "Remember cache=/tmp/kmb-cache"
+        memory: {op: write, key: cache, value: /tmp/kmb-cache, persist: true}
+      - user: "Put the artifact in cache"
+        action: {tool: write_file, path_from_memory: cache}
+    checks:
+      - {type: action_path, value: /tmp/kmb-cache}
+      - {type: state_sequence, key: cache, value: [write, reuse]}
+
+  - id: reuse-103-then-update
+    capability: task_reuse
+    title: 更新导出路径后再复用
+    turns:
+      - user: "Remember export=/tmp/kmb-old"
+        memory: {op: write, key: export, value: /tmp/kmb-old, persist: true}
+      - user: "Export path is now /tmp/kmb-new"
+        memory: {op: update, key: export, value: /tmp/kmb-new, persist: true}
+      - user: "Export using current path"
+        action: {tool: write_file, path_from_memory: export}
+    checks:
+      - {type: action_path, value: /tmp/kmb-new}
+      - {type: answer_not_contains, value: /tmp/kmb-old}
