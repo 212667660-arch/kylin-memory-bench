@@ -1,6 +1,8 @@
 # 忆衡发布冻结清单
 
-状态：**代码、数据集、创新层及 no-memory 多批统计和非视频检查已完成；系统级边界证据已归档；release7 技术包已重建并通过 VM 包审计；项目许可证和桌面演示视频仍待确认/录制**。
+状态：**本机开发与 P1 提分项已完成（扩展套件、openKylin 进程适配器 Agent、无凭据双 Agent 对比 demo、文档口径统一）；openKylin 实机迁移验收与桌面视频、项目级 LICENSE 仍后置。**
+
+说明：下文所列 openKylin VM / `.deb` 证据为历史归档，**不作为本阶段「实机已验证」宣称**；迁移后需在目标机重跑验收命令。
 
 ## 固定版本
 
@@ -18,7 +20,9 @@
 | 内容 | SHA-256 |
 |---|---|
 | `suites/core-zh.yaml` | `b2f698e997d73ad17c89c8372c4a9dd780655af990b4fbd5ba0e48df4101f7f2` |
-| `suites/core-zh-expanded.yaml` | 待正式冻结时用 `Get-FileHash`/`sha256sum` 写入（每类 +3，共 18 案例） |
+| `suites/core-zh-expanded.yaml` | （本机新增，冻结时用 sha256sum 写入） |
+| `suites/adversarial/extended.yaml` | （本机新增，冻结时用 sha256sum 写入） |
+| `scripts/openkylin_ecosystem_agent.py` | （本机新增 process 适配器） |
 | `suites/core-en.yaml` | `0011a45df20b25a6f9875cd5068b19732a1a2009f988191d568291561604bf5a` |
 | `suites/adversarial/core.yaml` | `1bcdcfe6c66396295ff61b8e2875e81e0ab20b109b2f9456b01f77c2e20e9304` |
 | `suites/adversarial/core-en.yaml` | `0441bb6b55f04fb6de08542a5ff2b100803dcfb0a12c31733a9f54401cc1e166` |

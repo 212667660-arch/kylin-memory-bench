@@ -10,16 +10,21 @@ KylinMemoryBench 是面向 openKylin 的智能体长期记忆自动化评测 Ben
 bash scripts/run_offline_demo.sh runs/offline-demo
 ```
 
+该 demo 使用 **reference** 与 **kylinbot-process**（openKylin 生态进程适配器，本机 stand-in）双侧真实评测后输出对比与雷达图；另含 reference vs flawed 对照。无需 API Key。
+
 或逐步执行：
 
 ```bash
 python -m unittest discover -s tests -v
 python -m kmb.cli validate --strict --suite suites/core-zh.yaml
 python -m kmb.cli validate --strict --suite suites/core-zh-expanded.yaml
-python -m kmb.cli compare --agents configs/agent-reference.yaml configs/agent-flawed.yaml --suite suites/core-zh.yaml --out runs/compare
+python -m kmb.cli validate --strict --suite suites/adversarial/extended.yaml
+python -m kmb.cli compare \
+  --agents configs/agent-reference.yaml configs/agent-kylinbot-process.yaml \
+  --suite suites/core-zh.yaml --out runs/compare --seed 42 --retries 0 --timeout 30
 ```
 
-现代 pip 可使用 `python -m pip install .` 安装 CLI。openKylin 2.0 SP2 VM 已实际完成源码安装和真实 Grok/DeepSeek 运行；`.deb` 第六批已在该 VM 完成安装、升级、验证、卸载和残留检查，证据见 `runs/deb-lifecycle-authorized-20260908-rerun6/`。当前技术发布候选为 `0.2.0+release7`，包内容审计与 manifest 见 `runs/openkylin-validation-20260909/release7-audit/` 和 `runs/openkylin-validation-20260909/release-manifest-release7/`。
+现代 pip 可使用 `python -m pip install .` 安装 CLI。**本阶段结论以本机开发与测试为准**；openKylin 实机迁移验收后置。仓库中 `runs/openkylin-validation-*`、`runs/deb-lifecycle-*` 与 `0.2.0+release7` 为历史归档记录，迁移后需在目标机重跑验收命令，详见 `docs/release-freeze.md` 与 `tasks/todo.md`。
 
 输出包括：
 
@@ -165,9 +170,20 @@ python scripts/aggregate_stability.py \
 
 实现 `kmb.agents.AgentAdapter` 的 `run(case) -> List[EvidenceEvent]`，把智能体的对话、记忆存取、工具调用和文件结果映射为统一事件即可。真实 Agent 的外部 API、进程或 GUI 操作应在适配器内完成；评分器不读取模型内部状态，也不依赖 LLM 裁判。
 
+**openKylin 生态进程适配器（本机已跑通）**：
+
+```bash
+python -m kmb.cli run \
+  --agent configs/agent-kylinbot-process.yaml \
+  --suite suites/core-zh.yaml \
+  --out runs/kylinbot-demo --seed 42 --retries 0 --timeout 30
+```
+
+配置类型 `command`：以子进程启动 `scripts/openkylin_ecosystem_agent.py`（stdin 案例 JSON → stdout 证据 JSONL，`source=process`）。迁入 openKylin 时只需把 `command` 指向原生 KylinBot/kylin-agent 包装，证据协议保持不变。
+
 ## 当前边界
 
-内置 `reference` 和 `flawed` 是离线、确定性的演示基线，用于验证 Benchmark 能区分正确行为与错误持久化/混淆/复用。它们不是赛事最终指定的两款真实 Agent，结果会标为 `simulated_baseline`。真实 openKylin 2.0 SP2 VM 已完成 Grok 4.6、DeepSeek v4 flash 的核心/对抗套件运行和四轨 wrapper/no-memory 对比，详见 `runs/openkylin-validation-20260906/final-event-report.md`。两款 API 没有导出原生记忆状态，所有结论都只能表述为系统级行为；`.deb` 第六批系统级生命周期已通过，桌面演示视频尚未录制。
+内置 `reference` 和 `flawed` 是离线、确定性的演示基线，用于验证 Benchmark 能区分正确行为与错误持久化/混淆/复用。它们不是赛事最终指定的两款真实 Agent，结果会标为 `simulated_baseline`。`kylinbot-process` 是本机已跑通的 openKylin 生态**进程适配器**（`source=process`，系统级）。历史目录 `runs/openkylin-validation-*` 记录过 VM 上的 Grok/DeepSeek 与 wrapper/no-memory 对比；两款云 API 未导出原生记忆状态，结论只能表述为系统级行为。桌面演示视频尚未录制；openKylin 实机迁移验收后置。
 
 详细流程、评分规则和复现说明见 [`docs/solution.md`](docs/solution.md)。
 外部 Agent 的 JSONL 证据格式见 [`docs/evidence-protocol.md`](docs/evidence-protocol.md)。

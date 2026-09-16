@@ -19,42 +19,66 @@ python -m kmb.cli validate --strict --suite suites/core-zh.yaml
 bash scripts/run_offline_demo.sh runs/offline-demo
 ```
 
+演示 Agent：
+
+| Agent | 说明 |
+|-------|------|
+| `reference` | 离线确定性基线（`simulated`） |
+| `kylinbot-process` | **openKylin 生态进程适配器**（子进程 CommandAgent，`source=process`） |
+| `flawed` | 错误记忆对照（仅 contrast 目录） |
+
 产物：
 
 | 路径 | 含义 |
 |------|------|
 | `runs/offline-demo/core-compare/comparison.html` | 双 Agent 对比 + 六维雷达 |
-| `runs/offline-demo/core-compare/comparison.json` | 机器可读对比 |
-| `runs/offline-demo/expanded-compare/` | 扩展 18 案例结果 |
-| `*/evidence.jsonl` | 每案例证据事件 |
-| `*/result.json` | 逐检查项评分与失败类型 |
+| `runs/offline-demo/core-compare/reference-radar.svg` | 侧 A 雷达 |
+| `runs/offline-demo/core-compare/kylinbot-process-radar.svg` | 侧 B 雷达 |
+| `runs/offline-demo/expanded-compare/` | 扩展 18 案例 |
+| `runs/offline-demo/adversarial-compare/` | 冲突/相近/噪声/敏感/跨任务 15 案例 |
+| `runs/offline-demo/flawed-contrast/` | 参考 vs 缺陷对照 |
+
+脚本在双侧均通过 `verify_run --strict` 且雷达文件存在后才成功退出。
 
 ## 3. 手动等价命令
 
 ```bash
 python -m kmb.cli compare \
-  --agents configs/agent-reference.yaml configs/agent-flawed.yaml \
+  --agents configs/agent-reference.yaml configs/agent-kylinbot-process.yaml \
   --suite suites/core-zh.yaml \
   --out runs/offline-demo/core-compare \
   --seed 42 --retries 0 --timeout 30
 
 python scripts/verify_run.py runs/offline-demo/core-compare/reference --strict
-python scripts/verify_run.py runs/offline-demo/core-compare/flawed --strict
+python scripts/verify_run.py runs/offline-demo/core-compare/kylinbot-process --strict
 ```
 
-## 4. 六类能力覆盖
+## 4. 套件覆盖
 
-核心套件 6 类各 1 条；扩展套件 `suites/core-zh-expanded.yaml` 每类再 +3 条（共 18）：
-
-- 长期保持 / 记忆调用 / 动态更新 / 相近区分 / 边界识别 / 任务复用
+| 套件 | 规模 | 侧重 |
+|------|------|------|
+| `suites/core-zh.yaml` | 6 | 六类最小闭环 |
+| `suites/core-zh-expanded.yaml` | 18 | 每类 +3 |
+| `suites/adversarial/core.yaml` | 12 | 基础对抗 |
+| `suites/adversarial/extended.yaml` | 15 | 冲突×3、相近实体×3、噪声×3、敏感×3、跨任务×3 |
 
 ```bash
-python -m kmb.cli list-cases --suite suites/core-zh-expanded.yaml
+python -m kmb.cli list-cases --suite suites/adversarial/extended.yaml
 ```
 
-## 5. 真实 Agent（可选，需云凭据）
+## 5. openKylin 进程适配器
 
-openKylin / Linux 上设置环境变量后：
+```bash
+# 协议：stdin 案例 JSON → stdout 证据 JSONL
+python -m kmb.cli run \
+  --agent configs/agent-kylinbot-process.yaml \
+  --suite suites/core-zh.yaml \
+  --out runs/kylinbot-demo --seed 42 --retries 0 --timeout 30
+```
+
+实机迁移：将 YAML 中 `command` 指向原生 KylinBot/kylin-agent 包装脚本即可，证据协议不变。
+
+## 6. 真实 Agent（可选，需云凭据）
 
 ```bash
 export GROK_API_KEY=...
@@ -65,22 +89,19 @@ python -m kmb.cli compare \
   --out runs/real-compare --seed 42 --retries 1 --timeout 180
 ```
 
-见 `docs/demo-script.md` 与 `docs/final-reproduction-checklist.md`。
-
-## 6. 结论表述边界（必读）
+## 7. 结论表述边界（必读）
 
 | 证据来源 | 可写 | 不可写 |
 |----------|------|--------|
-| `source=simulated`（reference/flawed） | 评测流水线可运行、可区分正确/错误记忆行为 | 真实模型能力 |
-| `source=model` | API 请求/响应、可观察文本 | 模型内部记忆状态 |
-| `source=wrapper` | 外部记忆控制器执行的系统级行为 | 模型原生长期记忆 |
+| `simulated` | 流水线可运行、可区分正确/错误行为 | 真实模型能力 |
+| `process` / `wrapper` | 系统级进程/控制器行为 | 模型原生长期记忆 |
+| `model`（native_memory_events=0） | API 文本与请求 | 原生记忆能力 |
 
-真实 Grok/DeepSeek 轨道当前 `native_memory_events=0`，报告须分层表述。
-
-## 7. 更多材料
+## 8. 更多材料
 
 - 方案：`docs/solution.md`
 - 证据协议：`docs/evidence-protocol.md`
-- 发布冻结：`docs/release-freeze.md`
-- openKylin 演示脚本：`docs/demo-script.md`（视频待录）
+- 任务状态：`tasks/todo.md`
+- 发布边界：`docs/release-freeze.md`
+- 演示脚本（视频待录）：`docs/demo-script.md`
 - 本地 GUI：`python -m kmb.cli serve --host 127.0.0.1 --port 8765 --root .`

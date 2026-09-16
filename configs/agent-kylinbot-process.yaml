@@ -1,0 +1,11 @@
+name: kylinbot-process
+type: command
+# openKylin ecosystem process adapter (local stand-in).
+# On openKylin, point command at a native KylinBot/kylin-agent wrapper
+# that speaks the same stdin/stdout JSONL evidence protocol.
+command: ["python", "scripts/openkylin_ecosystem_agent.py"]
+timeout_seconds: 30
+description: >-
+  Subprocess agent demonstrating openKylin ecosystem integration via the
+  CommandAgent protocol. No cloud credentials required. Source events are
+  marked source=process (not model-native memory).

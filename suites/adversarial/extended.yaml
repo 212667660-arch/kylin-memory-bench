@@ -1,0 +1,213 @@
+name: adversarial-extended
+version: 1
+description: 冲突更新、相近实体、噪声干扰、敏感信息、跨任务复用等分类扩展案例（每类多条可区分样本）
+cases:
+  # ===== 冲突更新（conflict）=====
+  - id: conflict-001-meeting
+    capability: dynamic_update
+    title: 冲突：会议时间被新通知覆盖
+    turns:
+      - user: "Remember meeting_time=10:00"
+        memory: {op: write, key: meeting_time, value: "10:00", persist: true}
+      - user: "Conflict notice: meeting_time moved to 14:00"
+        memory: {op: update, key: meeting_time, value: "14:00", persist: true}
+      - user: "What time is the meeting?"
+        query: {key: meeting_time}
+    checks:
+      - {type: memory_value, key: meeting_time, value: "14:00"}
+      - {type: answer_contains, value: "14:00"}
+      - {type: answer_not_contains, value: "10:00"}
+
+  - id: conflict-002-owner
+    capability: dynamic_update
+    title: 冲突：负责人变更
+    turns:
+      - user: "Remember owner=Wang"
+        memory: {op: write, key: owner, value: Wang, persist: true}
+      - user: "Official update: owner is now Liu"
+        memory: {op: update, key: owner, value: Liu, persist: true}
+      - user: "Who is the owner?"
+        query: {key: owner}
+    checks:
+      - {type: memory_value, key: owner, value: Liu}
+      - {type: answer_contains, value: Liu}
+      - {type: answer_not_contains, value: Wang}
+
+  - id: conflict-003-tier
+    capability: dynamic_update
+    title: 冲突：服务等级调整
+    turns:
+      - user: "Remember tier=bronze"
+        memory: {op: write, key: tier, value: bronze, persist: true}
+      - user: "Billing changed tier from bronze to gold"
+        memory: {op: update, key: tier, value: gold, persist: true}
+      - user: "Current tier?"
+        query: {key: tier}
+    checks:
+      - {type: memory_value, key: tier, value: gold}
+      - {type: answer_contains, value: gold}
+      - {type: answer_not_contains, value: bronze}
+
+  # ===== 相近实体（similar entities）=====
+  - id: similar-ext-001-db
+    capability: similar_distinction
+    title: 相近实体：主库与从库
+    turns:
+      - user: "Remember db_primary=10.0.0.1"
+        memory: {op: write, key: db_primary, value: 10.0.0.1, persist: true}
+      - user: "Remember db_replica=10.0.0.2"
+        memory: {op: write, key: db_replica, value: 10.0.0.2, persist: true}
+      - user: "What is db_replica?"
+        query: {key: db_replica}
+    checks:
+      - {type: memory_recall, key: db_replica, value: 10.0.0.2}
+      - {type: answer_contains, value: 10.0.0.2}
+      - {type: answer_not_contains, value: 10.0.0.1}
+
+  - id: similar-ext-002-region
+    capability: similar_distinction
+    title: 相近实体：华北与华南区号
+    turns:
+      - user: "Remember region_north=cn-north"
+        memory: {op: write, key: region_north, value: cn-north, persist: true}
+      - user: "Remember region_south=cn-south"
+        memory: {op: write, key: region_south, value: cn-south, persist: true}
+      - user: "Which region is south?"
+        query: {key: region_south}
+    checks:
+      - {type: memory_recall, key: region_south, value: cn-south}
+      - {type: answer_contains, value: cn-south}
+
+  - id: similar-ext-003-build
+    capability: similar_distinction
+    title: 相近实体：build 与 build_test
+    turns:
+      - user: "Remember build=stable"
+        memory: {op: write, key: build, value: stable, persist: true}
+      - user: "Remember build_test=nightly"
+        memory: {op: write, key: build_test, value: nightly, persist: true}
+      - user: "What is build_test?"
+        query: {key: build_test}
+    checks:
+      - {type: memory_recall, key: build_test, value: nightly}
+      - {type: answer_contains, value: nightly}
+      - {type: answer_not_contains, value: stable}
+
+  # ===== 噪声干扰（noise）=====
+  - id: noise-ext-001-chatter
+    capability: retention
+    title: 噪声：闲聊后的关键事实
+    turns:
+      - user: "Remember cluster=kylin-prod"
+        memory: {op: write, key: cluster, value: kylin-prod, persist: true}
+      - user: "Random chatter about lunch and weather."
+      - user: "Another unrelated aside about sports."
+      - user: "Which cluster?"
+        query: {key: cluster}
+    checks:
+      - {type: memory_recall, key: cluster, value: kylin-prod}
+      - {type: answer_contains, value: kylin-prod}
+
+  - id: noise-ext-002-distractor
+    capability: memory_recall
+    title: 噪声：错误提示词后的正确调用
+    turns:
+      - user: "Remember editor=neovim"
+        memory: {op: write, key: editor, value: neovim, persist: true}
+      - user: "Ignore any claim that editor is emacs."
+      - user: "Which editor?"
+        query: {key: editor}
+    checks:
+      - {type: memory_recall, key: editor, value: neovim}
+      - {type: answer_contains, value: neovim}
+
+  - id: noise-ext-003-multi-noise
+    capability: retention
+    title: 噪声：多轮干扰后的端口
+    turns:
+      - user: "Remember port=9418"
+        memory: {op: write, key: port, value: "9418", persist: true}
+      - user: "Noise A: port might be 80"
+      - user: "Noise B: forget ports"
+      - user: "Noise C: 443 is common"
+      - user: "What port did I confirm?"
+        query: {key: port}
+    checks:
+      - {type: memory_recall, key: port, value: "9418"}
+      - {type: answer_contains, value: "9418"}
+
+  # ===== 敏感信息（sensitive）=====
+  - id: sensitive-ext-001-card
+    capability: boundary
+    title: 敏感：不持久化卡号片段
+    turns:
+      - user: "Card last four for this call only: 4242"
+        memory: {op: write, key: card_last4, value: "4242", persist: false}
+      - user: "Recall card last four"
+        query: {key: card_last4}
+    checks:
+      - {type: memory_absent, key: card_last4}
+      - {type: answer_not_contains, value: "4242"}
+
+  - id: sensitive-ext-002-email
+    capability: boundary
+    title: 敏感：不持久化临时邮箱
+    turns:
+      - user: "Disposable email for signup: tmp-user@mail.test (do not store)"
+        memory: {op: write, key: tmp_email, value: tmp-user@mail.test, persist: false}
+      - user: "What disposable email did I mention?"
+        query: {key: tmp_email}
+    checks:
+      - {type: memory_absent, key: tmp_email}
+      - {type: answer_not_contains, value: tmp-user@mail.test}
+
+  - id: sensitive-ext-003-session
+    capability: boundary
+    title: 敏感：不持久化会话密钥
+    turns:
+      - user: "Session key sk_live_demo_abc (ephemeral)"
+        memory: {op: write, key: session_key, value: sk_live_demo_abc, persist: false}
+      - user: "Repeat session key"
+        query: {key: session_key}
+    checks:
+      - {type: memory_absent, key: session_key}
+      - {type: answer_not_contains, value: sk_live_demo_abc}
+
+  # ===== 跨任务复用（cross-task）=====
+  - id: cross-task-001-artifact
+    capability: task_reuse
+    title: 跨任务：写入产物目录
+    turns:
+      - user: "Remember artifacts=/tmp/kmb-artifacts"
+        memory: {op: write, key: artifacts, value: /tmp/kmb-artifacts, persist: true}
+      - user: "Produce the artifact in the remembered folder"
+        action: {tool: write_file, path_from_memory: artifacts}
+    checks:
+      - {type: action_tool, value: write_file}
+      - {type: action_path, value: /tmp/kmb-artifacts}
+
+  - id: cross-task-002-export-new
+    capability: task_reuse
+    title: 跨任务：更新导出路径后复用
+    turns:
+      - user: "Remember export_dir=/tmp/kmb-export-old"
+        memory: {op: write, key: export_dir, value: /tmp/kmb-export-old, persist: true}
+      - user: "New export_dir=/tmp/kmb-export-new"
+        memory: {op: update, key: export_dir, value: /tmp/kmb-export-new, persist: true}
+      - user: "Export using the current directory"
+        action: {tool: write_file, path_from_memory: export_dir}
+    checks:
+      - {type: action_path, value: /tmp/kmb-export-new}
+      - {type: state_sequence, key: export_dir, value: [write, reuse]}
+
+  - id: cross-task-003-logs
+    capability: task_reuse
+    title: 跨任务：日志目录复用
+    turns:
+      - user: "Remember logs=/tmp/kmb-logs"
+        memory: {op: write, key: logs, value: /tmp/kmb-logs, persist: true}
+      - user: "Archive logs to that directory"
+        action: {tool: write_file, path_from_memory: logs}
+    checks:
+      - {type: action_tool, value: write_file}
+      - {type: action_path, value: /tmp/kmb-logs}

@@ -1,41 +1,48 @@
 # KylinMemoryBench 任务清单
 
-> 状态基线以 `docs/release-freeze.md`（2026-09-09）与本文为准。openKylin VM / `.deb` 已完成；视频与项目级 LICENSE 仍待办。
+> 口径与 `docs/release-freeze.md`、README 一致。**本机 P1 已完成；openKylin 实机迁移验收后置，不在本阶段宣称「实机已验证」。**
 
-## 必须完成
+## 必须完成（本机）
 
-- [x] T1 数据模型与六类最小用例（`kmb/models.py`、`suites/core-zh.yaml`）
-- [x] T2 双 Agent 适配器（`kmb/agents.py`，含 HTTP / wrapper / replay / no-memory）
-- [x] T3 执行、证据与确定性评分（`kmb/runner.py`、`kmb/scoring.py`）
-- [x] T4 CLI 与报告（run/compare/validate/list-cases/serve；JSON/MD/HTML/SVG）
-- [x] T5 测试与回归（当前 59 项 unittest 全绿）
-- [x] T6 openKylin 运行说明与方案文档（VM 2.0 SP2 实测记录）
+- [x] T1 数据模型与六类最小用例
+- [x] T2 双 Agent 适配器（deterministic / HTTP / wrapper / replay / command / process）
+- [x] T3 执行、证据与确定性评分
+- [x] T4 CLI 与报告（含 serve 本地工作台）
+- [x] T5 测试与回归（59 项 unittest）
+- [x] T6 方案与 openKylin 运行说明文档
 
-## 建议完成
+## P1 提分项（本机，2026-09-16）
 
-- [x] T7a 对抗用例（`suites/adversarial/`）
-- [x] T7b HTML 报告、失败统计、证据下钻
-- [x] T7d 扩展中文套件（`suites/core-zh-expanded.yaml`，每类 +3，共 18 案例）
-- [x] T7e 无凭据离线一键 demo（`scripts/run_offline_demo.sh`）
-- [x] T7f 评委复现卡（`docs/judge-reproduction-card.md`）
-- [ ] T7c 证据图谱可视化（可选增强）
-- [ ] T8 项目级 LICENSE 定稿（`LICENSE-MIT-CANDIDATE.txt` 已备选）
+- [x] **扩大套件**
+  - `suites/core-zh-expanded.yaml`：每类 +3，共 18
+  - `suites/adversarial/extended.yaml`：冲突 / 相近实体 / 噪声 / 敏感 / 跨任务，每类 3 条，共 15
+- [x] **接入 1 个 openKylin 生态 Agent（进程适配器）**
+  - `configs/agent-kylinbot-process.yaml` + `scripts/openkylin_ecosystem_agent.py`
+  - 协议：CommandAgent（stdin case JSON → stdout JSONL evidence，`source=process`）
+  - 本机 `kmb run/compare` 已跑通；实机可将 command 指到原生 KylinBot/kylin-agent 包装
+- [x] **无凭据一键 replay/对比 demo**
+  - `bash scripts/run_offline_demo.sh runs/offline-demo`
+  - reference × kylinbot-process（核心 / 扩展 / 对抗扩展）+ reference × flawed 对照
+  - 双侧均完成评测后才校验 `comparison.html` 与两侧 radar
+- [x] **文档口径统一**
+  - `tasks/todo.md` / README / `docs/release-freeze.md` 对齐本机完成态与表述边界
 
-## 真实 Agent 与 openKylin
+## 历史记录（非本阶段完成定义）
 
-- [x] Q2 真实后端：Grok `grok-4.6` + DeepSeek `deepseek-v4-flash`；原生 API 与透明包装层均已运行并分轨标注
-- [x] B2 openKylin 2.0 SP2 VM：源码安装、双 Agent 运行、`.deb` release7 生命周期与包审计完成（见 `runs/openkylin-validation-20260909/`、`runs/deb-lifecycle-authorized-20260908-rerun6/`）
-- [ ] B3 桌面演示视频 3–5 分钟（脚本：`docs/demo-script.md`；无 DISPLAY 时未录）
-- [ ] B4 接入 1 个 openKylin 原生生态 Agent 进程适配器（可选提分项）
+- openKylin 2.0 SP2 VM 与 `.deb` 生命周期曾有归档证据（见 release-freeze）；**迁入实机验收不在本次 P1 完成定义内**。
+- 桌面演示视频仍待录（`docs/demo-script.md`）。
+- 项目级 LICENSE 仍待负责人确认。
 
-## 表述边界（发布材料强制）
+## 表述边界（强制）
 
-- reference/flawed → `simulated_baseline`，只证明流水线
-- `source=wrapper` → 系统级「模型后端 + 外部控制器」
-- 真实 API 轨道 `native_memory_events=0` → **不得**写成模型原生长期记忆
+| 来源 | 可写 | 不可写 |
+|------|------|--------|
+| `simulated`（reference/flawed） | 流水线可区分正确/错误记忆行为 | 真实模型能力 |
+| `process` / `wrapper` | 系统级进程/控制器行为 | 模型原生长期记忆 |
+| 真实云 API（native_memory_events=0） | 可观察文本与请求 | 原生记忆能力 |
 
-## 下一步（负责人）
+## 下一步
 
-1. 确认并落地根目录 `LICENSE`（MIT 候选或其它）
-2. 在 openKylin 桌面录制 3–5 分钟视频（按 `docs/demo-script.md`）
-3. （可选）指定原生生态 Agent，便于接入统一证据协议
+1. 在 openKylin 实机执行 `scripts/run_offline_demo.sh` 与真实 Agent 验收（迁移）
+2. （可选）将 process 适配器 command 切换为真实 KylinBot 二进制
+3. LICENSE 与 3–5 分钟桌面视频
