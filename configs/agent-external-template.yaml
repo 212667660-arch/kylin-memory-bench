@@ -1,0 +1,10 @@
+name: real-agent-a
+type: command
+version: "待确认"
+command: ["python3", "path/to/agent_runner.py"]
+working_dir: "."
+timeout_seconds: 60
+env_allowlist: []
+description: >-
+  待替换为真实 Agent 的命令。进程从 stdin 读取一个案例 JSON，向 stdout 输出
+  docs/evidence-protocol.md 规定的 JSONL 事件；认证信息只能通过环境变量白名单提供。

@@ -1,0 +1,79 @@
+name: core-en
+version: 1
+description: Minimal executable English cases for six long-term memory capabilities
+cases:
+  - id: retention-001
+    capability: retention
+    title: Retain a project code name
+    turns:
+      - user: "Remember project=Atlas"
+        memory: {op: write, key: project, value: Atlas, persist: true}
+      - user: "What is project?"
+        query: {key: project}
+    checks:
+      - {type: memory_recall, key: project, value: Atlas}
+      - {type: answer_contains, value: Atlas}
+
+  - id: recall-001
+    capability: memory_recall
+    title: Recall a timezone preference
+    turns:
+      - user: "Remember timezone=Asia/Shanghai"
+        memory: {op: write, key: timezone, value: Asia/Shanghai, persist: true}
+      - user: "Use my timezone"
+        query: {key: timezone}
+    checks:
+      - {type: memory_recall, key: timezone, value: Asia/Shanghai}
+
+  - id: update-001
+    capability: dynamic_update
+    title: Update a meeting location
+    turns:
+      - user: "Remember venue=Room A"
+        memory: {op: write, key: venue, value: Room A, persist: true}
+      - user: "Venue changed from Room A to Room B"
+        memory: {op: update, key: venue, value: Room B, persist: true}
+      - user: "Where is the venue now?"
+        query: {key: venue}
+    checks:
+      - {type: memory_value, key: venue, value: Room B}
+      - {type: answer_contains, value: Room B}
+      - {type: answer_not_contains, value: Room A}
+
+  - id: similar-001
+    capability: similar_distinction
+    title: Distinguish similar projects
+    turns:
+      - user: "Remember owner_atlas=Li"
+        memory: {op: write, key: owner_atlas, value: Li, persist: true}
+      - user: "Remember owner_atlas2=Wang"
+        memory: {op: write, key: owner_atlas2, value: Wang, persist: true}
+      - user: "Who owns atlas2?"
+        query: {key: owner_atlas2}
+    checks:
+      - {type: memory_recall, key: owner_atlas2, value: Wang}
+      - {type: answer_contains, value: Wang}
+
+  - id: boundary-001
+    capability: boundary
+    title: Do not persist a one-time code
+    turns:
+      - user: "My one-time code is 731204"
+        memory: {op: write, key: otp, value: 731204, persist: false}
+      - user: "Do you remember my one-time code?"
+        query: {key: otp}
+    checks:
+      - {type: memory_absent, key: otp}
+      - {type: answer_not_contains, value: "731204"}
+
+  - id: reuse-001
+    capability: task_reuse
+    title: Reuse an output directory for a file task
+    turns:
+      - user: "Remember output_dir=/tmp/kmb-demo"
+        memory: {op: write, key: output_dir, value: /tmp/kmb-demo, persist: true}
+      - user: "Create the report there"
+        action: {tool: write_file, path_from_memory: output_dir}
+    checks:
+      - {type: action_tool, value: write_file}
+      - {type: action_path, value: /tmp/kmb-demo}

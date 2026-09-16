@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KylinMemoryBench 工作台</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell" id="app-shell">
+    <aside class="sidebar" aria-label="主导航">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">K</div>
+        <div class="brand-copy">
+          <div class="brand-name">KylinMemBench</div>
+          <div class="brand-subtitle">长期记忆评测</div>
+        </div>
+      </div>
+      <nav class="nav-list" aria-label="工作区导航">
+        <div class="nav-section">
+          <div class="nav-section-label">工作区</div>
+          <button class="nav-item active" data-view="overview" type="button"><span class="nav-icon" aria-hidden="true">⌂</span><span class="nav-label">总览</span></button>
+          <button class="nav-item" data-view="new" type="button"><span class="nav-icon" aria-hidden="true">＋</span><span class="nav-label">新建评测</span></button>
+          <button class="nav-item" data-view="tasks" type="button"><span class="nav-icon" aria-hidden="true">▶</span><span class="nav-label">评测任务</span></button>
+          <button class="nav-item" data-view="history" type="button"><span class="nav-icon" aria-hidden="true">◷</span><span class="nav-label">运行历史</span></button>
+          <button class="nav-item" data-view="results" type="button"><span class="nav-icon" aria-hidden="true">▤</span><span class="nav-label">结果中心</span></button>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-label">配置</div>
+          <button class="nav-item" data-view="agents" type="button"><span class="nav-icon" aria-hidden="true">◌</span><span class="nav-label">智能体</span></button>
+          <button class="nav-item" data-view="configs" type="button"><span class="nav-icon" aria-hidden="true">⌘</span><span class="nav-label">API / 模型</span></button>
+        </div>
+        <div class="nav-section" style="margin-top:auto">
+          <div class="nav-section-label">系统</div>
+          <button class="nav-item" data-view="settings" type="button"><span class="nav-icon" aria-hidden="true">⚙</span><span class="nav-label">系统设置</span></button>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="local-chip"><span class="status-dot"></span><span>本地工作区</span></div>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div class="topbar-copy">
+          <h1 id="page-title">总览</h1>
+          <p id="page-subtitle">本地评测工作区</p>
+        </div>
+        <div class="topbar-actions">
+          <button id="status-chip" class="status-chip" type="button" title="服务与环境状态" aria-label="服务与环境状态">
+            <span class="status-dot"></span>
+            <span id="status-chip-text">本地</span>
+          </button>
+          <div id="toolbar-actions" class="toolbar-actions" aria-label="工作区操作"></div>
+        </div>
+      </header>
+
+      <div id="global-error" class="global-error" role="alert" aria-live="assertive" hidden></div>
+      <div id="view-root" class="view-root"></div>
+      <footer id="status-bar" class="status-bar" aria-label="工作区状态"></footer>
+    </main>
+
+    <aside id="inspector-rail" class="inspector-rail" aria-label="属性">
+      <div id="inspector-root"></div>
+    </aside>
+  </div>
+
+  <div id="drawer-backdrop" class="drawer-backdrop" hidden></div>
+  <aside id="case-drawer" class="case-drawer" aria-label="案例详情" aria-hidden="true">
+    <div class="drawer-header">
+      <h2 id="drawer-title">案例详情</h2>
+      <button id="drawer-close" class="icon-button" type="button" title="关闭" aria-label="关闭">×</button>
+    </div>
+    <div id="drawer-content" class="drawer-content"></div>
+  </aside>
+
+  <script src="/app.js"></script>
+</body>
+</html>

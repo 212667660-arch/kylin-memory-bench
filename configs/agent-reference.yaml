@@ -1,0 +1,3 @@
+name: reference
+type: deterministic
+description: 本地确定性参考 Agent；用于验证 Benchmark 闭环。

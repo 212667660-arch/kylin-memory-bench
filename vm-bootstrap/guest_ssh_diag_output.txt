@@ -1,0 +1,86 @@
+=== PATH ===
+/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/opt/system/sbin:/opt/system/bin
+=== SSH BINARIES ===
+--- /opt/kare/usr/sbin/sshd
+-rwxr-xr-x 1 root root 65  9月 6日 00:58 /opt/kare/usr/sbin/sshd
+#!/bin/bash
+/usr/bin/kare run openssh-server /usr/sbin/sshd "$@"
+--- /opt/kare/lib/systemd/system/ssh.service.bin
+-rwxr-xr-x 1 root root 1239  9月 6日 00:58 /opt/kare/lib/systemd/system/ssh.service.bin
+#!/bin/bash
+# Auto-generated wrapper for ssh.service
+PIDFILE="/tmp/ssh.service.pid"
+ORIG_CMD="/usr/sbin/sshd -D $SSHD_OPTS"
+export KARE_WORKING_DIR=""
+
+is_running() {
+    pid=$(ps aux | grep "$ORIG_CMD" | grep -vE "grep|ssh.service.bin|tini" | awk '{print $2}'|head -n1)
+    [ -n "$pid" ]
+}
+
+start() {
+    if is_running; then
+        echo "ssh.service already running (pid=$(cat "$PIDFILE" 2>/dev/null))."
+        exit 0
+    fi
+    /usr/bin/kare run openssh-server /usr/sbin/sshd -D $SSHD_OPTS 
+    for i in {1..30}; do
+        pid=$(ps aux | grep "$ORIG_CMD" | grep -vE "grep|ssh.service.bin|tini" | awk '{print $2}'|head -n1)
+        [ -n "$pid" ] && break
+        sleep 0.2
+    done
+    if [ -z "$pid" ]; then
+        echo "Failed to start ssh.service"
+        exit 1
+    fi
+    echo "$pid" > "$PIDFILE"
+    echo "$pid"
+}
+
+stop() {
+    pids=$(ps aux | grep "$ORIG_CMD" | grep -vE "grep" | awk '{print $2}')
+    kill -TERM $pids 2>/dev/null
+    # 等待进程退出
+    for i in {1..30}; do
+        is_running || break
+        sleep 0.2
+    done
+    is_running && kill -KILL "$pid" 2>/dev/null
+    rm -f "$PIDFILE"
+}
+
+case "$1" in
+    start)   start ;;
+    stop)    stop ;;
+    *)       echo "Usage: $0 {start|stop}" >&2; exit 1 ;;
+esac
+--- /usr/sbin/sshd
+ls: 无法访问 '/usr/sbin/sshd': 没有那个文件或目录
+--- /etc/ssh/sshd_config
+ls: 无法访问 '/etc/ssh/sshd_config': 没有那个文件或目录
+--- /etc/default/ssh
+ls: 无法访问 '/etc/default/ssh': 没有那个文件或目录
+=== PACKAGE STATE ===
+dpkg-query: 系统没有安装软件包 openssh-server，因而没有相关的信息
+使用 dpkg --info (= dpkg-deb --info) 来检测打包好的文件，
+=== SERVICE ===
+ssh.service is not a native service, redirecting to systemd-sysv-install.
+Executing: /usr/lib/systemd/systemd-sysv-install is-enabled ssh
+enabled
+inactive
+○ ssh.service - OpenBSD Secure Shell server
+     Loaded: loaded (/opt/kare/usr/lib/systemd/system/ssh.service; disabled; preset: enabled)
+     Active: inactive (dead)
+       Docs: man:sshd(8)
+             man:sshd_config(5)
+=== PORTS ===
+State  Recv-Q Send-Q      Local Address:Port Peer Address:PortProcess
+LISTEN 0      1024            127.0.0.1:8000      0.0.0.0:*          
+LISTEN 0      1024            127.0.0.1:8002      0.0.0.0:*          
+LISTEN 0      4096        127.0.0.53%lo:53        0.0.0.0:*          
+LISTEN 0      32              127.0.0.1:53        0.0.0.0:*          
+LISTEN 0      4096           127.0.0.54:53        0.0.0.0:*          
+LISTEN 0      4096            127.0.0.1:631       0.0.0.0:*          
+LISTEN 0      4096                [::1]:631          [::]:*          
+LISTEN 0      32                  [::1]:53           [::]:*          
+LISTEN 0      4096   [::ffff:127.0.0.1]:8001            *:*          

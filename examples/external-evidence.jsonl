@@ -1,0 +1,3 @@
+{"case_id":"replay-example","kind":"memory_write","data":{"key":"project","value":"Atlas","persist":true},"step":1,"timestamp":"2026-01-01T00:00:00+00:00"}
+{"case_id":"replay-example","kind":"memory_recall","data":{"key":"project","value":"Atlas","hit":true},"step":2,"timestamp":"2026-01-01T00:00:01+00:00"}
+{"case_id":"replay-example","kind":"assistant_message","data":{"text":"Atlas"},"step":2,"timestamp":"2026-01-01T00:00:01+00:00"}

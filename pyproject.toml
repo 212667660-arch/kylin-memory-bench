@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kylin-memory-bench"
+version = "0.2.0"
+description = "Evidence-based long-term memory benchmark for AI agents"
+requires-python = ">=3.9"
+dependencies = ["PyYAML>=6.0"]
+
+[project.scripts]
+kmb = "kmb.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["kmb*"]
+
+[tool.setuptools.package-data]
+kmb = ["web/*.html", "web/*.js", "web/*.css"]

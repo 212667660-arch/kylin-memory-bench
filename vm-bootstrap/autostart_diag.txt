@@ -1,0 +1,11 @@
+===cron===
+no crontab for Cisyam
+===profile===
+/home/Cisyam/.config/autostart:
+总计 16
+drwxrwxr-x  2 Cisyam Cisyam 4096  9月 6日 00:37 .
+drwxrwxr-x 29 Cisyam Cisyam 4096  9月 6日 00:39 ..
+-rw-rw-r--  1 Cisyam Cisyam  986  9月 6日 00:37 kylin-aiassistant-autostart.desktop
+-rw-rw-r--  1 Cisyam Cisyam 1092  9月 6日 00:37 kylin-weather.desktop
+===systemd-user===
+Failed to connect to bus: 找不到介质

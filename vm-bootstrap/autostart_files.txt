@@ -1,0 +1,4 @@
+===autostart===
+cat: /home/Cisyam/.config/autostart/openkylin-user-ssh.desktop: 没有那个文件或目录
+===launcher===
+cat: /home/Cisyam/.local/bin/openkylin-user-ssh-start: 没有那个文件或目录

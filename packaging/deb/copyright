@@ -1,0 +1,10 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: KylinMemoryBench
+Source: local project workspace
+
+Files: *
+Copyright: KylinMemoryBench project contributors
+License: pending-project-owner-selection
+ Comment: This technical validation package must not be redistributed until the
+ project owner selects and records a project-level license. Third-party research
+ repositories are not included; see /usr/share/doc/kylin-memory-bench/NOTICE.

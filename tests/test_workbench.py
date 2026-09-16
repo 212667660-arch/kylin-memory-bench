@@ -1,0 +1,263 @@
+import json
+import os
+import tempfile
+import threading
+import unittest
+from http.server import ThreadingHTTPServer
+from pathlib import Path
+from unittest.mock import patch
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
+
+from kmb.workbench import WorkbenchHandler, WorkbenchState, load_credentials_file
+
+
+class WorkbenchTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(dir=str(Path.cwd()))
+        self.root = Path(self.temp.name)
+        (self.root / "configs").mkdir()
+        (self.root / "suites").mkdir()
+        (self.root / "runs" / "sample" / "reference").mkdir(parents=True)
+        (self.root / "configs" / "reference.yaml").write_text(
+            "name: reference\ntype: deterministic\ndescription: local\n", encoding="utf-8"
+        )
+        (self.root / "configs" / "bad.yaml").write_text(
+            "name: api\ntype: http\nbase_url: https://example.test/v1\nmodel: demo\napi_key_env: KMB_TEST_SECRET\n", encoding="utf-8"
+        )
+        (self.root / "suites" / "core.yaml").write_text(
+            "cases:\n  - id: c1\n    capability: retention\n    title: one\n    turns: []\n    checks: []\n", encoding="utf-8"
+        )
+        result = {
+            "run_id": "sample-run", "started_at": "2026-09-09T00:00:00+00:00",
+            "agent": "reference", "cases": 1, "seed": 42, "retries": 1,
+            "overall": 100.0, "dimensions": {"retention": 100.0},
+            "observability": {"mode": "simulated_baseline", "disclaimer": "synthetic", "native_memory_events": 0},
+            "failure_counts": {}, "evidence_chain": {"events": 1, "link_coverage": 1.0},
+            "results": [{"case_id": "c1", "capability": "retention", "score": 1.0, "status": "pass", "checks": [], "failures": []}],
+            "evidence": "runs/sample/reference/evidence.jsonl",
+        }
+        (self.root / "runs" / "sample" / "reference" / "result.json").write_text(json.dumps(result), encoding="utf-8")
+        (self.root / "runs" / "sample" / "reference" / "evidence.jsonl").write_text(
+            json.dumps({"run_id": "sample-run", "agent": "reference", "case_id": "c1", "kind": "assistant_message", "data": {"text": "ok"}, "step": 1, "source": "model"}) + "\n", encoding="utf-8"
+        )
+        self.state = WorkbenchState(str(self.root))
+
+    def tearDown(self):
+        self.state.close()
+        self.temp.cleanup()
+
+    def test_lists_only_non_secret_config_metadata(self):
+        os.environ["KMB_TEST_SECRET"] = "do-not-return-this-value"
+        try:
+            configs = self.state.list_configs()
+        finally:
+            os.environ.pop("KMB_TEST_SECRET", None)
+        self.assertEqual({item["name"] for item in configs}, {"reference", "api"})
+        serialized = json.dumps(configs)
+        self.assertNotIn("do-not-return-this-value", serialized)
+        self.assertNotIn("Authorization", serialized)
+        self.assertIn("configured", serialized)
+
+    def test_cloud_config_metadata_identifies_provider_and_mode(self):
+        (self.root / "configs" / "agent-grok.yaml").write_text(
+            "name: grok-api\ntype: http\nbase_url: https://api.wapq.cn/v1\nmodel: grok-4.6\napi_key_env: GROK_API_KEY\n",
+            encoding="utf-8",
+        )
+        (self.root / "configs" / "agent-deepseek-memory.yaml").write_text(
+            "name: deepseek-memory-controller\ntype: memory_controller\nbase_url: https://api.deepseek.com\nmodel: deepseek-v4-flash\napi_key_env: DEEPSEEK_API_KEY\n",
+            encoding="utf-8",
+        )
+        configs = {item["name"]: item for item in self.state.list_configs()}
+        self.assertEqual(configs["grok-api"]["provider"], "Grok")
+        self.assertEqual(configs["grok-api"]["profile_mode"], "标准 API")
+        self.assertEqual(configs["deepseek-memory-controller"]["provider"], "DeepSeek")
+        self.assertEqual(configs["deepseek-memory-controller"]["profile_mode"], "记忆开启")
+
+    def test_create_config_writes_non_secret_http_profile(self):
+        result = self.state.create_config({
+            "profile_id": "openrouter",
+            "provider": "OpenRouter",
+            "name": "OpenRouter",
+            "base_url": "https://openrouter.ai/api/v1",
+            "endpoint": "/chat/completions",
+            "model": "openai/gpt-4.1-mini",
+            "api_key_env": "OPENROUTER_API_KEY",
+            "timeout_seconds": "75",
+            "temperature": "0.2",
+            "description": "shared gateway",
+        })
+        path = self.root / "configs" / "agent-openrouter.yaml"
+        self.assertTrue(path.is_file())
+        text = path.read_text(encoding="utf-8")
+        self.assertIn("OPENROUTER_API_KEY", text)
+        self.assertNotIn("api_key:", text.lower())
+        self.assertEqual(result["config"]["name"], "OpenRouter")
+        self.assertEqual(result["config"]["provider"], "OpenRouter")
+        self.assertEqual(result["config"]["model"], "openai/gpt-4.1-mini")
+
+    def test_create_config_rejects_secret_payload_and_duplicate(self):
+        with self.assertRaises(ValueError):
+            self.state.create_config({
+                "profile_id": "unsafe",
+                "name": "Unsafe",
+                "base_url": "https://example.test/v1",
+                "model": "demo",
+                "api_key_env": "UNSAFE_API_KEY",
+                "api_key": "must-not-be-accepted",
+            })
+        self.state.create_config({
+            "profile_id": "duplicate",
+            "name": "Duplicate",
+            "base_url": "https://example.test/v1",
+            "model": "demo",
+            "api_key_env": "DUPLICATE_API_KEY",
+        })
+        with self.assertRaises(FileExistsError):
+            self.state.create_config({
+                "profile_id": "duplicate",
+                "name": "Duplicate again",
+                "base_url": "https://example.test/v1",
+                "model": "demo",
+                "api_key_env": "DUPLICATE_API_KEY",
+            })
+
+    def test_credentials_file_loads_workspace_referenced_custom_env(self):
+        path = self.root / "credentials.env"
+        path.write_text("CUSTOM_PROVIDER_API_KEY=synthetic-custom-secret\n", encoding="utf-8")
+        os.chmod(path, 0o600)
+        (self.root / "configs" / "custom.yaml").write_text(
+            "name: custom\ntype: http\nbase_url: https://example.test/v1\nmodel: demo\napi_key_env: CUSTOM_PROVIDER_API_KEY\n",
+            encoding="utf-8",
+        )
+        previous_file = os.environ.get("KMB_CREDENTIALS_FILE")
+        previous = os.environ.pop("CUSTOM_PROVIDER_API_KEY", None)
+        os.environ["KMB_CREDENTIALS_FILE"] = str(path)
+        try:
+            with patch("kmb.workbench._credential_file_status", return_value={"status": "secure", "path": "configured credential file", "mode": "0600", "loaded_names": []}):
+                result = load_credentials_file(self.root)
+            self.assertEqual(result["loaded_names"], ["CUSTOM_PROVIDER_API_KEY"])
+            self.assertEqual(os.environ["CUSTOM_PROVIDER_API_KEY"], "synthetic-custom-secret")
+            self.assertNotIn("synthetic-custom-secret", json.dumps(result))
+        finally:
+            os.environ.pop("CUSTOM_PROVIDER_API_KEY", None)
+            if previous is not None:
+                os.environ["CUSTOM_PROVIDER_API_KEY"] = previous
+            if previous_file is None:
+                os.environ.pop("KMB_CREDENTIALS_FILE", None)
+            else:
+                os.environ["KMB_CREDENTIALS_FILE"] = previous_file
+
+    def test_secure_credentials_file_loads_allowlisted_names_without_returning_values(self):
+        path = self.root / "credentials.env"
+        path.write_text(
+            "GROK_API_KEY=synthetic-grok-secret\nDEEPSEEK_MODEL=deepseek-v4-flash\nIGNORED=value\n",
+            encoding="utf-8",
+        )
+        previous = {name: os.environ.pop(name, None) for name in ("GROK_API_KEY", "DEEPSEEK_MODEL")}
+        previous_file = os.environ.get("KMB_CREDENTIALS_FILE")
+        os.environ["KMB_CREDENTIALS_FILE"] = str(path)
+        try:
+            with patch("kmb.workbench._credential_file_status", return_value={"status": "secure", "path": "configured credential file", "mode": "0600", "loaded_names": []}):
+                result = load_credentials_file()
+            self.assertEqual(result["status"], "secure")
+            self.assertEqual(result["loaded_names"], ["DEEPSEEK_MODEL", "GROK_API_KEY"])
+            self.assertNotIn("synthetic-grok-secret", json.dumps(result))
+            self.assertEqual(os.environ["DEEPSEEK_MODEL"], "deepseek-v4-flash")
+        finally:
+            for name in ("GROK_API_KEY", "DEEPSEEK_MODEL"):
+                os.environ.pop(name, None)
+                if previous[name] is not None:
+                    os.environ[name] = previous[name]
+            if previous_file is None:
+                os.environ.pop("KMB_CREDENTIALS_FILE", None)
+            else:
+                os.environ["KMB_CREDENTIALS_FILE"] = previous_file
+
+    def test_result_listing_and_detail_use_workspace_relative_paths(self):
+        entries = self.state.list_runs()
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]["path"], "runs/sample/reference")
+        detail = self.state.get_run("runs/sample/reference")
+        self.assertEqual(detail["kind"], "single")
+        self.assertEqual(detail["result"]["run_id"], "sample-run")
+        self.assertEqual(detail["result"]["_workbench"]["evidence_path"], "runs/sample/reference/evidence.jsonl")
+
+    def test_path_traversal_is_rejected(self):
+        with self.assertRaises(ValueError):
+            self.state.artifact("runs/../configs/reference.yaml")
+        with self.assertRaises(ValueError):
+            self.state.config_path("../secrets.yaml")
+
+    def test_deterministic_health_does_not_require_credentials(self):
+        result = self.state.health("configs/reference.yaml")
+        self.assertEqual(result["status"], "healthy")
+        self.assertNotIn("secret", json.dumps(result).lower())
+
+    def test_stop_job_sets_cancel_event_without_marking_completed(self):
+        job_id = "wb-stop-test"
+        self.state.jobs[job_id] = {
+            "id": job_id, "status": "queued", "output": "runs/workbench/wb-stop-test",
+            "progress": {"completed": 0, "total": 2, "phase": "排队中"}, "error": None,
+        }
+        self.state.cancel_events[job_id] = threading.Event()
+        result = self.state.stop_job(job_id)
+        self.assertEqual(result["status"], "stopping")
+        self.assertTrue(self.state.cancel_events[job_id].is_set())
+        self.assertNotEqual(result["status"], "completed")
+
+    def test_http_endpoints_return_real_data_and_reject_unknown_paths(self):
+        server = ThreadingHTTPServer(("127.0.0.1", 0), WorkbenchHandler)
+        server.workbench_state = self.state
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base = "http://127.0.0.1:%d" % server.server_address[1]
+        try:
+            with urlopen(base + "/api/runs", timeout=3) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            self.assertEqual(payload["runs"][0]["path"], "runs/sample/reference")
+            request = Request(base + "/api/health", data=json.dumps({"config": "configs/reference.yaml"}).encode("utf-8"), headers={"Content-Type": "application/json"}, method="POST")
+            with urlopen(request, timeout=3) as response:
+                self.assertEqual(json.loads(response.read().decode("utf-8"))["status"], "healthy")
+            with self.assertRaises(HTTPError) as error:
+                urlopen(base + "/api/artifact?path=" + "../outside.txt", timeout=3)
+                self.assertEqual(error.exception.code, 400)
+            create_request = Request(
+                base + "/api/configs",
+                data=json.dumps({
+                    "profile_id": "api-test",
+                    "name": "API Test",
+                    "base_url": "https://example.test/v1",
+                    "model": "demo",
+                    "api_key_env": "API_TEST_KEY",
+                }).encode("utf-8"),
+                headers={"Content-Type": "application/json"}, method="POST",
+            )
+            with urlopen(create_request, timeout=3) as response:
+                self.assertEqual(response.status, 201)
+                created = json.loads(response.read().decode("utf-8"))
+            self.assertEqual(created["config"]["name"], "API Test")
+            self.assertNotIn("secret", json.dumps(created).lower())
+            secret_request = Request(
+                base + "/api/configs",
+                data=json.dumps({
+                    "profile_id": "api-secret",
+                    "name": "API Secret",
+                    "base_url": "https://example.test/v1",
+                    "model": "demo",
+                    "api_key_env": "API_SECRET_KEY",
+                    "api_key": "should-not-pass",
+                }).encode("utf-8"),
+                headers={"Content-Type": "application/json"}, method="POST",
+            )
+            with self.assertRaises(HTTPError) as secret_error:
+                urlopen(secret_request, timeout=3)
+            self.assertEqual(secret_error.exception.code, 400)
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+
+if __name__ == "__main__":
+    unittest.main()

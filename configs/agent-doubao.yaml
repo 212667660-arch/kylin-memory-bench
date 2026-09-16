@@ -1,0 +1,14 @@
+name: doubao-api
+type: http
+version: "待确认"
+base_url: https://ark.cn-beijing.volces.com/api/v3
+endpoint: /chat/completions
+# 火山方舟部署的模型/Endpoint ID 通常需要按账号配置；不要把 API Key 写入此文件。
+model: ${DOUBAO_MODEL}
+api_key_env: DOUBAO_API_KEY
+timeout_seconds: 60
+request_options:
+  temperature: 0
+description: >-
+  豆包/火山方舟 OpenAI 兼容 API 适配器。运行前设置 DOUBAO_API_KEY 和
+  DOUBAO_MODEL；若使用其他地域网关，请覆盖 base_url。

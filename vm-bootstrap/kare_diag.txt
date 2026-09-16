@@ -1,0 +1,52 @@
+=== kare files ===
+ls: 无法访问 '/opt/kare/usr/bin/sshd': 没有那个文件或目录
+ls: 无法访问 '/opt/kare/usr/bin/ssh-keygen': 没有那个文件或目录
+ls: 无法访问 '/opt/kare/usr/sbin/ssh-keygen': 没有那个文件或目录
+-rwxr-xr-x 3 root root 9526  8月13日 16:50 /usr/bin/kare
+=== kare type ===
+/usr/bin/kare: Python script, Unicode text, UTF-8 text executable
+=== kare help ===
+usage: kare [-h]
+            [-E | -l | -b BUILD_RELEASE | -L FILE_LIST | -s PACKAGE_SIZE | -P PURGE [PURGE ...]
+            | -S SEARCH | -e ENV] [-p PID] [-i INSTALL [INSTALL ...]]
+            [--chroot CHROOT] [--subsystem SUBSYSTEM]
+            {run,inspect,import,clear_base_apply,restore_apply,try-install}
+            ...
+
+Kare Command Line Tool
+
+positional arguments:
+  {run,inspect,import,clear_base_apply,restore_apply,try-install}
+    run                 使用KARE运行软件
+    inspect             使用KARE进行Debug
+    import              使用KARE进行Debug
+    clear_base_apply    清除基础环境中的指定软件包
+    restore_apply       重置容器，恢复到下层状态，此操作会破坏用户之前更改的内容，请谨慎操作
+    try-install         仅测试安装的 deb 和环境，不真正安装
+
+options:
+  -h, --help            show this help message and exit
+  -E                    列出构建完成的兼容运行环境
+  -l                    列出已安装的软件包
+  -b BUILD_RELEASE      构建兼容运行环境
+  -L FILE_LIST          列出软件包的已安装文件
+  -s PACKAGE_SIZE       列出软件包大小
+  -P PURGE [PURGE ...]  模糊移除软件包
+  -S SEARCH             列出文件所在软件包及路径
+  -e ENV                指定软件包安装环境
+  -p PID                指定命令行应用运行的包名及对应进程号
+  -i INSTALL [INSTALL ...]
+                        安装软件包
+  --chroot CHROOT       指定chroot环境路径
+  --subsystem SUBSYSTEM
+                        指定安装子系统
+=== kare list ===
+usage: kare [-h]
+            [-E | -l | -b BUILD_RELEASE | -L FILE_LIST | -s PACKAGE_SIZE | -P PURGE [PURGE ...]
+            | -S SEARCH | -e ENV] [-p PID] [-i INSTALL [INSTALL ...]]
+            [--chroot CHROOT] [--subsystem SUBSYSTEM]
+            {run,inspect,import,clear_base_apply,restore_apply,try-install}
+            ...
+kare: error: argument command: invalid choice: 'list' (choose from 'run', 'inspect', 'import', 'clear_base_apply', 'restore_apply', 'try-install')
+=== ssh package files ===
+  1866473      4 -rwxr-xr-x   1 root     root           65 9月  6 00:58 /opt/kare/usr/sbin/sshd

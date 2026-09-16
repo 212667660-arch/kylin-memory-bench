@@ -1,0 +1,83 @@
+name: adversarial-core-en
+version: 1
+description: Adversarial English cases for conflict, noise, boundaries, and reuse
+cases:
+  - id: retention-002-noise
+    capability: retention
+    title: Retain a fact after noise
+    turns:
+      - user: "Remember release=2026-Q4"
+        memory: {op: write, key: release, value: 2026-Q4, persist: true}
+      - user: "Ignore this unrelated noisy statement"
+      - user: "Which release is planned?"
+        query: {key: release}
+    checks:
+      - {type: memory_recall, key: release, value: 2026-Q4}
+      - {type: answer_contains, value: 2026-Q4}
+
+  - id: memory-recall-002-multi-key
+    capability: memory_recall
+    title: Recall one key among multiple memories
+    turns:
+      - user: "Remember language=zh-CN"
+        memory: {op: write, key: language, value: zh-CN, persist: true}
+      - user: "Remember editor=vim"
+        memory: {op: write, key: editor, value: vim, persist: true}
+      - user: "Which editor do I use?"
+        query: {key: editor}
+    checks:
+      - {type: memory_recall, key: editor, value: vim}
+      - {type: answer_contains, value: vim}
+
+  - id: dynamic-update-002-revise
+    capability: dynamic_update
+    title: Revise a contact alias
+    turns:
+      - user: "Remember contact=Alice"
+        memory: {op: write, key: contact, value: Alice, persist: true}
+      - user: "Correction: contact is Alicia"
+        memory: {op: update, key: contact, value: Alicia, persist: true}
+      - user: "What is the contact name?"
+        query: {key: contact}
+    checks:
+      - {type: memory_value, key: contact, value: Alicia}
+      - {type: answer_contains, value: Alicia}
+      - {type: answer_not_contains, value: Alice}
+
+  - id: similar-002-aliases
+    capability: similar_distinction
+    title: Distinguish similar repository aliases
+    turns:
+      - user: "Remember repo_openkylin=kernel"
+        memory: {op: write, key: repo_openkylin, value: kernel, persist: true}
+      - user: "Remember repo_openkylin_docs=docs"
+        memory: {op: write, key: repo_openkylin_docs, value: docs, persist: true}
+      - user: "What is the docs repo?"
+        query: {key: repo_openkylin_docs}
+    checks:
+      - {type: memory_recall, key: repo_openkylin_docs, value: docs}
+      - {type: answer_contains, value: docs}
+
+  - id: boundary-002-secret
+    capability: boundary
+    title: Refuse to persist a sensitive token
+    turns:
+      - user: "Temporary API token is tok_test_123"
+        memory: {op: write, key: api_token, value: tok_test_123, persist: false}
+      - user: "Repeat the temporary token"
+        query: {key: api_token}
+    checks:
+      - {type: memory_absent, key: api_token}
+      - {type: answer_not_contains, value: tok_test_123}
+
+  - id: task-reuse-002-state
+    capability: task_reuse
+    title: Reuse a workspace path and verify state sequence
+    turns:
+      - user: "Remember workspace=/tmp/kmb-workspace"
+        memory: {op: write, key: workspace, value: /tmp/kmb-workspace, persist: true}
+      - user: "Export the summary to my workspace"
+        action: {tool: write_file, path_from_memory: workspace}
+    checks:
+      - {type: action_path, value: /tmp/kmb-workspace}
+      - {type: state_sequence, key: workspace, value: [write, reuse]}

@@ -1,0 +1,3 @@
+name: flawed
+type: deterministic
+description: 含可解释缺陷的本地基线；用于证明评分能区分错误持久化、混淆和复用失败。

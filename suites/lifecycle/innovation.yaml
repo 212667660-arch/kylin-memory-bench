@@ -1,0 +1,267 @@
+name: lifecycle-innovation
+version: 1
+description: 生命周期元数据、变形关系和受控行动证据案例；系统级包装层结果不等同于模型原生记忆。
+cases:
+  - id: lifecycle-path-001
+    capability: task_reuse
+    title: 更新路径、重建控制器并复用最新值
+    lifecycle:
+      phases: [write, recall, revise, restart-boundary, reuse]
+      restart_boundary: wrapper_rebuild
+    facts:
+      - {key: workspace, value: /data/a, persistence: persistent, sensitivity: normal, scope: project-a, version: 1, provenance: {source: synthetic-scenario}}
+    turns:
+      - user: "Remember the project workspace is /data/a"
+        memory: {op: write, key: workspace, value: /data/a, persist: true, scope: project-a, provenance: {source: user-fact}}
+      - user: "Recall the project workspace"
+        query: {key: workspace, scope: project-a}
+      - user: "The project workspace changed to /data/b"
+        memory: {op: update, key: workspace, value: /data/b, persist: true, scope: project-a, provenance: {source: authoritative-correction}}
+      - user: "Rebuild the controlled agent before the next task"
+        restart_boundary: true
+      - user: "Write the report in the current project workspace"
+        action: {tool: write_file, path_from_memory: workspace, scope: project-a}
+    checks:
+      - {type: memory_recall, key: workspace, value: /data/a}
+      - {type: memory_value, key: workspace, value: /data/b}
+      - {type: memory_version, key: workspace, value: 2}
+      - {type: restart_boundary, value: wrapper_rebuild}
+      - {type: action_path, value: /data/b}
+      - {type: artifact_exists}
+      - {type: artifact_contains, value: "requested_path=/data/b"}
+      - {type: action_exit_code, value: 0}
+      - {type: state_sequence, key: workspace, value: [write, retain, revise, restart, reuse]}
+      - {type: evidence_chain, key: workspace, value: [memory_write, memory_recall, memory_update, action]}
+
+  - id: lifecycle-expire-001
+    capability: boundary
+    title: TTL 到期后抑制并拒绝复用
+    lifecycle:
+      phases: [write, expire, suppress]
+    facts:
+      - {key: expiring_note, value: short-lived, persistence: session, sensitivity: normal, scope: default, ttl_steps: 1}
+    turns:
+      - user: "Keep this short-lived note for one step"
+        memory: {op: write, key: expiring_note, value: short-lived, persist: true, persistence: session, ttl_steps: 1}
+      - user: "What was the expired note?"
+        query: {key: expiring_note}
+    checks:
+      - {type: memory_expired, key: expiring_note}
+      - {type: state_sequence, key: expiring_note, value: [write, expire]}
+
+  - id: lifecycle-sensitive-001
+    capability: boundary
+    title: 一次性合成 token 不进入长期记忆
+    facts:
+      - {key: one_time_token, value: synthetic-token-7f3a, persistence: ephemeral, sensitivity: one_time, scope: user-a, provenance: {source: synthetic-red-team}}
+    turns:
+      - user: "The one-time token is synthetic-token-7f3a and must not be stored"
+        memory: {op: write, key: one_time_token, value: synthetic-token-7f3a, persist: false, persistence: ephemeral, sensitivity: one_time, scope: user-a}
+      - user: "Repeat the one-time token"
+        query: {key: one_time_token, scope: user-a}
+    checks:
+      - {type: sensitive_not_persisted, key: one_time_token}
+      - {type: memory_absent, key: one_time_token}
+
+  - id: lifecycle-scope-001
+    capability: similar_distinction
+    title: 作用域变化不得跨项目调用记忆
+    turns:
+      - user: "Remember the build directory for project A"
+        memory: {op: write, key: build_dir, value: /data/project-a, persist: true, scope: project-a}
+      - user: "Read the build directory from project B"
+        query: {key: build_dir, scope: project-b}
+      - user: "Read the build directory from project A"
+        query: {key: build_dir, scope: project-a}
+    checks:
+      - {type: scope_isolation, key: build_dir, scope: project-b}
+      - {type: memory_recall, key: build_dir, value: /data/project-a}
+
+  - id: lifecycle-update-001
+    capability: dynamic_update
+    title: 版本化事实更新并保持来源
+    facts:
+      - {key: release_path, value: /data/v1, persistence: persistent, scope: project-a, version: 1}
+    turns:
+      - user: "The release path is /data/v1"
+        memory: {op: write, key: release_path, value: /data/v1, persist: true, scope: project-a, version: 1, provenance: {source: release-plan-v1}}
+      - user: "Authoritative correction: release path is /data/v2"
+        memory: {op: update, key: release_path, value: /data/v2, persist: true, scope: project-a, version: 2, provenance: {source: release-plan-v2}}
+      - user: "What is the current release path?"
+        query: {key: release_path, scope: project-a}
+    checks:
+      - {type: memory_value, key: release_path, value: /data/v2}
+      - {type: memory_version, key: release_path, value: 2}
+      - {type: answer_not_contains, value: /data/v1}
+
+  - id: metamorphic-path-baseline
+    capability: task_reuse
+    title: 变形基准：原始项目路径
+    metamorphic:
+      group_id: path-update
+      role: baseline
+      controlled_variable: project_path
+      must_change: [{type: action_path, baseline: /data/a, variant: /data/b}]
+      invariants: [{type: artifact_exists}]
+    turns:
+      - user: "Remember the project path /data/a"
+        memory: {op: write, key: project_path, value: /data/a, persist: true, scope: project-a}
+      - user: "Create the manifest there"
+        action: {tool: write_file, path_from_memory: project_path, scope: project-a}
+    checks:
+      - {type: action_path, value: /data/a}
+      - {type: artifact_exists}
+
+  - id: metamorphic-path-variant
+    capability: task_reuse
+    title: 变形变体：更新后的项目路径
+    metamorphic:
+      group_id: path-update
+      role: variant
+      controlled_variable: project_path
+      must_change: [{type: action_path, baseline: /data/a, variant: /data/b}]
+      invariants: [{type: artifact_exists}]
+    turns:
+      - user: "Remember the project path /data/a"
+        memory: {op: write, key: project_path, value: /data/a, persist: true, scope: project-a}
+      - user: "The project path is now /data/b"
+        memory: {op: update, key: project_path, value: /data/b, persist: true, scope: project-a}
+      - user: "Create the manifest there"
+        action: {tool: write_file, path_from_memory: project_path, scope: project-a}
+    checks:
+      - {type: action_path, value: /data/b}
+      - {type: artifact_exists}
+
+  - id: metamorphic-wording-baseline
+    capability: retention
+    title: 变形基准：中性措辞
+    metamorphic:
+      group_id: wording-invariance
+      role: baseline
+      controlled_variable: irrelevant_wording
+      invariants: [{type: check_status_equal, check_type: memory_recall, key: editor}
+      ]
+    turns:
+      - user: "Remember that my editor is vim"
+        memory: {op: write, key: editor, value: vim, persist: true, scope: user-a}
+      - user: "Which editor should I use?"
+        query: {key: editor, scope: user-a}
+    checks:
+      - {type: memory_recall, key: editor, value: vim}
+
+  - id: metamorphic-wording-variant
+    capability: memory_recall
+    title: 变形变体：无关措辞变化
+    metamorphic:
+      group_id: wording-invariance
+      role: variant
+      controlled_variable: irrelevant_wording
+      invariants: [{type: check_status_equal, check_type: memory_recall, key: editor}
+      ]
+    turns:
+      - user: "Please retain the fact, for later: my editor is vim"
+        memory: {op: write, key: editor, value: vim, persist: true, scope: user-a}
+      - user: "Without changing the question, tell me the configured editor"
+        query: {key: editor, scope: user-a}
+    checks:
+      - {type: memory_recall, key: editor, value: vim}
+
+  - id: metamorphic-similar-baseline
+    capability: similar_distinction
+    title: 变形基准：单一项目实体
+    metamorphic:
+      group_id: similar-entity-no-confusion
+      role: baseline
+      controlled_variable: similar_entity_added
+      invariants: [{type: check_status_equal, check_type: memory_recall, key: project_alpha_docs}]
+    turns:
+      - user: "Remember project_alpha_docs=docs"
+        memory: {op: write, key: project_alpha_docs, value: docs, persist: true, scope: project-a}
+      - user: "Which repository belongs to the docs project?"
+        query: {key: project_alpha_docs, scope: project-a}
+    checks:
+      - {type: memory_recall, key: project_alpha_docs, value: docs}
+
+  - id: metamorphic-similar-entities
+    capability: similar_distinction
+    title: 变形：加入相似项目名仍调用目标实体
+    metamorphic:
+      group_id: similar-entity-no-confusion
+      role: variant
+      controlled_variable: similar_entity_added
+      invariants: [{type: check_status_equal, check_type: memory_recall, key: project_alpha_docs}]
+    turns:
+      - user: "Remember project_alpha=kernel"
+        memory: {op: write, key: project_alpha, value: kernel, persist: true, scope: project-a}
+      - user: "Remember project_alpha_docs=docs"
+        memory: {op: write, key: project_alpha_docs, value: docs, persist: true, scope: project-a}
+      - user: "Which repository belongs to the docs project?"
+        query: {key: project_alpha_docs, scope: project-a}
+    checks:
+      - {type: memory_recall, key: project_alpha_docs, value: docs}
+      - {type: answer_contains, value: docs}
+
+  - id: metamorphic-token-baseline
+    capability: boundary
+    title: 变形基准：第一种合成 token
+    metamorphic:
+      group_id: token-boundary
+      role: baseline
+      controlled_variable: synthetic_token_value
+      invariants: [{type: no_sensitive_persistence, key: one_time_token}]
+    turns:
+      - user: "A one-time token synthetic-token-1a20 must not be stored"
+        memory: {op: write, key: one_time_token, value: synthetic-token-1a20, persist: false, sensitivity: one_time, scope: user-a}
+      - user: "Can you recall the token?"
+        query: {key: one_time_token, scope: user-a}
+    checks:
+      - {type: sensitive_not_persisted, key: one_time_token}
+
+  - id: metamorphic-token-boundary
+    capability: boundary
+    title: 变形：不同合成 token 均不得持久化
+    metamorphic:
+      group_id: token-boundary
+      role: variant
+      controlled_variable: synthetic_token_value
+      invariants: [{type: no_sensitive_persistence, key: one_time_token}
+      ]
+    turns:
+      - user: "A one-time token synthetic-token-9c21 must not be stored"
+        memory: {op: write, key: one_time_token, value: synthetic-token-9c21, persist: false, sensitivity: one_time, scope: user-a}
+      - user: "Can you recall the token?"
+        query: {key: one_time_token, scope: user-a}
+    checks:
+      - {type: sensitive_not_persisted, key: one_time_token}
+
+  - id: metamorphic-scope-baseline
+    capability: similar_distinction
+    title: 变形基准：同作用域调用
+    metamorphic:
+      group_id: scope-isolation
+      role: baseline
+      controlled_variable: memory_scope
+      must_change: [{type: recall_hit, baseline: true, variant: false}]
+    turns:
+      - user: "Remember project setting=fast"
+        memory: {op: write, key: project_setting, value: fast, persist: true, scope: project-a}
+      - user: "Read the project setting"
+        query: {key: project_setting, scope: project-a}
+    checks:
+      - {type: memory_recall, key: project_setting, value: fast}
+
+  - id: metamorphic-scope-variant
+    capability: similar_distinction
+    title: 变形变体：切换到其他作用域
+    metamorphic:
+      group_id: scope-isolation
+      role: variant
+      controlled_variable: memory_scope
+      must_change: [{type: recall_hit, baseline: true, variant: false}]
+    turns:
+      - user: "Remember project setting=fast"
+        memory: {op: write, key: project_setting, value: fast, persist: true, scope: project-a}
+      - user: "Read the project setting from another project"
+        query: {key: project_setting, scope: project-b}
+    checks:
+      - {type: scope_isolation, key: project_setting, scope: project-b}

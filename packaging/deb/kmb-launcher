@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+
+KMB_HOME="${KMB_HOME:-/usr/share/kylin-memory-bench}"
+if [ ! -d "$KMB_HOME/kmb" ]; then
+    printf '%s\n' "kylin-memory-bench installation is incomplete: $KMB_HOME/kmb is missing" >&2
+    exit 2
+fi
+if [ -n "${PYTHONPATH:-}" ]; then
+    export PYTHONPATH="$KMB_HOME:$PYTHONPATH"
+else
+    export PYTHONPATH="$KMB_HOME"
+fi
+exec /usr/bin/python3 -m kmb.cli "$@"

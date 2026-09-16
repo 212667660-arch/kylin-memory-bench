@@ -1,0 +1,6 @@
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/opt/system/sbin:/opt/system/bin
+dpkg-query: 系统没有安装软件包 openssh-server，因而没有相关的信息
+使用 dpkg --info (= dpkg-deb --info) 来检测打包好的文件，
+ls: 无法访问 '/usr/sbin/sshd': 没有那个文件或目录
+ls: 无法访问 '/usr/bin/sshd': 没有那个文件或目录
+-rwxr-xr-x 1 root root 65  9月 6日 00:58 /opt/kare/usr/sbin/sshd

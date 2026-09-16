@@ -1,0 +1,19 @@
+# 更新记录
+
+## 未发布
+
+- EvidenceEvent 增加 `source` 和 `evidence_class`，结果与报告增加模型原生、包装层、未证实自述和不可观测状态的边界说明。
+- 增加许可证审计、数据/Prompt 来源声明、openKylin 实机验证清单和离线 wheelhouse 准备脚本。
+- 正式验收脚本现在要求 `--require-openkylin` 通过，并会标记包装层运行的系统级结论。
+- 增加真实后端 `memory_disabled` 无记忆基线；每个案例仍调用模型并记录禁用、未命中和动作阻断证据。
+- 增加 openKylin/Debian `.deb` 技术验收包构建及安装、升级、卸载、smoke 验证脚本。
+- 补充无记忆对照命令、Debian 发布说明和 3-5 分钟 openKylin 桌面演示脚本。
+
+## 0.2.0 - 赛事可验收版本推进
+
+- 增加本地 `kmb serve` 评测工作台：复用 CLI runner 和真实结果，支持双 Agent 参数公平性、证据下钻、历史运行、配置健康检查和系统信息只读查看；前端不接触 API Key。
+
+- 增加 6 个对抗案例，覆盖噪声、冲突更新、相似实体、敏感边界和跨任务复用。
+- 增加证据引用、状态序列评分、重试、运行 ID、随机种子和失败汇总。
+- 增加外部 JSONL Replay 适配器、`validate`/`list-cases` 命令和离线 HTML 报告。
+- 增加 openKylin 环境矩阵、证据协议和贡献指南。

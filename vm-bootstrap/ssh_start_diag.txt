@@ -1,0 +1,4 @@
+start
+uid=1000(Cisyam) gid=1000(Cisyam) 组=1000(Cisyam),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),100(users),111(lpadmin),115(nopasswdlogin),990(sambashare)
+sudo: 需要密码
+sudo_exit:0

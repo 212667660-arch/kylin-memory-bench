@@ -1,0 +1,237 @@
+===etc-default===
+# Default settings for openssh-server. This file is sourced by /bin/sh from
+# /etc/init.d/ssh.
+
+# Options to pass to sshd
+SSHD_OPTS=
+===ssh-configs===
+  2098194      4 -rw-r--r--   1 root     root         1649 8月 13 16:50 /opt/kare-applications/shadow/merge/etc/ssh/ssh_config
+  2155290    608 -rw-r--r--   1 root     root       620042 7月 24  2024 /opt/kare-applications/shadow/merge/etc/ssh/moduli
+  2158210      4 -rw-r--r--   1 root     root         3223 7月 24  2024 /opt/kare-applications/shadow/merge/etc/ssh/sshd_config
+  2158230      4 -rw-------   1 root     root          505 9月  6 00:58 /opt/kare-applications/shadow/merge/etc/ssh/ssh_host_ecdsa_key
+  2158228      4 -rw-------   1 root     root         2590 9月  6 00:58 /opt/kare-applications/shadow/merge/etc/ssh/ssh_host_rsa_key
+  2158231      4 -rw-r--r--   1 root     root          171 9月  6 00:58 /opt/kare-applications/shadow/merge/etc/ssh/ssh_host_ecdsa_key.pub
+  2158233      4 -rw-r--r--   1 root     root           91 9月  6 00:58 /opt/kare-applications/shadow/merge/etc/ssh/ssh_host_ed25519_key.pub
+  2158232      4 -rw-------   1 root     root          399 9月  6 00:58 /opt/kare-applications/shadow/merge/etc/ssh/ssh_host_ed25519_key
+  2158229      4 -rw-r--r--   1 root     root          563 9月  6 00:58 /opt/kare-applications/shadow/merge/etc/ssh/ssh_host_rsa_key.pub
+===keys===
+find: ‘/opt/kare-applications/base/kare-v10sp1/etc/polkit-1/localauthority’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/etc/audit’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/etc/audisp’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/etc/ssl/private’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/run/sudo’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/run/saslauthd’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/run/cryptsetup’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/run/lock/lvm’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/run/lvm’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/var/spool/cron/crontabs’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/var/cache/ldconfig’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/var/cache/private’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/var/cache/apt/archives/partial’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/var/log/private’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/var/lib/polkit-1’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/var/lib/kim/private’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/var/lib/private’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/var/lib/NetworkManager’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/var/lib/apt/lists/partial’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/var/lib/colord’: 权限不够
+find: ‘/opt/kare-applications/base/kare-v10sp1/root’: 权限不够
+find: ‘/opt/kare-applications/shadow/work/etc/work’: 权限不够
+find: ‘/opt/kare-applications/shadow/work/usr/work’: 权限不够
+find: ‘/opt/kare-applications/shadow/work/var/work’: 权限不够
+find: ‘/opt/kare-applications/shadow/work/root/work’: 权限不够
+find: ‘/opt/kare-applications/shadow/work/opt/work’: 权限不够
+  2158230      4 -rw-------   1 root     root          505 9月  6 00:58 /opt/kare-applications/shadow/upper/etc/ssh/ssh_host_ecdsa_key
+  2158228      4 -rw-------   1 root     root         2590 9月  6 00:58 /opt/kare-applications/shadow/upper/etc/ssh/ssh_host_rsa_key
+  2158231      4 -rw-r--r--   1 root     root          171 9月  6 00:58 /opt/kare-applications/shadow/upper/etc/ssh/ssh_host_ecdsa_key.pub
+  2158233      4 -rw-r--r--   1 root     root           91 9月  6 00:58 /opt/kare-applications/shadow/upper/etc/ssh/ssh_host_ed25519_key.pub
+  2158232      4 -rw-------   1 root     root          399 9月  6 00:58 /opt/kare-applications/shadow/upper/etc/ssh/ssh_host_ed25519_key
+  2158229      4 -rw-r--r--   1 root     root          563 9月  6 00:58 /opt/kare-applications/shadow/upper/etc/ssh/ssh_host_rsa_key.pub
+find: ‘/opt/kare-applications/shadow/upper/var/cache/apt/archives/partial’: 权限不够
+  2158230      4 -rw-------   1 root     root          505 9月  6 00:58 /opt/kare-applications/shadow/merge/etc/ssh/ssh_host_ecdsa_key
+  2158228      4 -rw-------   1 root     root         2590 9月  6 00:58 /opt/kare-applications/shadow/merge/etc/ssh/ssh_host_rsa_key
+  2158231      4 -rw-r--r--   1 root     root          171 9月  6 00:58 /opt/kare-applications/shadow/merge/etc/ssh/ssh_host_ecdsa_key.pub
+  2158233      4 -rw-r--r--   1 root     root           91 9月  6 00:58 /opt/kare-applications/shadow/merge/etc/ssh/ssh_host_ed25519_key.pub
+  2158232      4 -rw-------   1 root     root          399 9月  6 00:58 /opt/kare-applications/shadow/merge/etc/ssh/ssh_host_ed25519_key
+  2158229      4 -rw-r--r--   1 root     root          563 9月  6 00:58 /opt/kare-applications/shadow/merge/etc/ssh/ssh_host_rsa_key.pub
+find: ‘/opt/kare-applications/shadow/merge/etc/polkit-1/rules.d’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/etc/credstore’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/etc/cups/ssl’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/etc/ipsec.d/private’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/etc/ssl/private’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/etc/credstore.encrypted’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/usr/etc/polkit-1/rules.d’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/usr/etc/credstore’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/usr/etc/ipsec.d/private’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/usr/etc/ssl/private’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/usr/etc/credstore.encrypted’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/spool/cron/crontabs’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/spool/rsyslog’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/spool/cups’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/tmp/systemd-private-4f0fdc6103074b44a7e58dc6df00eadc-upower.service-m2dGXA’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/tmp/systemd-private-4f0fdc6103074b44a7e58dc6df00eadc-polkit.service-JHIhei’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/tmp/systemd-private-4f0fdc6103074b44a7e58dc6df00eadc-systemd-logind.service-fTrzuC’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/tmp/systemd-private-4f0fdc6103074b44a7e58dc6df00eadc-systemd-resolved.service-HRpyXC’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/tmp/systemd-private-4f0fdc6103074b44a7e58dc6df00eadc-systemd-timesyncd.service-8NYzBj’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/tmp/systemd-private-4f0fdc6103074b44a7e58dc6df00eadc-systemd-resolved.service-SUdroP’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/tmp/vmware-root_932-2722632322’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/tmp/systemd-private-4f0fdc6103074b44a7e58dc6df00eadc-upower.service-CxuqVR’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/tmp/systemd-private-4f0fdc6103074b44a7e58dc6df00eadc-systemd-logind.service-ucLWFg’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/tmp/systemd-private-4f0fdc6103074b44a7e58dc6df00eadc-systemd-timesyncd.service-3BVvcN’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/tmp/python_env_2xlxw8’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/tmp/systemd-private-4f0fdc6103074b44a7e58dc6df00eadc-polkit.service-De84Ek’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/tmp/pulse-PKdhtXMmr18n’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/cache/cups’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/cache/ldconfig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/cache/private’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/cache/apt/archives/partial’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/log/private’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/base/top.openkylin.base/binary/1.1.13/files/etc/polkit-1/rules.d’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/base/top.openkylin.base/binary/1.1.13/files/etc/audit’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/base/top.openkylin.base/binary/1.1.13/files/etc/ssl/private’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/base/top.openkylin.base/binary/1.1.13/files/var/cache/ldconfig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/base/top.openkylin.base/binary/1.1.13/files/var/log/audit’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/base/top.openkylin.base/binary/1.1.13/files/var/lib/polkit-1’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/base/top.openkylin.base/binary/1.1.13/files/root’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-music/binary/1.1.0.47-ok9.25k0.97/sig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-music/binary/1.1.0.47-ok9.25k0.97/sizeinfo’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-scanner/binary/3.2.1-ok2.22k1.65/sig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-scanner/binary/3.2.1-ok2.22k1.65/sizeinfo’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-burner/binary/3.2.0.1-kylin1k32.01-ok28k1.62/sig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-burner/binary/3.2.0.1-kylin1k32.01-ok28k1.62/sizeinfo’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-recorder/binary/1.3.0.2-0k3.3-ok5.14k0.79/sig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-recorder/binary/1.3.0.2-0k3.3-ok5.14k0.79/sizeinfo’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-camera/binary/1.3.0.16-ok1.67k0.56/sig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-camera/binary/1.3.0.16-ok1.67k0.56/sizeinfo’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-weather/binary/3.2.0.3-ok16.11k1.19/sig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-weather/binary/3.2.0.3-ok16.11k1.19/sizeinfo’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-calculator/binary/1.2.0.0-ok6.15k0.44/sig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-calculator/binary/1.2.0.0-ok6.15k0.44/sizeinfo’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-video/binary/3.1.4-2k1-ok26.21k0.114/sig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-video/binary/3.1.4-2k1-ok26.21k0.114/sizeinfo’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/runtime/top.openkylin.ukui/binary/1.1.43-k0.2/files/etc/polkit-1/rules.d’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/runtime/top.openkylin.ukui/binary/1.1.43-k0.2/files/var/spool/cron/crontabs’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/runtime/top.openkylin.ukui/binary/1.1.43-k0.2/files/var/cache/ldconfig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/runtime/top.openkylin.ukui/binary/1.1.43-k0.2/files/var/lib/polkit-1’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/runtime/top.openkylin.ukui/binary/1.1.43-k0.2/files/var/lib/saned’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kaiming/layers/stable/x86_64/runtime/top.openkylin.ukui/binary/1.1.43-k0.2/files/var/lib/avahi-autoipd’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/etc/polkit-1/localauthority’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/etc/audit’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/etc/audisp’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/etc/ssl/private’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/run/sudo’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/run/saslauthd’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/run/cryptsetup’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/run/lock/lvm’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/run/lvm’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/var/spool/cron/crontabs’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/var/cache/ldconfig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/var/cache/private’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/var/cache/apt/archives/partial’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/var/log/private’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/var/lib/polkit-1’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/var/lib/kim/private’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/var/lib/private’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/var/lib/NetworkManager’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/var/lib/apt/lists/partial’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/var/lib/colord’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/base/kare-v10sp1/root’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/shadow/work/etc/work’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/shadow/work/usr/work’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/shadow/work/var’: 符号连接的层数过多
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/shadow/work/root/work’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/shadow/work/opt/work’: 权限不够
+  2158230      4 -rw-------   1 root     root          505 9月  6 00:58 /opt/kare-applications/shadow/merge/var/opt/kare-applications/shadow/upper/etc/ssh/ssh_host_ecdsa_key
+  2158228      4 -rw-------   1 root     root         2590 9月  6 00:58 /opt/kare-applications/shadow/merge/var/opt/kare-applications/shadow/upper/etc/ssh/ssh_host_rsa_key
+  2158231      4 -rw-r--r--   1 root     root          171 9月  6 00:58 /opt/kare-applications/shadow/merge/var/opt/kare-applications/shadow/upper/etc/ssh/ssh_host_ecdsa_key.pub
+  2158233      4 -rw-r--r--   1 root     root           91 9月  6 00:58 /opt/kare-applications/shadow/merge/var/opt/kare-applications/shadow/upper/etc/ssh/ssh_host_ed25519_key.pub
+  2158232      4 -rw-------   1 root     root          399 9月  6 00:58 /opt/kare-applications/shadow/merge/var/opt/kare-applications/shadow/upper/etc/ssh/ssh_host_ed25519_key
+  2158229      4 -rw-r--r--   1 root     root          563 9月  6 00:58 /opt/kare-applications/shadow/merge/var/opt/kare-applications/shadow/upper/etc/ssh/ssh_host_rsa_key.pub
+find: ‘/opt/kare-applications/shadow/merge/var/opt/kare-applications/shadow/upper/var’: 符号连接的层数过多
+find: ‘/opt/kare-applications/shadow/merge/var/lib/polkit-1’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/lib/saned’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/lib/openvpn/chroot’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/lib/lightdm’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/lib/AccountsService/users’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/lib/bluetooth’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/lib/private’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/lib/NetworkManager’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/lib/avahi-autoipd’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/lib/apt/lists/partial’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/lib/strongswan’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/var/lib/udisks2’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/root/.cache’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/root/.ssh’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/root/.config/pulse’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/base/top.openkylin.base/binary/1.1.13/files/etc/polkit-1/rules.d’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/base/top.openkylin.base/binary/1.1.13/files/etc/audit’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/base/top.openkylin.base/binary/1.1.13/files/etc/ssl/private’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/base/top.openkylin.base/binary/1.1.13/files/var/cache/ldconfig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/base/top.openkylin.base/binary/1.1.13/files/var/log/audit’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/base/top.openkylin.base/binary/1.1.13/files/var/lib/polkit-1’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/base/top.openkylin.base/binary/1.1.13/files/root’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-music/binary/1.1.0.47-ok9.25k0.97/sig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-music/binary/1.1.0.47-ok9.25k0.97/sizeinfo’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-scanner/binary/3.2.1-ok2.22k1.65/sig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-scanner/binary/3.2.1-ok2.22k1.65/sizeinfo’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-burner/binary/3.2.0.1-kylin1k32.01-ok28k1.62/sig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-burner/binary/3.2.0.1-kylin1k32.01-ok28k1.62/sizeinfo’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-recorder/binary/1.3.0.2-0k3.3-ok5.14k0.79/sig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-recorder/binary/1.3.0.2-0k3.3-ok5.14k0.79/sizeinfo’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-camera/binary/1.3.0.16-ok1.67k0.56/sig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-camera/binary/1.3.0.16-ok1.67k0.56/sizeinfo’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-weather/binary/3.2.0.3-ok16.11k1.19/sig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-weather/binary/3.2.0.3-ok16.11k1.19/sizeinfo’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-calculator/binary/1.2.0.0-ok6.15k0.44/sig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-calculator/binary/1.2.0.0-ok6.15k0.44/sizeinfo’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-video/binary/3.1.4-2k1-ok26.21k0.114/sig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/app/top.openkylin.kylin-video/binary/3.1.4-2k1-ok26.21k0.114/sizeinfo’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/runtime/top.openkylin.ukui/binary/1.1.43-k0.2/files/etc/polkit-1/rules.d’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/runtime/top.openkylin.ukui/binary/1.1.43-k0.2/files/var/spool/cron/crontabs’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/runtime/top.openkylin.ukui/binary/1.1.43-k0.2/files/var/cache/ldconfig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/runtime/top.openkylin.ukui/binary/1.1.43-k0.2/files/var/lib/polkit-1’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/runtime/top.openkylin.ukui/binary/1.1.43-k0.2/files/var/lib/saned’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kaiming/layers/stable/x86_64/runtime/top.openkylin.ukui/binary/1.1.43-k0.2/files/var/lib/avahi-autoipd’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/etc/polkit-1/localauthority’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/etc/audit’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/etc/audisp’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/etc/ssl/private’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/run/sudo’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/run/saslauthd’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/run/cryptsetup’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/run/lock/lvm’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/run/lvm’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/var/spool/cron/crontabs’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/var/cache/ldconfig’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/var/cache/private’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/var/cache/apt/archives/partial’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/var/log/private’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/var/lib/polkit-1’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/var/lib/kim/private’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/var/lib/private’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/var/lib/NetworkManager’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/var/lib/apt/lists/partial’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/var/lib/colord’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/base/kare-v10sp1/root’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/shadow/work/etc/work’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/shadow/work/usr/work’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/shadow/work/var/work’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/shadow/work/root/work’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/shadow/work/opt’: 符号连接的层数过多
+  2158230      4 -rw-------   1 root     root          505 9月  6 00:58 /opt/kare-applications/shadow/merge/opt/kare-applications/shadow/upper/etc/ssh/ssh_host_ecdsa_key
+  2158228      4 -rw-------   1 root     root         2590 9月  6 00:58 /opt/kare-applications/shadow/merge/opt/kare-applications/shadow/upper/etc/ssh/ssh_host_rsa_key
+  2158231      4 -rw-r--r--   1 root     root          171 9月  6 00:58 /opt/kare-applications/shadow/merge/opt/kare-applications/shadow/upper/etc/ssh/ssh_host_ecdsa_key.pub
+  2158233      4 -rw-r--r--   1 root     root           91 9月  6 00:58 /opt/kare-applications/shadow/merge/opt/kare-applications/shadow/upper/etc/ssh/ssh_host_ed25519_key.pub
+  2158232      4 -rw-------   1 root     root          399 9月  6 00:58 /opt/kare-applications/shadow/merge/opt/kare-applications/shadow/upper/etc/ssh/ssh_host_ed25519_key
+  2158229      4 -rw-r--r--   1 root     root          563 9月  6 00:58 /opt/kare-applications/shadow/merge/opt/kare-applications/shadow/upper/etc/ssh/ssh_host_rsa_key.pub
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/shadow/upper/var/cache/apt/archives/partial’: 权限不够
+find: ‘/opt/kare-applications/shadow/merge/opt/kare-applications/shadow/upper/opt’: 符号连接的层数过多
+===sshd-modes===
+usage: kare run [-h] [--redirect_io] ...
+
+positional arguments:
+  run_args
+
+options:
+  -h, --help     show this help message and exit
+  --redirect_io  将标准输入输出重定向到运行程序内

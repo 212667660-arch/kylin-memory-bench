@@ -1,0 +1,14 @@
+name: deepseek-no-memory-baseline
+type: memory_disabled
+version: "deepseek-v4-flash"
+base_url: https://api.deepseek.com
+endpoint: /chat/completions
+model: deepseek-v4-flash
+api_key_env: DEEPSEEK_API_KEY
+api_timeout_seconds: 180
+request_options:
+  temperature: 0
+description: >-
+  Real DeepSeek v4 flash backend with the external KylinMemoryBench
+  memory/action controller disabled. This is a no-memory comparison baseline,
+  not a native memory claim.

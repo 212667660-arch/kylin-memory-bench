@@ -1,0 +1,112 @@
+======
+总计 40
+drwxr-xr-x   2 root root 4096  9月 4日 20:54 backup
+lrwxrwxrwx   5 root root    7  8月13日 16:50 bin -> usr/bin
+drwxr-xr-x   7 root root 4096  9月 4日 21:06 boot
+drwxr-xr-x   2 root root 4096  9月 4日 20:59 cdrom
+dr-xr-xr-x   6 root root 4096  9月 4日 20:54 data
+drwxr-xr-x  19 root root 4060  9月 6日 00:35 dev
+drwxr-xr-x   1 root root 4096  9月 6日 00:54 etc
+drwxr-xr-x   3 root root 4096  9月 4日 21:04 home
+lrwxrwxrwx   5 root root    7  8月13日 16:50 lib -> usr/lib
+lrwxrwxrwx   3 root root    9  8月13日 16:50 lib32 -> usr/lib32
+lrwxrwxrwx   5 root root    9  8月13日 16:50 lib64 -> usr/lib64
+lrwxrwxrwx   3 root root   10  8月13日 16:50 libx32 -> usr/libx32
+lrwxrwxrwx   3 root root    9  8月13日 16:50 media -> run/media
+lrwxrwxrwx   3 root root    7  8月13日 16:50 mnt -> var/mnt
+lrwxrwxrwx   3 root root    7  8月13日 16:50 opt -> var/opt
+lrwxrwxrwx   3 root root   14  8月13日 16:50 ostree -> sysroot/ostree
+dr-xr-xr-x 437 root root    0  9月 6日 00:33 proc
+drwx------   6 root root 4096  9月 4日 21:09 root
+drwxr-xr-x  37 root root 1040  9月 6日 00:58 run
+lrwxrwxrwx   5 root root    8  8月13日 16:50 sbin -> usr/sbin
+lrwxrwxrwx   3 root root    7  8月13日 16:50 srv -> var/srv
+dr-xr-xr-x  13 root root    0  9月 6日 00:33 sys
+drwxr-xr-x  14 root root 4096  9月 4日 20:59 sysroot
+lrwxrwxrwx   3 root root    7  8月13日 16:50 tmp -> var/tmp
+drwxr-xr-x   1 root root 4096  9月 4日 21:09 usr
+drwxr-xr-x  14 root root 4096  9月 4日 21:09 var
+======
+总计 40
+drwxr-xr-x   2 root root 4096  9月 4日 20:54 backup
+lrwxrwxrwx   5 root root    7  8月13日 16:50 bin -> usr/bin
+drwxr-xr-x   7 root root 4096  9月 4日 21:06 boot
+drwxr-xr-x   2 root root 4096  9月 4日 20:59 cdrom
+dr-xr-xr-x   6 root root 4096  9月 4日 20:54 data
+drwxr-xr-x  19 root root 4060  9月 6日 00:35 dev
+drwxr-xr-x   1 root root 4096  9月 6日 00:54 etc
+drwxr-xr-x   3 root root 4096  9月 4日 21:04 home
+lrwxrwxrwx   5 root root    7  8月13日 16:50 lib -> usr/lib
+lrwxrwxrwx   3 root root    9  8月13日 16:50 lib32 -> usr/lib32
+lrwxrwxrwx   5 root root    9  8月13日 16:50 lib64 -> usr/lib64
+lrwxrwxrwx   3 root root   10  8月13日 16:50 libx32 -> usr/libx32
+lrwxrwxrwx   3 root root    9  8月13日 16:50 media -> run/media
+lrwxrwxrwx   3 root root    7  8月13日 16:50 mnt -> var/mnt
+lrwxrwxrwx   3 root root    7  8月13日 16:50 opt -> var/opt
+lrwxrwxrwx   3 root root   14  8月13日 16:50 ostree -> sysroot/ostree
+dr-xr-xr-x 437 root root    0  9月 6日 00:33 proc
+drwx------   6 root root 4096  9月 4日 21:09 root
+drwxr-xr-x  37 root root 1040  9月 6日 00:58 run
+lrwxrwxrwx   5 root root    8  8月13日 16:50 sbin -> usr/sbin
+lrwxrwxrwx   3 root root    7  8月13日 16:50 srv -> var/srv
+dr-xr-xr-x  13 root root    0  9月 6日 01:09 sys
+drwxr-xr-x  14 root root 4096  9月 4日 20:59 sysroot
+lrwxrwxrwx   3 root root    7  8月13日 16:50 tmp -> var/tmp
+drwxr-xr-x   1 root root 4096  9月 4日 21:09 usr
+drwxr-xr-x  14 root root 4096  9月 4日 21:09 var
+======
+总计 40
+drwxr-xr-x   2 root root 4096  9月 4日 20:54 backup
+lrwxrwxrwx   5 root root    7  8月13日 16:50 bin -> usr/bin
+drwxr-xr-x   7 root root 4096  9月 4日 21:06 boot
+drwxr-xr-x   2 root root 4096  9月 4日 20:59 cdrom
+dr-xr-xr-x   6 root root 4096  9月 4日 20:54 data
+drwxr-xr-x  19 root root 4060  9月 6日 00:35 dev
+drwxr-xr-x   1 root root 4096  9月 6日 00:54 etc
+drwxr-xr-x   3 root root 4096  9月 4日 21:04 home
+lrwxrwxrwx   5 root root    7  8月13日 16:50 lib -> usr/lib
+lrwxrwxrwx   3 root root    9  8月13日 16:50 lib32 -> usr/lib32
+lrwxrwxrwx   5 root root    9  8月13日 16:50 lib64 -> usr/lib64
+lrwxrwxrwx   3 root root   10  8月13日 16:50 libx32 -> usr/libx32
+lrwxrwxrwx   3 root root    9  8月13日 16:50 media -> run/media
+lrwxrwxrwx   3 root root    7  8月13日 16:50 mnt -> var/mnt
+lrwxrwxrwx   3 root root    7  8月13日 16:50 opt -> var/opt
+lrwxrwxrwx   3 root root   14  8月13日 16:50 ostree -> sysroot/ostree
+dr-xr-xr-x 437 root root    0  9月 6日 00:33 proc
+drwx------   6 root root 4096  9月 4日 21:09 root
+drwxr-xr-x  37 root root 1040  9月 6日 00:58 run
+lrwxrwxrwx   5 root root    8  8月13日 16:50 sbin -> usr/sbin
+lrwxrwxrwx   3 root root    7  8月13日 16:50 srv -> var/srv
+dr-xr-xr-x  13 root root    0  9月 6日 01:09 sys
+drwxr-xr-x  14 root root 4096  9月 4日 20:59 sysroot
+lrwxrwxrwx   3 root root    7  8月13日 16:50 tmp -> var/tmp
+drwxr-xr-x   1 root root 4096  9月 4日 21:09 usr
+drwxr-xr-x  14 root root 4096  9月 4日 21:09 var
+======
+总计 40
+drwxr-xr-x   2 root root 4096  9月 4日 20:54 backup
+lrwxrwxrwx   5 root root    7  8月13日 16:50 bin -> usr/bin
+drwxr-xr-x   7 root root 4096  9月 4日 21:06 boot
+drwxr-xr-x   2 root root 4096  9月 4日 20:59 cdrom
+dr-xr-xr-x   6 root root 4096  9月 4日 20:54 data
+drwxr-xr-x  19 root root 4060  9月 6日 00:35 dev
+drwxr-xr-x   1 root root 4096  9月 6日 00:54 etc
+drwxr-xr-x   3 root root 4096  9月 4日 21:04 home
+lrwxrwxrwx   5 root root    7  8月13日 16:50 lib -> usr/lib
+lrwxrwxrwx   3 root root    9  8月13日 16:50 lib32 -> usr/lib32
+lrwxrwxrwx   5 root root    9  8月13日 16:50 lib64 -> usr/lib64
+lrwxrwxrwx   3 root root   10  8月13日 16:50 libx32 -> usr/libx32
+lrwxrwxrwx   3 root root    9  8月13日 16:50 media -> run/media
+lrwxrwxrwx   3 root root    7  8月13日 16:50 mnt -> var/mnt
+lrwxrwxrwx   3 root root    7  8月13日 16:50 opt -> var/opt
+lrwxrwxrwx   3 root root   14  8月13日 16:50 ostree -> sysroot/ostree
+dr-xr-xr-x 437 root root    0  9月 6日 00:33 proc
+drwx------   6 root root 4096  9月 4日 21:09 root
+drwxr-xr-x  37 root root 1040  9月 6日 00:58 run
+lrwxrwxrwx   5 root root    8  8月13日 16:50 sbin -> usr/sbin
+lrwxrwxrwx   3 root root    7  8月13日 16:50 srv -> var/srv
+dr-xr-xr-x  13 root root    0  9月 6日 01:09 sys
+drwxr-xr-x  14 root root 4096  9月 4日 20:59 sysroot
+lrwxrwxrwx   3 root root    7  8月13日 16:50 tmp -> var/tmp
+drwxr-xr-x   1 root root 4096  9月 4日 21:09 usr
+drwxr-xr-x  14 root root 4096  9月 4日 21:09 var

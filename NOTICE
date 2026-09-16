@@ -1,0 +1,18 @@
+# KylinMemoryBench Notice
+
+This repository currently contains original KylinMemoryBench source code,
+project-authored benchmark cases, and research documentation. The reviewed
+third-party repositories listed in `docs/license-audit.md` are not copied into
+the benchmark source, suites, or examples.
+
+The `.tmp-github-research/` directory is research cache only and must not be
+included in a release archive, package, or `.deb` without a separate license
+and data audit.
+
+This NOTICE is not a project license and grants no rights. The project-level
+LICENSE selection remains a release decision for the project owner. A
+non-active MIT candidate is stored in `LICENSE-MIT-CANDIDATE.txt`; it must not
+be treated as the final license before written confirmation.
+
+See `THIRD_PARTY_NOTICES.md` for the current dependency, research-reference,
+and cloud-output release boundaries.

@@ -1,0 +1,54 @@
+===desktop===
+[Desktop Entry]
+Type=Application
+Name=openKylin SSH (VM)
+Exec=/home/Cisyam/.local/bin/openkylin-user-ssh-start
+Terminal=false
+X-GNOME-Autostart-enabled=true
+===launcher===
+#!/bin/sh
+set -u
+PORT="${KMB_USER_SSH_PORT:-2222}"
+HOSTKEY="$HOME/.ssh/ssh_host_ed25519_key"
+CONFIG="$HOME/.ssh/sshd_config_vm"
+LOG="$HOME/.ssh/sshd_vm_${PORT}.log"
+PIDFILE="$HOME/.ssh/sshd_vm_${PORT}.pid"
+if [ ! -f "$HOSTKEY" ]; then
+  if command -v ssh-keygen >/dev/null 2>&1; then
+    ssh-keygen -t ed25519 -f "$HOSTKEY" -N '' -q
+  else
+    exit 1
+  fi
+fi
+if [ ! -f "$CONFIG" ]; then
+  cat > "$CONFIG" <<CFG
+Port ${PORT}
+ListenAddress 0.0.0.0
+HostKey ${HOSTKEY}
+PidFile ${PIDFILE}
+AuthorizedKeysFile %h/.ssh/authorized_keys
+PasswordAuthentication no
+PubkeyAuthentication yes
+ChallengeResponseAuthentication no
+UsePAM no
+PermitRootLogin no
+AllowUsers $(id -un)
+Subsystem sftp internal-sftp
+CFG
+fi
+if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+  exit 0
+fi
+exec /opt/kare/usr/sbin/sshd -f "$CONFIG" -E "$LOG"
+===ports===
+State  Recv-Q Send-Q      Local Address:Port Peer Address:PortProcess                         
+LISTEN 0      128               0.0.0.0:2222      0.0.0.0:*    users:(("sshd",pid=30851,fd=4))
+LISTEN 0      1024            127.0.0.1:8000      0.0.0.0:*                                   
+LISTEN 0      1024            127.0.0.1:8002      0.0.0.0:*                                   
+LISTEN 0      4096        127.0.0.53%lo:53        0.0.0.0:*                                   
+LISTEN 0      32              127.0.0.1:53        0.0.0.0:*                                   
+LISTEN 0      4096           127.0.0.54:53        0.0.0.0:*                                   
+LISTEN 0      4096            127.0.0.1:631       0.0.0.0:*                                   
+LISTEN 0      4096                [::1]:631          [::]:*                                   
+LISTEN 0      32                  [::1]:53           [::]:*                                   
+LISTEN 0      4096   [::ffff:127.0.0.1]:8001            *:*                                   

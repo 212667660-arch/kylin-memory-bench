@@ -1,0 +1,13 @@
+name: deepseek-api
+type: http
+version: "待确认"
+base_url: https://api.deepseek.com
+endpoint: /chat/completions
+# 本账号已实际验证可调用；不要把 API Key 写入此文件。
+model: deepseek-v4-flash
+api_key_env: DEEPSEEK_API_KEY
+timeout_seconds: 60
+request_options:
+  temperature: 0
+description: >-
+  DeepSeek OpenAI 兼容 API 适配器。运行前只需设置 DEEPSEEK_API_KEY。

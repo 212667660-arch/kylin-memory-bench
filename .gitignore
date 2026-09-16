@@ -1,0 +1,50 @@
+# Secrets and local credentials
+.env
+.env.*
+*.env
+credentials.env
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local environments and caches
+.kmb-venv/
+.venv-*/
+.pip-cache*/
+.tmp-*/
+.tmp-*/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+
+# Scratch / research / local tooling (not product source)
+_ui_ref/
+_codexpp_research/
+.codexpp_research/
+tmp/
+tmp*/
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
+
+# Generated benchmark and release artifacts
+runs/
+dist/
+build/
+*.deb
+*.whl
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+
+# Local session extracts (may contain pasted secrets)
+_codex_threads/
