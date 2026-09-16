@@ -644,9 +644,9 @@
     const progress = job && job.progress ? Math.round((Number(job.progress.completed || 0) / Math.max(1, Number(job.progress.total || 2))) * 100) : 0;
     return '<div class="workspace-intro compact-intro"><div><p>使用相同参数运行两个 Agent。</p></div><div class="section-actions"><button class="button" data-action="reload" type="button">刷新配置</button><button class="button" data-toolbar="copy" type="button">复制配置</button></div></div>'
       + '<section class="workspace-surface compare-workspace"><div class="surface-toolbar"><div><h3>Agent 对比</h3></div><span class="compare-lock">参数锁定</span></div><div class="agent-compare-grid">'
-      + '<div class="agent-pane blue"><div class="agent-pane-head"><div><h3>主 Agent</h3></div></div><div class="field"><label for="primary-agent">配置档案</label><select id="primary-agent">' + configOptions(primary) + '</select></div>' + agentMetaHtml(primaryConfig) + '<div class="agent-pane-footer"><span id="health-primary">' + healthStateMarkup(primary, "尚未检查连接") + '</span><button class="button small" data-health="primary" type="button">连接检查</button></div></div>'
+      + '<div class="agent-pane blue"><div class="agent-pane-head"><div><h3>主智能体</h3></div></div><div class="field"><label for="primary-agent">配置档案</label><select id="primary-agent">' + configOptions(primary) + '</select></div>' + agentMetaHtml(primaryConfig) + '<div class="agent-pane-footer"><span id="health-primary">' + healthStateMarkup(primary, "尚未检查连接") + '</span><button class="button small" data-health="primary" type="button">连接检查</button></div></div>'
       + '<div class="compare-divider" aria-hidden="true">对比</div>'
-      + '<div class="agent-pane orange"><div class="agent-pane-head"><div><h3>对比 Agent</h3></div></div><div class="field"><label for="comparison-agent">配置档案</label><select id="comparison-agent">' + configOptions(comparison) + '</select></div>' + agentMetaHtml(comparisonConfig) + '<div class="agent-pane-footer"><span id="health-comparison">' + healthStateMarkup(comparison, "尚未检查连接") + '</span><button class="button small" data-health="comparison" type="button">连接检查</button></div></div>'
+      + '<div class="agent-pane orange"><div class="agent-pane-head"><div><h3>对比智能体</h3></div></div><div class="field"><label for="comparison-agent">配置档案</label><select id="comparison-agent">' + configOptions(comparison) + '</select></div>' + agentMetaHtml(comparisonConfig) + '<div class="agent-pane-footer"><span id="health-comparison">' + healthStateMarkup(comparison, "尚未检查连接") + '</span><button class="button small" data-health="comparison" type="button">连接检查</button></div></div>'
       + '</div></section>'
       + '<section class="workspace-surface run-config"><div class="surface-toolbar"><div><h3>评测参数</h3></div>' + (changed ? '<span class="change-badge">参数已变化</span>' : '<span class="lock-badge">▣ 已锁定</span>') + '</div><div class="run-config-grid"><div class="field suite-field"><label for="suite">测试套件</label><select id="suite">' + suiteOptions(suite) + '</select>' + suiteInsightHtml(suite) + '</div><div class="field"><label for="seed">Seed</label><input id="seed" type="number" value="' + escapeHtml(state.params.seed) + '"></div><div class="field"><label for="retries">重试次数</label><input id="retries" min="0" max="5" type="number" value="' + escapeHtml(state.params.retries) + '"></div><div class="field"><label for="timeout">单案例超时（秒）</label><input id="timeout" min="1" max="900" type="number" value="' + escapeHtml(state.params.timeout) + '"></div><div class="field"><label for="scorer-version">评分器版本</label><input id="scorer-version" type="text" value="' + escapeHtml(state.params.scorer_version) + '"></div></div>' + (changed ? '<div class="change-warning"><strong>比较参数已变化。</strong> 本次运行将使用新的条件，不能与旧运行直接当作同一实验。</div>' : '') + '</section>'
       + '<section class="workspace-surface validation-workspace"><div class="surface-toolbar"><div><h3>运行前校验</h3></div><button id="start-run" class="button primary" type="button"' + ((!primary || !comparison || !suite || primary === comparison) ? " disabled" : "") + '>▶ 开始评测</button></div><div class="validation-inline"><ul class="validation-list">'
@@ -845,115 +845,127 @@
 
   function updateParamsFromForm() { ["seed", "retries", "timeout", "scorer-version"].forEach((id) => { const input = $("#" + id); if (input) state.params[id === "scorer-version" ? "scorer_version" : id] = input.value; }); }
 
-  function enhanceSelectMenus() {
-    const roots = document.querySelectorAll(".field select, .filter-row select");
-    roots.forEach((select) => {
-      if (select.dataset.menuBound === "1") return;
-      select.dataset.menuBound = "1";
-      select.classList.add("native-select");
-      const wrap = document.createElement("div");
+  function selectTriggerLabel(select) {
+    const opt = select.options[select.selectedIndex];
+    return opt ? opt.text : "选择…";
+  }
+
+  function ensureSelectMenu(select) {
+    let wrap = select.closest(".select-menu");
+    if (!wrap) {
+      wrap = document.createElement("div");
       wrap.className = "select-menu";
       select.parentNode.insertBefore(wrap, select);
       wrap.appendChild(select);
+    }
+    select.classList.add("native-select");
+    select.setAttribute("tabindex", "-1");
+    select.setAttribute("aria-hidden", "true");
 
-      const label = select.options[select.selectedIndex]
-        ? select.options[select.selectedIndex].text
-        : "选择…";
-      const trigger = document.createElement("button");
+    let trigger = wrap.querySelector(":scope > .select-trigger");
+    if (!trigger) {
+      trigger = document.createElement("button");
       trigger.type = "button";
       trigger.className = "select-trigger";
       trigger.setAttribute("aria-haspopup", "listbox");
       trigger.setAttribute("aria-expanded", "false");
       trigger.innerHTML = '<span class="select-trigger-text"></span><span class="select-chevron" aria-hidden="true">▾</span>';
-      trigger.querySelector(".select-trigger-text").textContent = label;
       wrap.appendChild(trigger);
-
-      const popup = document.createElement("div");
+    }
+    let popup = wrap.querySelector(":scope > .select-popup");
+    if (!popup) {
+      popup = document.createElement("div");
       popup.className = "select-popup";
       popup.setAttribute("role", "listbox");
+      popup.tabIndex = -1;
       wrap.appendChild(popup);
+    }
 
-      const rebuild = () => {
-        popup.innerHTML = "";
-        let group = null;
-        const items = [];
-        Array.from(select.options).forEach((opt) => {
-          if (opt.parentElement && opt.parentElement.tagName === "OPTGROUP" && group !== opt.parentElement.label) {
-            group = opt.parentElement.label;
-            const gl = document.createElement("div");
-            gl.className = "select-group-label";
-            gl.textContent = group;
-            popup.appendChild(gl);
-          } else if (!opt.parentElement || opt.parentElement.tagName !== "OPTGROUP") {
-            group = null;
-          }
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.className = "select-option" + (opt.selected ? " selected" : "");
-          btn.setAttribute("role", "option");
-          btn.dataset.value = opt.value;
-          btn.innerHTML = '<span></span><span class="select-option-check">✓</span>';
-          btn.querySelector("span").textContent = opt.text;
-          btn.addEventListener("click", () => {
-            select.value = opt.value;
-            select.dispatchEvent(new Event("change", { bubbles: true }));
-            trigger.querySelector(".select-trigger-text").textContent = opt.text;
-            wrap.classList.remove("open");
-            trigger.setAttribute("aria-expanded", "false");
-          });
-          popup.appendChild(btn);
-          items.push(btn);
+    const syncLabel = () => {
+      trigger.querySelector(".select-trigger-text").textContent = selectTriggerLabel(select);
+    };
+    syncLabel();
+
+    const rebuildOptions = () => {
+      popup.innerHTML = "";
+      const items = [];
+      let lastGroup = null;
+      Array.from(select.options).forEach((opt) => {
+        const groupLabel = opt.parentElement && opt.parentElement.tagName === "OPTGROUP" ? opt.parentElement.label : null;
+        if (groupLabel && groupLabel !== lastGroup) {
+          lastGroup = groupLabel;
+          const gl = document.createElement("div");
+          gl.className = "select-group-label";
+          gl.textContent = groupLabel;
+          popup.appendChild(gl);
+        }
+        if (!groupLabel) lastGroup = null;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "select-option" + (opt.selected ? " selected" : "");
+        btn.setAttribute("role", "option");
+        btn.dataset.value = opt.value;
+        btn.innerHTML = '<span class="select-option-label"></span><span class="select-option-check">✓</span>';
+        btn.querySelector(".select-option-label").textContent = opt.text;
+        btn.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          select.value = opt.value;
+          select.dispatchEvent(new Event("change", { bubbles: true }));
+          syncLabel();
+          rebuildOptions();
+          closeSelectMenus();
+          trigger.focus();
         });
-        let active = items.findIndex((el) => el.classList.contains("selected"));
-        if (active < 0) active = 0;
-        const setActive = (index) => {
-          items.forEach((el) => el.classList.remove("active"));
-          if (items[index]) items[index].classList.add("active");
-        };
-        setActive(active);
-        popup.onkeydown = (event) => {
-          if (event.key === "ArrowDown") { event.preventDefault(); active = Math.min(items.length - 1, active + 1); setActive(active); items[active]?.scrollIntoView({ block: "nearest" }); }
-          if (event.key === "ArrowUp") { event.preventDefault(); active = Math.max(0, active - 1); setActive(active); items[active]?.scrollIntoView({ block: "nearest" }); }
-          if (event.key === "Enter" || event.key === " ") { event.preventDefault(); items[active]?.click(); }
-          if (event.key === "Escape") { wrap.classList.remove("open"); trigger.setAttribute("aria-expanded", "false"); trigger.focus(); }
-        };
+        popup.appendChild(btn);
+        items.push(btn);
+      });
+      let active = Math.max(0, items.findIndex((el) => el.classList.contains("selected")));
+      const setActive = (index) => {
+        items.forEach((el) => el.classList.remove("active"));
+        if (items[index]) items[index].classList.add("active");
       };
-      rebuild();
-
-      const closeAll = (except) => {
-        document.querySelectorAll(".select-menu.open").forEach((el) => {
-          if (el === except) return;
-          el.classList.remove("open");
-          const t = el.querySelector(".select-trigger");
-          if (t) t.setAttribute("aria-expanded", "false");
-        });
+      setActive(active);
+      popup.onkeydown = (event) => {
+        if (event.key === "ArrowDown") { event.preventDefault(); active = Math.min(items.length - 1, active + 1); setActive(active); items[active]?.scrollIntoView({ block: "nearest" }); }
+        if (event.key === "ArrowUp") { event.preventDefault(); active = Math.max(0, active - 1); setActive(active); items[active]?.scrollIntoView({ block: "nearest" }); }
+        if (event.key === "Home") { event.preventDefault(); active = 0; setActive(active); items[0]?.scrollIntoView({ block: "nearest" }); }
+        if (event.key === "End") { event.preventDefault(); active = items.length - 1; setActive(active); items[active]?.scrollIntoView({ block: "nearest" }); }
+        if (event.key === "Enter" || event.key === " ") { event.preventDefault(); items[active]?.click(); }
+        if (event.key === "Escape") { closeSelectMenus(); trigger.focus(); }
       };
+    };
+    rebuildOptions();
 
+    if (!trigger.dataset.bound) {
+      trigger.dataset.bound = "1";
       trigger.addEventListener("click", (event) => {
+        event.preventDefault();
         event.stopPropagation();
-        const open = !wrap.classList.contains("open");
-        closeAll(wrap);
-        wrap.classList.toggle("open", open);
-        trigger.setAttribute("aria-expanded", open ? "true" : "false");
-        if (open) {
+        const willOpen = !wrap.classList.contains("open");
+        closeSelectMenus();
+        if (willOpen) {
+          wrap.classList.add("open");
+          trigger.setAttribute("aria-expanded", "true");
           const selected = popup.querySelector(".select-option.selected") || popup.querySelector(".select-option");
           if (selected) selected.scrollIntoView({ block: "nearest" });
-          popup.focus?.();
+          popup.focus({ preventScroll: true });
         }
       });
-      select.addEventListener("change", () => {
-        const opt = select.options[select.selectedIndex];
-        if (opt) trigger.querySelector(".select-trigger-text").textContent = opt.text;
-        popup.querySelectorAll(".select-option").forEach((el) => {
-          el.classList.toggle("selected", el.dataset.value === select.value);
-        });
-      });
-    });
+    }
+
+    select.addEventListener("change", () => {
+      syncLabel();
+      rebuildOptions();
+    }, { once: false });
+
+    return wrap;
   }
-  document.addEventListener("click", (event) => {
-    if (event.target && event.target.closest && event.target.closest(".select-menu")) return;
-    closeSelectMenus();
-  });
+
+  function enhanceSelectMenus() {
+    document.querySelectorAll("#view-root select").forEach(ensureSelectMenu);
+  }
+
   function closeSelectMenus() {
     document.querySelectorAll(".select-menu.open").forEach((el) => {
       el.classList.remove("open");

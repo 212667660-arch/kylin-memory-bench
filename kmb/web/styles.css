@@ -1656,3 +1656,52 @@ td strong { color: var(--foreground); font-weight: 600; }
   border-radius: 999px;
   background: hsl(226 14% 24%);
 }
+
+
+/* Select menu layout safety: trigger is the only in-flow control */
+.select-menu {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+.select-trigger {
+  width: 100%;
+  min-width: 0;
+  background: hsl(226 24% 6.5%);
+  border: 1px solid hsl(226 14% 24%);
+  border-radius: 10px;
+  min-height: 40px;
+  height: 40px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--foreground);
+}
+.select-trigger:hover { border-color: hsl(226 14% 30%); background: hsl(226 20% 8%); }
+.select-trigger[aria-expanded="true"] {
+  border-color: hsl(232 88% 64% / 0.65);
+  box-shadow: 0 0 0 3px hsl(232 88% 64% / 0.22);
+  background: hsl(226 20% 8%);
+}
+.select-popup {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 300px;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--popover);
+  box-shadow: var(--shadow-lg);
+  display: none;
+}
+.select-menu.open .select-popup { display: block; }
+.agent-pane,
+.agent-compare-grid,
+.compare-workspace,
+.field { min-width: 0; }
+.agent-compare-grid { overflow: visible; }
