@@ -844,6 +844,124 @@
   function closeDrawer() { $("#case-drawer").classList.remove("open"); $("#case-drawer").setAttribute("aria-hidden", "true"); $("#drawer-backdrop").hidden = true; }
 
   function updateParamsFromForm() { ["seed", "retries", "timeout", "scorer-version"].forEach((id) => { const input = $("#" + id); if (input) state.params[id === "scorer-version" ? "scorer_version" : id] = input.value; }); }
+
+  function enhanceSelectMenus() {
+    const roots = document.querySelectorAll(".field select, .filter-row select");
+    roots.forEach((select) => {
+      if (select.dataset.menuBound === "1") return;
+      select.dataset.menuBound = "1";
+      select.classList.add("native-select");
+      const wrap = document.createElement("div");
+      wrap.className = "select-menu";
+      select.parentNode.insertBefore(wrap, select);
+      wrap.appendChild(select);
+
+      const label = select.options[select.selectedIndex]
+        ? select.options[select.selectedIndex].text
+        : "选择…";
+      const trigger = document.createElement("button");
+      trigger.type = "button";
+      trigger.className = "select-trigger";
+      trigger.setAttribute("aria-haspopup", "listbox");
+      trigger.setAttribute("aria-expanded", "false");
+      trigger.innerHTML = '<span class="select-trigger-text"></span><span class="select-chevron" aria-hidden="true">▾</span>';
+      trigger.querySelector(".select-trigger-text").textContent = label;
+      wrap.appendChild(trigger);
+
+      const popup = document.createElement("div");
+      popup.className = "select-popup";
+      popup.setAttribute("role", "listbox");
+      wrap.appendChild(popup);
+
+      const rebuild = () => {
+        popup.innerHTML = "";
+        let group = null;
+        const items = [];
+        Array.from(select.options).forEach((opt) => {
+          if (opt.parentElement && opt.parentElement.tagName === "OPTGROUP" && group !== opt.parentElement.label) {
+            group = opt.parentElement.label;
+            const gl = document.createElement("div");
+            gl.className = "select-group-label";
+            gl.textContent = group;
+            popup.appendChild(gl);
+          } else if (!opt.parentElement || opt.parentElement.tagName !== "OPTGROUP") {
+            group = null;
+          }
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "select-option" + (opt.selected ? " selected" : "");
+          btn.setAttribute("role", "option");
+          btn.dataset.value = opt.value;
+          btn.innerHTML = '<span></span><span class="select-option-check">✓</span>';
+          btn.querySelector("span").textContent = opt.text;
+          btn.addEventListener("click", () => {
+            select.value = opt.value;
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+            trigger.querySelector(".select-trigger-text").textContent = opt.text;
+            wrap.classList.remove("open");
+            trigger.setAttribute("aria-expanded", "false");
+          });
+          popup.appendChild(btn);
+          items.push(btn);
+        });
+        let active = items.findIndex((el) => el.classList.contains("selected"));
+        if (active < 0) active = 0;
+        const setActive = (index) => {
+          items.forEach((el) => el.classList.remove("active"));
+          if (items[index]) items[index].classList.add("active");
+        };
+        setActive(active);
+        popup.onkeydown = (event) => {
+          if (event.key === "ArrowDown") { event.preventDefault(); active = Math.min(items.length - 1, active + 1); setActive(active); items[active]?.scrollIntoView({ block: "nearest" }); }
+          if (event.key === "ArrowUp") { event.preventDefault(); active = Math.max(0, active - 1); setActive(active); items[active]?.scrollIntoView({ block: "nearest" }); }
+          if (event.key === "Enter" || event.key === " ") { event.preventDefault(); items[active]?.click(); }
+          if (event.key === "Escape") { wrap.classList.remove("open"); trigger.setAttribute("aria-expanded", "false"); trigger.focus(); }
+        };
+      };
+      rebuild();
+
+      const closeAll = (except) => {
+        document.querySelectorAll(".select-menu.open").forEach((el) => {
+          if (el === except) return;
+          el.classList.remove("open");
+          const t = el.querySelector(".select-trigger");
+          if (t) t.setAttribute("aria-expanded", "false");
+        });
+      };
+
+      trigger.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const open = !wrap.classList.contains("open");
+        closeAll(wrap);
+        wrap.classList.toggle("open", open);
+        trigger.setAttribute("aria-expanded", open ? "true" : "false");
+        if (open) {
+          const selected = popup.querySelector(".select-option.selected") || popup.querySelector(".select-option");
+          if (selected) selected.scrollIntoView({ block: "nearest" });
+          popup.focus?.();
+        }
+      });
+      select.addEventListener("change", () => {
+        const opt = select.options[select.selectedIndex];
+        if (opt) trigger.querySelector(".select-trigger-text").textContent = opt.text;
+        popup.querySelectorAll(".select-option").forEach((el) => {
+          el.classList.toggle("selected", el.dataset.value === select.value);
+        });
+      });
+    });
+  }
+  document.addEventListener("click", (event) => {
+    if (event.target && event.target.closest && event.target.closest(".select-menu")) return;
+    closeSelectMenus();
+  });
+  function closeSelectMenus() {
+    document.querySelectorAll(".select-menu.open").forEach((el) => {
+      el.classList.remove("open");
+      const t = el.querySelector(".select-trigger");
+      if (t) t.setAttribute("aria-expanded", "false");
+    });
+  }
+
   function bindViewEvents() {
     document.querySelectorAll("#view-root [data-view]").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
     const primary = $("#primary-agent"), comparison = $("#comparison-agent"), suite = $("#suite");
@@ -869,6 +987,7 @@
     document.querySelectorAll("[data-provider-detail]").forEach((button) => button.addEventListener("click", () => { state.providerDetail = button.dataset.providerDetail; render(); }));
      document.querySelectorAll("[data-go-compare-tab]").forEach((button) => button.addEventListener("click", () => { state.resultTab = button.dataset.goCompareTab || "cases"; state.view = "results"; render(); }));
      document.querySelectorAll("[data-go-compare-case]").forEach((button) => button.addEventListener("click", () => { state.selectedCase = button.dataset.goCompareCase; state.resultTab = "cases"; state.view = "results"; render(); }));
+    enhanceSelectMenus();
   }
 
   async function healthCheck(which) { const config = which === "primary" ? $("#primary-agent")?.value : $("#comparison-agent")?.value; if (!config) return; const target = $("#health-" + which); if (target) { target.textContent = "检查中…"; target.className = "health-state"; } try { const result = await api("/api/health", { method: "POST", body: JSON.stringify({ config }) }); state.health[config] = result; if (target) { target.innerHTML = healthStateMarkup(config, "尚未检查连接"); } } catch (error) { state.health[config] = { status: "error", error: error.message, checked_at: new Date().toISOString() }; if (target) { target.innerHTML = healthStateMarkup(config, "尚未检查连接"); } } }
