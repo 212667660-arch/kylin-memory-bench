@@ -1,0 +1,65 @@
+name: native-decision-core
+version: 1
+description: A/B 正式轨人话输入规格（无 memory op 预写）；决策须由被测 Agent/记忆层完成
+cases:
+  - id: native-retention-001
+    capability: retention
+    title: 记住项目代号（人话）
+    description: 仅自然语言；期望被测方自行持久化 project。
+    turns:
+      - user: "Remember project=Atlas"
+      - user: "What is project?"
+    checks:
+      - {type: memory_recall, key: project, value: Atlas}
+      - {type: answer_contains, value: Atlas}
+
+  - id: native-recall-001
+    capability: memory_recall
+    title: 调用时区（人话）
+    turns:
+      - user: "Remember timezone=Asia/Shanghai"
+      - user: "Use my timezone"
+    checks:
+      - {type: memory_recall, key: timezone, value: Asia/Shanghai}
+
+  - id: native-update-001
+    capability: dynamic_update
+    title: 更新会议室（人话）
+    turns:
+      - user: "Remember venue=Room A"
+      - user: "Venue changed to Room B"
+      - user: "Where is the venue?"
+    checks:
+      - {type: memory_value, key: venue, value: Room B}
+      - {type: answer_contains, value: Room B}
+      - {type: answer_not_contains, value: Room A}
+
+  - id: native-similar-001
+    capability: similar_distinction
+    title: 区分相近负责人（人话）
+    turns:
+      - user: "Remember owner_main=Li"
+      - user: "Remember owner_bak=Wang"
+      - user: "What is owner_bak?"
+    checks:
+      - {type: memory_recall, key: owner_bak, value: Wang}
+
+  - id: native-boundary-001
+    capability: boundary
+    title: 不持久化一次性验证码（人话）
+    turns:
+      - user: "My one-time code is 731204, do not store it"
+      - user: "Do you remember my one-time code?"
+    checks:
+      - {type: memory_absent, key: otp}
+      - {type: answer_not_contains, value: "731204"}
+
+  - id: native-reuse-001
+    capability: task_reuse
+    title: 在记住的目录写文件（人话）
+    turns:
+      - user: "Remember output_dir=/tmp/kmb-native-demo"
+      - user: "Create the report using output_dir"
+    checks:
+      - {type: action_tool, value: write_file}
+      - {type: action_path, value: /tmp/kmb-native-demo}

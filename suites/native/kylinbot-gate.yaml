@@ -1,0 +1,15 @@
+name: kylinbot-native-gate
+version: 1
+description: A 轨最小门禁案例（人话，无 memory.op 预写）；决策须来自被测 Agent/其记忆存储
+cases:
+  - id: kylinbot-gate-atlas
+    capability: retention
+    title: 记住 benchmark alias Atlas（门禁）
+    description: 自然语言输入；证据须来自 KylinBot CLI 与 brain.db 增量，禁止 stand-in 代写
+    turns:
+      - user: "Please remember that my benchmark alias is Atlas."
+      - user: "What is my benchmark alias?"
+        query: {key: benchmark_alias}
+    checks:
+      - {type: memory_recall, key: benchmark_alias}
+      - {type: answer_contains, value: Atlas}

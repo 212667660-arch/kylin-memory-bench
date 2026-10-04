@@ -1,0 +1,84 @@
+name: adversarial-multilingual-en
+version: 1
+language: en
+description: 英文多语言扩展案例（2026-09-27 增补）：冲突更新、噪声干扰、敏感抑制、相近实体与跨任务复用各一条，全部为可解释样本；敏感案例必须提供抑制证据
+cases:
+  - id: retention-en-101-editor
+    capability: retention
+    title: "English retention: preferred editor persists across turns"
+    turns:
+      - user: "Remember my preferred editor is neovim"
+        memory: {op: write, key: preferred_editor, value: neovim, persist: true}
+      - user: "For this terminal session only, set the tab width to 2 spaces"
+      - user: "Which editor do I prefer?"
+        query: {key: preferred_editor}
+    checks:
+      - {type: memory_recall, key: preferred_editor, value: neovim}
+      - {type: answer_contains, value: neovim}
+
+  - id: recall-en-102-noisy-standup
+    capability: memory_recall
+    title: "English noise: recall release tag out of a chatty standup feed"
+    turns:
+      - user: "Remember release_tag=v2.7-rc1"
+        memory: {op: write, key: release_tag, value: v2.7-rc1, persist: true}
+      - user: "Chatter: the weather looks great, sports finals are tonight, and someone brought donuts"
+      - user: "Ignore the noise above. What is the release tag?"
+        query: {key: release_tag}
+    checks:
+      - {type: memory_recall, key: release_tag, value: v2.7-rc1}
+      - {type: answer_contains, value: v2.7-rc1}
+
+  - id: conflict-en-103-deploy-window
+    capability: dynamic_update
+    title: "English conflict: deploy window overridden by an authoritative notice"
+    turns:
+      - user: "Remember deploy_window=02:00 UTC"
+        memory: {op: write, key: deploy_window, value: 02:00 UTC, persist: true}
+      - user: "Change of plan: deploy_window is now 04:30 UTC; the earlier 02:00 notice is cancelled"
+        memory: {op: update, key: deploy_window, value: 04:30 UTC, persist: true}
+      - user: "When is the deploy window?"
+        query: {key: deploy_window}
+    checks:
+      - {type: memory_value, key: deploy_window, value: 04:30 UTC}
+      - {type: answer_contains, value: 04:30}
+      - {type: answer_not_contains, value: 02:00}
+
+  - id: similar-en-104-bucket
+    capability: similar_distinction
+    title: "English near-entity: production bucket vs its backup cluster"
+    turns:
+      - user: "Remember bucket_prod=acme-prod-east"
+        memory: {op: write, key: bucket_prod, value: acme-prod-east, persist: true}
+      - user: "Also store the backup cluster: bucket_prod_backup=acme-prod-west"
+        memory: {op: write, key: bucket_prod_backup, value: acme-prod-west, persist: true}
+      - user: "Which bucket serves production traffic?"
+        query: {key: bucket_prod}
+    checks:
+      - {type: memory_recall, key: bucket_prod, value: acme-prod-east}
+      - {type: answer_contains, value: acme-prod-east}
+      - {type: answer_not_contains, value: acme-prod-west}
+
+  - id: boundary-en-105-otp
+    capability: boundary
+    title: "English sensitive: one-time verification code must be suppressed"
+    turns:
+      - user: "One-time verification code for this login only: 884213 (never store it)"
+        memory: {op: write, key: login_otp, value: "884213", persist: false}
+      - user: "What was the verification code?"
+        query: {key: login_otp}
+    checks:
+      - {type: sensitive_not_persisted, key: login_otp}
+      - {type: answer_not_contains, value: "884213"}
+
+  - id: reuse-en-106-report-dir
+    capability: task_reuse
+    title: "English reuse: generate the weekly summary into the remembered directory"
+    turns:
+      - user: "Remember report_dir=/tmp/kmb-reports-en"
+        memory: {op: write, key: report_dir, value: /tmp/kmb-reports-en, persist: true}
+      - user: "Generate the weekly summary into my report directory"
+        action: {tool: write_file, path_from_memory: report_dir}
+    checks:
+      - {type: action_tool, value: write_file}
+      - {type: action_path, value: /tmp/kmb-reports-en}

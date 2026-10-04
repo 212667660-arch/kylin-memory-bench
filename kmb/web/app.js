@@ -12,6 +12,7 @@
   const state = {
     view: "overview",
     configs: [],
+    agents: [],
     suites: [],
     runs: [],
     system: null,
@@ -34,6 +35,8 @@
     providerDetail: null,
     savedAt: null,
     moreOpen: false,
+    quickSelected: [],
+    quickNotice: null,
     configDraft: {
       profile_id: "",
       provider: "",
@@ -54,6 +57,8 @@
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   const fmt = (value, fallback = "未观测") => value == null || value === "" ? fallback : String(value);
   const pct = (value) => Number.isFinite(Number(value)) ? Number(value).toFixed(2) : "0.00";
+  const scoreValid = (agent) => Boolean(agent) && agent.score_valid !== false;
+  const scoreText = (agent) => scoreValid(agent) ? pct(agent.overall) : "不可评分";
   const safeJson = (value) => escapeHtml(JSON.stringify(value, null, 2));
   const api = async (path, options) => {
     const response = await fetch(path, Object.assign({ headers: { "Content-Type": "application/json" } }, options || {}));
@@ -124,7 +129,11 @@
       "deepseek-api": "DeepSeek · 标准 API",
       "doubao-api": "Doubao · 标准 API",
       "real-agent-a": "真实智能体 A",
-      "external-replay": "外部证据回放"
+      "external-replay": "外部证据回放",
+      kylinbot: "小K KylinBot",
+      hermes: "Hermes",
+      openclaw: "OpenClaw",
+      kylinagent: "KylinAgent"
     };
     return exact[raw.toLowerCase()] || raw
       .replace(/\breference\b/gi, "参考基线")
@@ -235,6 +244,11 @@
     action_failure: "实际动作失败",
     runtime_error: "运行错误",
     timeout: "超时",
+    credential_error: "凭据错误",
+    billing_error: "余额或计费错误",
+    missing_input: "缺少输入或存储",
+    not_observable: "证据不可观测",
+    unsupported_action: "动作不受支持",
     invalid_behavior: "行为不符合规则",
     verified: "证据已记录",
   };
@@ -267,12 +281,15 @@
       } catch (error) { /* ignore malformed local-only draft */ }
     }
     const failures = [];
-    const results = await Promise.allSettled([api("/api/configs"), api("/api/suites"), api("/api/runs?limit=120"), api("/api/system")]);
-    ["configs", "suites", "runs", "system"].forEach((key, index) => {
+    const results = await Promise.allSettled([api("/api/configs"), api("/api/agents"), api("/api/suites"), api("/api/runs?limit=120"), api("/api/system")]);
+    ["configs", "agents", "suites", "runs", "system"].forEach((key, index) => {
       const result = results[index];
       if (result.status === "fulfilled") state[key] = key === "system" ? result.value : (result.value[key] || result.value);
       else failures.push(result.reason.message);
     });
+    const runnable = (state.agents || []).filter((agent) => agent && agent.installed && agent.runnable).map((agent) => agent.id);
+    state.quickSelected = state.quickSelected.filter((id) => runnable.includes(id));
+    if (!state.quickSelected.length) state.quickSelected = runnable.slice(0, 2);
     if (failures.length) showGlobalError(failures.join("；")); else showGlobalError("");
     updateEnvironmentBadge();
     if (state.selectedRunPath && state.view === "results") {
@@ -572,6 +589,7 @@
     const recentAgents = recentAgentUsage();
     return '<div class="workspace-intro compact-intro"><div></div><div class="section-actions"><button class="button" data-view="new" type="button">新建评测</button>' + (latest ? '<button class="button" data-open-run="' + escapeHtml(latest.path) + '" type="button">打开最近运行</button>' : '') + '</div></div>'
       + '<section class="overview-current"><div><h3>' + escapeHtml(headline) + '</h3><p>' + escapeHtml(agents) + '</p></div><div class="overview-current-meta">' + latestStatus + '<span>' + escapeHtml(latest ? fmt(latest.started_at, "时间未记录") : "等待第一次运行") + '</span></div></section>'
+      + quickCompareMarkup()
       + (recentAgents.length ? '<section class="overview-section"><div class="section-title-row"><h3>最近使用 Agent</h3></div><div class="overview-run-list">' + recentAgents.map((item) => '<div class="overview-run-row static"><span class="run-status-dot completed"></span><span class="overview-run-main"><strong>' + escapeHtml(item.name) + '</strong><small>' + escapeHtml(item.meta) + '</small></span><span class="overview-run-score">' + escapeHtml(item.score) + '</span><span class="overview-run-time">' + escapeHtml(item.runs + " 次") + '</span></div>').join("") + '</div></section>' : '')
       + '<div class="overview-columns">'
       + '<section class="overview-section"><div class="section-title-row"><h3>评测趋势</h3></div>' + trendMarkup() + '</section>'
@@ -611,6 +629,26 @@
     state.runs.filter((run) => run.failure_counts && Object.keys(run.failure_counts).length).slice(0, 8).forEach((run) => Object.entries(run.failure_counts).forEach(([type, count]) => items.push({ run, type, count })));
     if (!items.length) return '<div class="empty-inline">暂无可从运行摘要确认的失败类型。</div>';
     return '<div class="overview-failure-list">' + items.slice(0, 8).map((item) => '<div class="overview-failure-row"><span class="failure-preview-id">' + escapeHtml(item.run.id || item.run.agent || '运行') + '</span><span>' + escapeHtml(item.run.agent || 'Agent') + '</span><span class="status-pill failed">' + escapeHtml(failureLabel(item.type)) + '</span><strong>' + escapeHtml(String(item.count)) + ' 次</strong></div>').join('') + '</div>';
+  }
+
+  function quickCompareMarkup() {
+    const agents = Array.isArray(state.agents) ? state.agents : [];
+    const selected = state.quickSelected || [];
+    const active = state.job && ["queued", "running", "stopping"].includes(state.job.status) && state.job.kind === "quick_compare";
+    const ready = selected.length === 2 && !active;
+    const jobError = state.job && state.job.kind === "quick_compare" && state.job.status === "error" ? { kind: "error", message: state.job.error || "快速对比失败，请查看任务日志。" } : null;
+    const currentNotice = state.quickNotice || jobError;
+    const notice = currentNotice ? '<div class="quick-compare-notice ' + (currentNotice.kind === "error" ? "error" : "success") + '" role="status">' + escapeHtml(currentNotice.message) + '</div>' : '';
+    const runnableCount = agents.filter((agent) => Boolean(agent.installed && agent.runnable)).length;
+    const rows = agents.length ? agents.map((agent) => {
+      const runnable = Boolean(agent.installed && agent.runnable);
+      const checked = selected.includes(agent.id);
+      const status = !agent.installed ? "未安装" : runnable ? "可自动运行" : "需手动观测";
+      const fixHint = !runnable && agent.fix_hint ? (agent.reason ? "；" + agent.fix_hint : agent.fix_hint) : "";
+      const detail = runnable ? (agent.evidence_mode === "agent_memory_observed" ? "可读取结构化记忆证据" : "已发现运行入口") : (agent.reason || "当前适配器不能自动驱动") + fixHint;
+      return '<label class="quick-agent-row ' + (!runnable ? "unavailable" : "") + '"><input type="checkbox" data-quick-agent value="' + escapeHtml(agent.id) + '"' + (checked ? " checked" : "") + (!runnable || active ? " disabled" : "") + '><span class="quick-agent-copy"><strong>' + escapeHtml(displayAgentName(agent.id || agent.display_name)) + '</strong><small>' + escapeHtml(detail) + '</small></span><span class="status-pill ' + (runnable ? "completed" : "partial") + '">' + escapeHtml(status) + '</span></label>';
+    }).join("") : '<div class="empty-inline">尚未发现已安装的支持 Agent。请在 openKylin 环境刷新。</div>';
+    return '<section class="workspace-surface quick-compare-panel"><div class="surface-toolbar"><div><div class="eyebrow">QUICK COMPARE</div><h3>快速对比</h3><p>选择两个系统中已有的 Agent，使用固定六维套件直接生成可追溯结果。</p></div><span class="quick-compare-count">已选 ' + selected.length + ' / 2</span></div><div class="quick-compare-body"><div class="quick-agent-list">' + rows + '</div><div class="quick-compare-actions"><span class="field-help">默认参数：Seed 42 · 重试 1 次 · 单案例 180 秒</span><button class="button" data-quick-auto type="button"' + (runnableCount >= 2 && !active ? "" : " disabled") + ' title="自动选择两个可运行 Agent 并立即开始">一键对比可用 Agent</button><button class="button primary" data-quick-start type="button"' + (ready ? "" : " disabled") + '>' + (active ? "对比运行中…" : "开始快速对比") + '</button></div>' + notice + (active ? '<div class="quick-job-progress" role="status"><span>' + escapeHtml((state.job.progress && state.job.progress.phase) || "正在准备") + '</span><div class="progress-track"><div class="progress-value" style="width:' + Math.round((Number(state.job.progress?.completed || 0) / Math.max(1, Number(state.job.progress?.total || 2))) * 100) + '%"></div></div></div>' : '') + '</div></section>';
   }
 
   function renderTasks() {
@@ -694,9 +732,10 @@
     if (!latency) return null;
     return latency.mean != null ? Number(latency.mean) : latency.average != null ? Number(latency.average) : null;
   }
-  function scoreDelta(primary, comparison) { return comparison ? Number(primary.overall || 0) - Number(comparison.overall || 0) : null; }
+  function scoreDelta(primary, comparison) { return comparison && scoreValid(primary) && scoreValid(comparison) ? Number(primary.overall || 0) - Number(comparison.overall || 0) : null; }
   function winnerText(primary, comparison) {
     if (!comparison) return "单 Agent";
+    if (!scoreValid(primary) || !scoreValid(comparison)) return "不可比较";
     const delta = scoreDelta(primary, comparison);
     if (delta === 0) return "平局";
     return delta > 0 ? displayAgentName(primary.agent || "主 Agent") : displayAgentName(comparison.agent || "对比 Agent");
@@ -706,6 +745,9 @@
     return '<div class="workspace-intro compact-intro result-dashboard-intro"><div><div class="run-summary"><span>运行 <strong>' + escapeHtml(record.id || state.selectedRunPath || path) + '</strong></span><span>状态 <strong>' + escapeHtml(statusLabel(record.status || "completed")) + '</strong></span><span>案例 <strong>' + fmt(primary.cases, "未记录") + '</strong></span><span>随机种子 <strong>' + fmt(primary.seed, "未记录") + '</strong></span></div></div><div class="section-actions"><button class="button" data-view="history" type="button">切换运行</button><button class="button primary" data-view="new" type="button">开始新的评测</button></div></div>' + resultTabs("result");
   }
   function dashboardDimensionSnapshot(primary, comparison) {
+    if (!scoreValid(primary) || (comparison && !scoreValid(comparison))) {
+      return '<section class="workspace-surface empty-inline"><strong>本次运行不可评分</strong><span>至少一个 Agent 出现运行错误；请先处理余额、凭据、超时或运行环境问题，再比较六维能力。</span></section>';
+    }
     const rows = CAPABILITIES.map((item) => ({ item, delta: comparison == null ? null : Number((primary.dimensions || {})[item[0]] || 0) - Number((comparison.dimensions || {})[item[0]] || 0) })).filter((row) => row.delta != null).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
     const differenceList = comparison && rows.length ? '<section class="workspace-surface dashboard-differences"><div class="surface-toolbar"><div><h3>差异最大的项目</h3></div><button class="link-button" data-result-tab="compare" type="button">查看完整对比 →</button></div><div class="difference-list">' + rows.slice(0, 4).map((row) => '<button class="difference-row" data-result-tab="cases" type="button"><span class="difference-rank">' + (rows.indexOf(row) + 1) + '</span><span><strong>' + row.item[1] + '</strong><small>' + row.item[0] + '</small></span><span class="difference-value ' + (row.delta < 0 ? 'negative' : '') + '">' + (row.delta > 0 ? '+' : '') + pct(row.delta) + '</span><span class="difference-note">点击查看案例</span></button>').join('') + '</div></section>' : '';
     return '<div class="dashboard-analysis-grid"><section class="workspace-surface"><div class="surface-toolbar"><div><h3>六维能力得分</h3></div><button class="link-button" data-result-tab="compare" type="button">查看完整对比 →</button></div><div class="dashboard-dimensions"><div class="dashboard-dimension-head"><span>能力维度</span><span>' + escapeHtml(displayAgentName(primary.agent || "主 Agent")) + '</span><span>' + escapeHtml(displayAgentName(comparison?.agent || "对比 Agent")) + '</span><span>差值</span></div>' + CAPABILITIES.map((item) => { const a = Number((primary.dimensions || {})[item[0]] || 0), b = comparison ? Number((comparison.dimensions || {})[item[0]] || 0) : null; const d = b == null ? null : a - b; return '<div class="dashboard-dimension-row"><div><strong>' + item[1] + '</strong><span>' + item[0] + '</span></div><span class="dashboard-score blue">' + pct(a) + '</span><span class="dashboard-score orange">' + (b == null ? '未观测' : pct(b)) + '</span><span class="dashboard-delta ' + (d != null && d < 0 ? 'negative' : '') + '">' + (d == null ? '—' : (d > 0 ? '+' : '') + pct(d)) + '</span></div>'; }).join('') + '</div><div class="dashboard-legend"><span><i class="legend-dot blue"></i>' + escapeHtml(displayAgentName(primary.agent || "主 Agent")) + '</span>' + (comparison ? '<span><i class="legend-dot orange"></i>' + escapeHtml(displayAgentName(comparison.agent || "对比 Agent")) + '</span>' : '') + '</div></section><section class="workspace-surface radar-surface"><div class="surface-toolbar"><div><h3>能力雷达</h3></div></div><div class="radar-wrap compact">' + radarChart(primary.dimensions || {}, comparison && comparison.dimensions) + '</div></section></div>' + differenceList;
@@ -730,7 +772,7 @@
     const cases = Number(primary.cases || (primary.results || []).length || 0);
     return resultDashboardHeader(primary, comparison, path)
       + '<div class="boundary-notice"><strong>观测边界</strong> ' + escapeHtml((primary.observability || {}).disclaimer || "模型文本不能替代状态证据。") + '<span class="source-key" title="原始来源字段：model / wrapper / simulated / runner">模型 / 包装层 / 模拟 / 运行器</span></div>'
-      + '<section class="result-conclusion"><div class="result-score-line"><div><span>主 Agent</span><strong class="score-blue">' + pct(primary.overall) + '</strong></div><div><span>对比 Agent</span><strong class="score-orange">' + (comparison ? pct(comparison.overall) : '未观测') + '</strong></div><div><span>胜出</span><strong>' + escapeHtml(winner) + '</strong></div><div><span>差值</span><strong>' + (delta == null ? '未观测' : (delta > 0 ? '+' : '') + pct(delta)) + '</strong></div></div><div class="result-fact-line"><span>成功率 ' + (aRate == null ? '未观测' : pct(aRate) + '%') + (comparison ? ' / ' + (bRate == null ? '未观测' : pct(bRate) + '%') : '') + '</span><span>案例 ' + cases + '</span><span>平均耗时 ' + (aLatency == null ? '未记录' : pct(aLatency) + ' ms') + '</span><span>失败案例 ' + failureCaseCount(failures) + '</span></div></section>'
+      + '<section class="result-conclusion"><div class="result-score-line"><div><span>主 Agent</span><strong class="score-blue">' + scoreText(primary) + '</strong></div><div><span>对比 Agent</span><strong class="score-orange">' + (comparison ? scoreText(comparison) : '未观测') + '</strong></div><div><span>胜出</span><strong>' + escapeHtml(winner) + '</strong></div><div><span>差值</span><strong>' + (delta == null ? '不可比较' : (delta > 0 ? '+' : '') + pct(delta)) + '</strong></div></div><div class="result-fact-line"><span>成功率 ' + (aRate == null ? '未观测' : pct(aRate) + '%') + (comparison ? ' / ' + (bRate == null ? '未观测' : pct(bRate) + '%') : '') + '</span><span>案例 ' + cases + '</span><span>平均耗时 ' + (aLatency == null ? '未记录' : pct(aLatency) + ' ms') + '</span><span>失败案例 ' + failureCaseCount(failures) + '</span></div></section>'
       + dashboardDimensionSnapshot(primary, comparison);
   }
   function investigationDifferenceList(primary, comparison) {
@@ -759,12 +801,14 @@
     else if (tab === 'evidence') body += '<section class="workspace-surface"><div class="surface-toolbar"><div><h3>证据链调查</h3><span>从失败类型进入完整证据事件时间线、动作结果和评分理由。</span></div></div>' + failureFilters(agents, failures) + '<div class="table-wrap">' + failureTable(filterFailures(failures)) + '</div></section>';
     else if (tab === 'trace') body += renderMemoryTrace(agents);
     else if (tab === 'logs') body += '<section class="workspace-surface"><div class="surface-toolbar"><div><h3>运行日志与工件</h3><span>仅列出结果元数据中实际存在的本地文件。</span></div></div><div class="artifact-list">' + artifactButtons(primary, '主 Agent') + (comparison ? artifactButtons(comparison, '对比 Agent') : '') + '<div class="log-note">日志来源：本地运行目录、workbench-job.json 和证据事件 JSONL。</div></div></section>';
-    else body += '<div class="compare-summary"><span>主 Agent <strong class="score-blue">' + pct(primary.overall) + '</strong></span><span>对比 Agent <strong class="score-orange">' + (comparison ? pct(comparison.overall) : '未观测') + '</strong></span><span>差值 <strong>' + (delta == null ? '未观测' : (delta > 0 ? '+' : '') + pct(delta)) + '</strong></span></div><div class="compare-workspace-result"><section class="workspace-surface"><div class="surface-toolbar"><div><h3>六维能力对比</h3></div><div class="agent-legend"><i class="legend-dot blue"></i>' + escapeHtml(displayAgentName(primary.agent || '主 Agent')) + ' <i class="legend-dot orange"></i>' + escapeHtml(displayAgentName(comparison?.agent || '对比 Agent')) + '</div></div><div class="compare-table"><div class="compare-head"><span>能力维度</span><span>主 Agent</span><span>对比 Agent</span></div>' + CAPABILITIES.map((item) => dimensionRow(item, primary, comparison)).join('') + '</div></section><section class="workspace-surface radar-surface"><div class="surface-toolbar"><div><h3>雷达概览</h3></div></div><div class="radar-wrap">' + radarChart(primary.dimensions || {}, comparison && comparison.dimensions) + '</div></section></div>';
+    else if (!scoreValid(primary) || (comparison && !scoreValid(comparison))) body += '<div class="compare-summary"><span>主 Agent <strong class="score-blue">' + scoreText(primary) + '</strong></span><span>对比 Agent <strong class="score-orange">' + (comparison ? scoreText(comparison) : '未观测') + '</strong></span><span>差值 <strong>不可比较</strong></span></div><section class="workspace-surface empty-inline"><strong>运行错误阻止了能力对比</strong><span>错误证据已保留在“证据”和“日志”页。</span></section>';
+    else body += '<div class="compare-summary"><span>主 Agent <strong class="score-blue">' + scoreText(primary) + '</strong></span><span>对比 Agent <strong class="score-orange">' + (comparison ? scoreText(comparison) : '未观测') + '</strong></span><span>差值 <strong>' + (delta == null ? '未观测' : (delta > 0 ? '+' : '') + pct(delta)) + '</strong></span></div><div class="compare-workspace-result"><section class="workspace-surface"><div class="surface-toolbar"><div><h3>六维能力对比</h3></div><div class="agent-legend"><i class="legend-dot blue"></i>' + escapeHtml(displayAgentName(primary.agent || '主 Agent')) + ' <i class="legend-dot orange"></i>' + escapeHtml(displayAgentName(comparison?.agent || '对比 Agent')) + '</div></div><div class="compare-table"><div class="compare-head"><span>能力维度</span><span>主 Agent</span><span>对比 Agent</span></div>' + CAPABILITIES.map((item) => dimensionRow(item, primary, comparison)).join('') + '</div></section><section class="workspace-surface radar-surface"><div class="surface-toolbar"><div><h3>雷达概览</h3></div></div><div class="radar-wrap">' + radarChart(primary.dimensions || {}, comparison && comparison.dimensions) + '</div></section></div>';
     return header + body;
   }
   function caseRows(agents) { const ids = [...new Set(agents.flatMap((agent) => (agent.results || []).map((result) => result.case_id)))]; return ids.map((caseId) => ({ caseId, first: (agents[0].results || []).find((result) => result.case_id === caseId), second: agents[1] && (agents[1].results || []).find((result) => result.case_id === caseId) })); }
-  function renderCasesWorkspace(agents, failures) { const rows = caseRows(agents); const selected = state.selectedCase && rows.find((row) => row.caseId === state.selectedCase); return '<section class="workspace-surface"><div class="surface-toolbar"><div><h3>逐案例对比</h3><span>选择案例后，左右展示两个智能体的结果、差异和评分。</span></div><span class="rail-count">' + rows.length + ' 个案例</span></div><div class="case-list">' + rows.map((row) => '<button class="case-list-row ' + (row.caseId === state.selectedCase ? "active" : "") + '" data-select-case="' + escapeHtml(row.caseId) + '" type="button"><span class="case-list-id">' + escapeHtml(row.caseId) + '</span><span>' + escapeHtml(capabilityLabel((row.first || row.second || {}).capability)) + '</span><strong>' + pct(Number((row.first || {}).score || 0) * 100) + ' / ' + (row.second ? pct(Number(row.second.score || 0) * 100) : "-") + '</strong><span class="case-arrow">→</span></button>').join("") + '</div></section>' + (selected ? caseDetailWorkspace(selected, agents) : '<section class="workspace-surface empty-inline"><span>选择一个案例查看主 Agent / 对比 Agent 的详细差异。</span></section>'); }
-  function caseDetailWorkspace(row, agents) { const first = row.first || {}, second = row.second || {}; return '<section class="workspace-surface case-detail-workspace"><div class="surface-toolbar"><div><h3>' + escapeHtml(row.caseId) + '</h3><span>' + escapeHtml(capabilityLabel(first.capability || second.capability)) + '</span></div><button class="button small" data-open-case-evidence="' + escapeHtml(row.caseId) + '" type="button">打开证据</button></div><div class="case-agent-grid"><div class="case-agent-card blue"><span class="agent-tag">主 Agent</span><strong>' + escapeHtml(agents[0].agent || "主 Agent") + '</strong><span>分数 ' + pct(Number(first.score || 0) * 100) + '</span><p>' + escapeHtml((first.failures || []).map((failure) => failure.reason).join("；") || "案例通过或未记录失败理由") + '</p></div><div class="case-agent-card orange"><span class="agent-tag">对比 Agent</span><strong>' + escapeHtml(agents[1]?.agent || "对比 Agent") + '</strong><span>分数 ' + (row.second ? pct(Number(second.score || 0) * 100) : "未观测") + '</span><p>' + escapeHtml((second.failures || []).map((failure) => failure.reason).join("；") || "案例通过或未记录失败理由") + '</p></div></div><div class="case-detail-footer"><span>评分理由</span><strong>' + escapeHtml((first.failures || second.failures || []).map((failure) => failure.reason).join("；") || "由确定性评分器根据证据和动作结果判定") + '</strong></div></section>'; }
+  function caseScore(result) { return result && result.status === "error" ? "运行错误" : pct(Number((result || {}).score || 0) * 100); }
+  function renderCasesWorkspace(agents, failures) { const rows = caseRows(agents); const selected = state.selectedCase && rows.find((row) => row.caseId === state.selectedCase); return '<section class="workspace-surface"><div class="surface-toolbar"><div><h3>逐案例对比</h3><span>选择案例后，左右展示两个智能体的结果、差异和评分。</span></div><span class="rail-count">' + rows.length + ' 个案例</span></div><div class="case-list">' + rows.map((row) => '<button class="case-list-row ' + (row.caseId === state.selectedCase ? "active" : "") + '" data-select-case="' + escapeHtml(row.caseId) + '" type="button"><span class="case-list-id">' + escapeHtml(row.caseId) + '</span><span>' + escapeHtml(capabilityLabel((row.first || row.second || {}).capability)) + '</span><strong>' + caseScore(row.first) + ' / ' + (row.second ? caseScore(row.second) : "-") + '</strong><span class="case-arrow">→</span></button>').join("") + '</div></section>' + (selected ? caseDetailWorkspace(selected, agents) : '<section class="workspace-surface empty-inline"><span>选择一个案例查看主 Agent / 对比 Agent 的详细差异。</span></section>'); }
+  function caseDetailWorkspace(row, agents) { const first = row.first || {}, second = row.second || {}; return '<section class="workspace-surface case-detail-workspace"><div class="surface-toolbar"><div><h3>' + escapeHtml(row.caseId) + '</h3><span>' + escapeHtml(capabilityLabel(first.capability || second.capability)) + '</span></div><button class="button small" data-open-case-evidence="' + escapeHtml(row.caseId) + '" type="button">打开证据</button></div><div class="case-agent-grid"><div class="case-agent-card blue"><span class="agent-tag">主 Agent</span><strong>' + escapeHtml(agents[0].agent || "主 Agent") + '</strong><span>分数 ' + caseScore(first) + '</span><p>' + escapeHtml((first.failures || []).map((failure) => failure.reason).join("；") || "案例通过或未记录失败理由") + '</p></div><div class="case-agent-card orange"><span class="agent-tag">对比 Agent</span><strong>' + escapeHtml(agents[1]?.agent || "对比 Agent") + '</strong><span>分数 ' + (row.second ? caseScore(second) : "未观测") + '</span><p>' + escapeHtml((second.failures || []).map((failure) => failure.reason).join("；") || "案例通过或未记录失败理由") + '</p></div></div><div class="case-detail-footer"><span>评分理由</span><strong>' + escapeHtml((first.failures || second.failures || []).map((failure) => failure.reason).join("；") || "由确定性评分器根据证据和动作结果判定") + '</strong></div></section>'; }
   function summaryMetric(label, value, note) { return '<div class="metric"><div class="metric-label">' + escapeHtml(label) + '</div><div class="metric-value">' + escapeHtml(value) + '</div><div class="metric-note">' + escapeHtml(note || "") + '</div></div>'; }
   function dimensionRow(item, primary, comparison) { const p = Number((primary.dimensions || {})[item[0]] || 0), c = comparison ? Number((comparison.dimensions || {})[item[0]] || 0) : null; return '<div class="compare-row"><div><div class="dimension-name">' + item[1] + '</div><div class="dimension-key">' + item[0] + '</div></div><div class="bar-cell"><span class="bar-number">' + pct(p) + '</span><div class="bar-track"><div class="bar-fill blue" style="width:' + Math.max(0, Math.min(100, p)) + '%"></div></div></div><div class="bar-cell"><span class="bar-number">' + (c == null ? "-" : pct(c)) + '</span>' + (c == null ? '<div class="bar-track"></div>' : '<div class="bar-track"><div class="bar-fill orange" style="width:' + Math.max(0, Math.min(100, c)) + '%"></div></div>') + '</div></div>'; }
   function radarChart(first, second) {
@@ -836,7 +880,7 @@
     }
     const result = row.result;
     $("#drawer-title").textContent = result.case_id || "案例详情";
-    $("#drawer-content").innerHTML = '<div class="detail-block"><h3>判定</h3><div class="reason-box"><strong title="' + escapeHtml(row.failure.type || "invalid_behavior") + '">' + escapeHtml(failureLabel(row.failure.type)) + '</strong><br>' + escapeHtml(row.failure.reason || "未提供失败理由") + '</div></div><div class="detail-block"><h3>案例与状态</h3><div class="detail-code">' + safeJson({ agent: row.agent, capability: capabilityLabel(result.capability), score: result.score, status: result.status, attempts: result.attempts, observability: result.observability }) + '</div></div><div class="detail-block"><h3>检查项</h3><div class="detail-code">' + safeJson(result.checks || []) + '</div></div><div class="detail-block"><h3>EvidenceEvent 时间线（' + events.length + '）</h3><div class="timeline">' + (events.length ? events.map(timelineItem).join("") : '<div class="empty-state"><strong>没有可读取的证据事件</strong><p>结果可能缺少 evidence.jsonl，或路径不在当前工作区白名单中。</p></div>') + '</div></div><div class="detail-block"><h3>复现入口</h3><div class="detail-code">' + safeJson({ evidence: evidencePath || "未记录", result: (summary._workbench || {}).result_path || "未记录", command: "python -m kmb.cli run/compare ...（以运行记录中的实际命令为准）" }) + '</div></div>';
+    $("#drawer-content").innerHTML = '<div class="detail-block"><h3>判定</h3><div class="reason-box"><strong title="' + escapeHtml(row.failure.type || "invalid_behavior") + '">' + escapeHtml(failureLabel(row.failure.type)) + '</strong><span class="failure-category">' + escapeHtml(row.failure.category || "behavior_failure") + '</span><br>' + escapeHtml(row.failure.reason || "未提供失败理由") + '</div></div><div class="detail-block"><h3>案例与状态</h3><div class="detail-code">' + safeJson({ agent: row.agent, capability: capabilityLabel(result.capability), score: result.score, status: result.status, attempts: result.attempts, observability: result.observability }) + '</div></div><div class="detail-block"><h3>检查项</h3><div class="detail-code">' + safeJson(result.checks || []) + '</div></div><div class="detail-block"><h3>EvidenceEvent 时间线（' + events.length + '）</h3><div class="timeline">' + (events.length ? events.map(timelineItem).join("") : '<div class="empty-state"><strong>没有可读取的证据事件</strong><p>结果可能缺少 evidence.jsonl，或路径不在当前工作区白名单中。</p></div>') + '</div></div><div class="detail-block"><h3>复现入口</h3><div class="detail-code">' + safeJson({ evidence: evidencePath || "未记录", result: (summary._workbench || {}).result_path || "未记录", command: "python -m kmb.cli run/compare ...（以运行记录中的实际命令为准）" }) + '</div></div>';
     localizeUi();
     $("#drawer-backdrop").hidden = false; $("#case-drawer").classList.add("open"); $("#case-drawer").setAttribute("aria-hidden", "false");
   }
@@ -1143,6 +1187,22 @@
     document.querySelectorAll("[data-select-case]").forEach((button) => button.addEventListener("click", () => { state.selectedCase = button.dataset.selectCase; state.resultTab = "cases"; render(); }));
     document.querySelectorAll("[data-open-case-evidence]").forEach((button) => button.addEventListener("click", () => { const caseId = button.dataset.openCaseEvidence; const agents = normalizeAgents(state.selectedRun); const failed = filterFailures(collectFailures(agents)).find((item) => item.result.case_id === caseId); if (failed) return openFailure(failed); const summary = agents.find((agent) => (agent.results || []).some((result) => result.case_id === caseId)); const result = summary && (summary.results || []).find((item) => item.case_id === caseId); if (summary && result) return openFailure({ agent: summary.agent, result, failure: { type: result.status === "pass" ? "verified" : "invalid_behavior", reason: result.status === "pass" ? "该 Case 已通过确定性规则检查，继续查看 EvidenceEvent 记录。" : "该 Case 未通过，但未提供结构化失败原因。" }, agentSummary: summary }); showGlobalError("该 Case 没有可读取的证据事件"); }));
     document.querySelectorAll("[data-select-agent]").forEach((button) => button.addEventListener("click", () => { const path = button.dataset.selectAgent; if (!state.formPrimary) state.formPrimary = path; else state.formComparison = path; setView("new"); }));
+    document.querySelectorAll("[data-quick-agent]").forEach((input) => input.addEventListener("change", (event) => {
+      const checked = Array.from(document.querySelectorAll("[data-quick-agent]:checked")).map((item) => item.value);
+      if (checked.length > 2) {
+        event.target.checked = false;
+        state.quickNotice = { kind: "error", message: "快速对比一次只能选择两个 Agent。" };
+        render();
+        return;
+      }
+      state.quickSelected = checked;
+      state.quickNotice = null;
+      render();
+    }));
+    const quickStart = document.querySelector("[data-quick-start]");
+    if (quickStart) quickStart.addEventListener("click", startQuickCompare);
+    const quickAuto = document.querySelector("[data-quick-auto]");
+    if (quickAuto) quickAuto.addEventListener("click", startQuickCompareAuto);
     document.querySelectorAll("[data-agent-detail]").forEach((button) => button.addEventListener("click", () => { state.agentDetailPath = button.dataset.agentDetail; render(); }));
     document.querySelectorAll("[data-provider-detail]").forEach((button) => button.addEventListener("click", () => { state.providerDetail = button.dataset.providerDetail; render(); }));
      document.querySelectorAll("[data-go-compare-tab]").forEach((button) => button.addEventListener("click", () => { state.resultTab = button.dataset.goCompareTab || "cases"; state.view = "results"; render(); }));
@@ -1153,8 +1213,33 @@
   async function healthCheck(which) { const config = which === "primary" ? $("#primary-agent")?.value : $("#comparison-agent")?.value; if (!config) return; const target = $("#health-" + which); if (target) { target.textContent = "检查中…"; target.className = "health-state"; } try { const result = await api("/api/health", { method: "POST", body: JSON.stringify({ config }) }); state.health[config] = result; if (target) { target.innerHTML = healthStateMarkup(config, "尚未检查连接"); } } catch (error) { state.health[config] = { status: "error", error: error.message, checked_at: new Date().toISOString() }; if (target) { target.innerHTML = healthStateMarkup(config, "尚未检查连接"); } } }
   async function healthConfig(config) { const id = "#config-health-" + config.replace(/[^A-Za-z0-9]/g, "-"); const targets = [$(id), $("#provider-detail-health")].filter(Boolean); targets.forEach((target) => { target.textContent = "检查中…"; }); try { const result = await api("/api/health", { method: "POST", body: JSON.stringify({ config }) }); state.health[config] = result; targets.forEach((target) => { target.innerHTML = healthStateMarkup(config, credentialLabel(configByPath(config))); }); } catch (error) { state.health[config] = { status: "error", error: error.message, checked_at: new Date().toISOString() }; targets.forEach((target) => { target.innerHTML = healthStateMarkup(config, credentialLabel(configByPath(config))); }); } }
   async function startRun() { updateParamsFromForm(); const primary = $("#primary-agent")?.value, comparison = $("#comparison-agent")?.value, suite = $("#suite")?.value; const payload = { primary_agent: primary, comparison_agent: comparison, suite, seed: state.params.seed === "" ? null : Number(state.params.seed), retries: Number(state.params.retries), timeout: Number(state.params.timeout), scorer_version: state.params.scorer_version }; const button = $("#start-run"); if (button) button.disabled = true; try { state.job = await api("/api/runs", { method: "POST", body: JSON.stringify(payload) }); pollJob(state.job.id); render(); } catch (error) { showGlobalError(error.message); if (button) button.disabled = false; } }
+  async function startQuickCompare() {
+    const selected = (state.quickSelected || []).slice(0, 2);
+    if (selected.length !== 2) {
+      state.quickNotice = { kind: "error", message: "请选择两个已安装且可自动运行的 Agent。" };
+      render();
+      return;
+    }
+    await postQuickCompare({ agents: selected });
+  }
+  async function startQuickCompareAuto() {
+    await postQuickCompare({ agents: [] });
+  }
+  async function postQuickCompare(payload) {
+    const button = document.querySelector("[data-quick-start]");
+    if (button) button.disabled = true;
+    state.quickNotice = null;
+    try {
+      state.job = await api("/api/quick-compare", { method: "POST", body: JSON.stringify(payload) });
+      render();
+      pollJob(state.job.id);
+    } catch (error) {
+      state.quickNotice = { kind: "error", message: error.message };
+      render();
+    }
+  }
   async function stopRun() { if (!state.job || !state.job.id || !["queued", "running", "stopping"].includes(state.job.status)) return; try { state.job = await api("/api/jobs/" + encodeURIComponent(state.job.id) + "/stop", { method: "POST", body: JSON.stringify({}) }); render(); } catch (error) { showGlobalError("停止评测失败：" + error.message); } }
-  async function pollJob(id) { try { const job = await api("/api/jobs/" + encodeURIComponent(id)); state.job = job; render(); if (["queued", "running", "stopping"].includes(job.status)) window.setTimeout(() => pollJob(id), 900); else if (job.status === "completed") { state.selectedRun = null; state.selectedRunPath = job.result_path; } } catch (error) { showGlobalError(error.message); } }
+  async function pollJob(id) { try { const job = await api("/api/jobs/" + encodeURIComponent(id)); state.job = job; if (["queued", "running", "stopping"].includes(job.status)) { render(); window.setTimeout(() => pollJob(id), 900); } else if (job.status === "completed") { state.selectedRun = null; state.selectedRunPath = job.result_path; if (job.kind === "quick_compare" && job.result_path) { setView("results"); await loadSelectedRun(job.result_path); } else render(); } else render(); } catch (error) { showGlobalError(error.message); } }
 
   function configCredentialCommand(envName) {
     const env = String(envName || "MY_API_KEY");
@@ -1199,7 +1284,15 @@
       if (button) { button.disabled = true; button.textContent = "保存中…"; }
       try {
         const result = await api("/api/configs", { method: "POST", body: JSON.stringify(payload) });
-        state.configNotice = { kind: "success", env: result.credential_env, message: "已创建 " + ((result.config || {}).path || "配置档案") + "。配置文件不包含密钥。" };
+        const generated = (result && result.generated) || [];
+        const names = generated.map((item) => (item.path || item.name || "").split(/[\\/]/).pop()).filter(Boolean);
+        const createdPath = (result.config || {}).path || "配置档案";
+        state.configNotice = {
+          kind: "success",
+          env: result.credential_env,
+          message: "已创建可评测 Agent 三件套：" + (names.length ? names.join(" · ") : createdPath) +
+            "。http 仅连通；memory / no-memory 为包装轨（系统级可观测证据，非模型原生长期记忆）。配置文件不包含密钥。",
+        };
         state.configDraft = Object.assign({}, state.configDraft, { profile_id: "", provider: "", name: "", model: "", api_key_env: "", description: "" });
         state.configSaving = false;
         await loadData();

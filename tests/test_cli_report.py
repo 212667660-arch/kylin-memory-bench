@@ -58,3 +58,15 @@ class CliReportTests(unittest.TestCase):
         self.assertIn("<img", content)
         self.assertIn("失败统计", content)
         self.assertIn("能力边界", content)
+
+    def test_runtime_error_report_marks_score_unavailable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "report.html"
+            write_html_report([{
+                "agent": "broken", "overall": 0, "score_valid": False,
+                "score_status": "invalid_runtime", "error_cases": 1,
+                "dimensions": {}, "results": [],
+            }], str(path))
+            content = path.read_text(encoding="utf-8")
+        self.assertIn("不可评分", content)
+        self.assertNotIn("<td>0.00</td>", content)

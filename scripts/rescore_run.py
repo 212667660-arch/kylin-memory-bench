@@ -96,7 +96,7 @@ def rescore_run(source_dir, suite_path, output_dir):
     (output / "evidence.jsonl").write_text(evidence_path.read_text(encoding="utf-8"), encoding="utf-8")
     (output / "result.json").write_text(json.dumps(rescored, ensure_ascii=False, indent=2), encoding="utf-8")
     write_markdown(rescored, str(output / "result.md"))
-    (output / "radar.svg").write_text(radar_svg(rescored["dimensions"]), encoding="utf-8")
+    (output / "radar.svg").write_text(radar_svg(rescored["dimensions"], score_valid=rescored.get("score_valid", True)), encoding="utf-8")
     write_html_report([rescored], str(output / "result.html"))
     return rescored
 

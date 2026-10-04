@@ -9,6 +9,7 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
+from kmb.agent_registry import AgentProfile
 from kmb.workbench import WorkbenchHandler, WorkbenchState, load_credentials_file
 
 
@@ -59,6 +60,99 @@ class WorkbenchTests(unittest.TestCase):
         self.assertNotIn("Authorization", serialized)
         self.assertIn("configured", serialized)
 
+    def test_agent_discovery_endpoint_returns_safe_profiles(self):
+        with patch("kmb.workbench.discover_agents", return_value=[]):
+            self.assertEqual(self.state.list_agents(), [])
+        server = ThreadingHTTPServer(("127.0.0.1", 0), WorkbenchHandler)
+        server.workbench_state = self.state
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base = "http://127.0.0.1:%d" % server.server_address[1]
+        try:
+            with patch.object(self.state, "list_agents", return_value=[{"id": "kylinbot", "installed": True, "runnable": True}]):
+                with urlopen(base + "/api/agents", timeout=3) as response:
+                    payload = json.loads(response.read().decode("utf-8"))
+            self.assertEqual(payload["agents"][0]["id"], "kylinbot")
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+    def test_quick_compare_accepts_two_runnable_installed_agents_only(self):
+        profiles = [
+            AgentProfile("kylinbot", "小K KylinBot", True, True, "kylinbot", evidence_mode="agent_memory_observed"),
+            AgentProfile("hermes", "Hermes", True, True, "hermes", evidence_mode="agent_memory_observed"),
+            AgentProfile("kylinagent", "KylinAgent", True, False, "kylinagent", evidence_mode="gui_observed", reason="需要 GUI 控制器"),
+        ]
+        with patch("kmb.workbench.discover_agents", return_value=profiles), patch.object(self.state.executor, "submit", return_value=None):
+            job = self.state.start_quick_compare({"agents": ["kylinbot", "hermes"]})
+        self.assertEqual(job["kind"], "quick_compare")
+        self.assertEqual(job["agents"], ["kylinbot", "hermes"])
+        self.assertEqual(job["params"]["suite"], "suites/quick.yaml")
+        with patch("kmb.workbench.discover_agents", return_value=profiles):
+            with self.assertRaisesRegex(ValueError, "not automatically runnable"):
+                self.state.start_quick_compare({"agents": ["kylinbot", "kylinagent"]})
+
+    def test_quick_compare_one_click_auto_selects_two_runnable(self):
+        profiles = [
+            AgentProfile("kylinbot", "小K KylinBot", True, True, "kylinbot", evidence_mode="agent_memory_observed"),
+            AgentProfile("kylinagent", "KylinAgent", True, False, "kylinagent", evidence_mode="gui_observed", reason="已安装，但当前只有 GUI/服务级观测"),
+            AgentProfile("hermes", "Hermes", True, True, "hermes", evidence_mode="agent_memory_observed"),
+        ]
+        with patch("kmb.workbench.discover_agents", return_value=profiles), patch.object(self.state.executor, "submit", return_value=None):
+            job = self.state.start_quick_compare({"agents": []})
+        self.assertEqual(job["kind"], "quick_compare")
+        self.assertEqual(job["agents"], ["kylinbot", "hermes"])
+
+    def test_quick_compare_blocked_reports_reason_and_fix_conditions(self):
+        profiles = [
+            AgentProfile("kylinbot", "小K KylinBot", True, True, "kylinbot", evidence_mode="agent_memory_observed"),
+            AgentProfile("kylinagent", "KylinAgent", True, False, "kylinagent", evidence_mode="gui_observed", reason="已安装，但当前只有 GUI/服务级观测，不能自动生成结构化记忆证据"),
+            AgentProfile("openclaw", "OpenClaw", False, False, "openclaw", evidence_mode="unavailable", reason="未检测到已知存储路径或可执行文件"),
+        ]
+        with patch("kmb.workbench.discover_agents", return_value=profiles):
+            with self.assertRaises(ValueError) as ctx:
+                self.state.start_quick_compare({"agents": []})
+        message = str(ctx.exception)
+        self.assertIn("kylinagent", message)
+        self.assertIn("GUI/服务级观测", message)
+        self.assertIn("openclaw", message)
+        self.assertIn("修复条件", message)
+
+    def test_list_agents_exposes_fix_hint_for_blocked_profiles(self):
+        profiles = [
+            AgentProfile("kylinbot", "小K KylinBot", True, True, "kylinbot", evidence_mode="agent_memory_observed"),
+            AgentProfile("kylinagent", "KylinAgent", True, False, "kylinagent", evidence_mode="gui_observed", reason="已安装，但当前只有 GUI/服务级观测"),
+            AgentProfile("hermes", "Hermes", False, False, "hermes", evidence_mode="unavailable", reason="未检测到已知存储路径或可执行文件"),
+        ]
+        with patch("kmb.workbench.discover_agents", return_value=profiles):
+            agents = {item["id"]: item for item in self.state.list_agents()}
+        self.assertEqual(agents["kylinbot"]["fix_hint"], "")
+        self.assertIn("结构化", agents["kylinagent"]["fix_hint"])
+        self.assertIn("修复条件", agents["hermes"]["fix_hint"])
+
+    def test_quick_compare_http_endpoint_passes_agent_ids_without_secrets(self):
+        server = ThreadingHTTPServer(("127.0.0.1", 0), WorkbenchHandler)
+        server.workbench_state = self.state
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base = "http://127.0.0.1:%d" % server.server_address[1]
+        payload = {"agents": ["kylinbot", "hermes"], "api_key": "must-not-leak"}
+        safe_job = {"id": "quick-test", "kind": "quick_compare", "status": "queued", "agents": payload["agents"]}
+        try:
+            with patch.object(self.state, "start_quick_compare", return_value=safe_job) as start:
+                request = Request(base + "/api/quick-compare", data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"}, method="POST")
+                with urlopen(request, timeout=3) as response:
+                    self.assertEqual(response.status, 202)
+                    result = json.loads(response.read().decode("utf-8"))
+            start.assert_called_once_with(payload)
+            self.assertEqual(result["id"], "quick-test")
+            self.assertNotIn("must-not-leak", json.dumps(result))
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
     def test_cloud_config_metadata_identifies_provider_and_mode(self):
         (self.root / "configs" / "agent-grok.yaml").write_text(
             "name: grok-api\ntype: http\nbase_url: https://api.wapq.cn/v1\nmodel: grok-4.6\napi_key_env: GROK_API_KEY\n",
@@ -88,13 +182,24 @@ class WorkbenchTests(unittest.TestCase):
             "description": "shared gateway",
         })
         path = self.root / "configs" / "agent-openrouter.yaml"
+        memory_path = self.root / "configs" / "agent-openrouter-memory.yaml"
+        no_memory_path = self.root / "configs" / "agent-openrouter-no-memory.yaml"
         self.assertTrue(path.is_file())
+        self.assertTrue(memory_path.is_file())
+        self.assertTrue(no_memory_path.is_file())
         text = path.read_text(encoding="utf-8")
+        memory_text = memory_path.read_text(encoding="utf-8")
         self.assertIn("OPENROUTER_API_KEY", text)
+        self.assertIn("type: http", text)
+        self.assertIn("type: memory_controller", memory_text)
+        self.assertIn("type: memory_disabled", no_memory_path.read_text(encoding="utf-8"))
         self.assertNotIn("api_key:", text.lower())
+        self.assertNotIn("api_key:", memory_text.lower())
         self.assertEqual(result["config"]["name"], "OpenRouter")
         self.assertEqual(result["config"]["provider"], "OpenRouter")
         self.assertEqual(result["config"]["model"], "openai/gpt-4.1-mini")
+        generated_types = {item.get("type") for item in result.get("generated") or []}
+        self.assertEqual(generated_types, {"http", "memory_controller", "memory_disabled"})
 
     def test_create_config_rejects_secret_payload_and_duplicate(self):
         with self.assertRaises(ValueError):

@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterable, List
 import yaml
 
 from .agents import AgentAdapter
+from .agent_adapters.base import ERROR_CATEGORIES, classify_error
 from .models import BenchmarkCase, EvidenceEvent, ScoreResult, summarize_evidence
 from .scoring import score_case, score_metamorphic_groups
 
@@ -80,6 +81,7 @@ def run_suite(
     destination.mkdir(parents=True, exist_ok=True)
     all_scores: List[ScoreResult] = []
     failure_counts = Counter()
+    failure_categories = Counter()
     case_events: Dict[str, List[EvidenceEvent]] = {}
     resolved_run_id = run_id or uuid.uuid4().hex[:12]
     evidence_path = destination / "evidence.jsonl"
@@ -100,9 +102,19 @@ def run_suite(
                     break
                 except Exception as exc:
                     error = "%s: %s" % (type(exc).__name__, exc)
-                    error_name = {"RuntimeError": "runtime_error", "TimeoutError": "timeout", "FileNotFoundError": "missing_input"}.get(type(exc).__name__, type(exc).__name__.lower())
+                    error_name = classify_error(exc)
                     failure_counts[error_name] += 1
-                    error_event = EvidenceEvent("error", {"message": error, "attempt": attempts}, 0, source="runner")
+                    error_data = {
+                        "message": error,
+                        "attempt": attempts,
+                        "category": error_name,
+                        "exception_type": type(exc).__name__,
+                    }
+                    for field_name in ("returncode", "stdout_tail", "stderr_tail"):
+                        value = getattr(exc, field_name, None)
+                        if value not in (None, ""):
+                            error_data[field_name] = value
+                    error_event = EvidenceEvent("error", error_data, 0, source="runner")
                     attempt_events.append(error_event)
                     events = [error_event]
             # Keep every failed attempt for audit, while scoring the final attempt only.
@@ -152,12 +164,17 @@ def run_suite(
             score = score_case(case, events)
             score.observability = summarize_evidence(evidence_events)
             if error:
+                error_category = str((evidence_events[-1].data if evidence_events else {}).get("category") or "runtime_error")
                 score.status, score.score = "error", 0.0
-                score.failures.append({"type": "runtime_error", "reason": error, "check": {}, "evidence_refs": [{"kind": "error", "step": 0, "source": "runner", "evidence_class": "runtime_error"}]})
+                score.failures.append({"type": error_category, "category": error_category, "reason": error, "check": {}, "evidence_refs": [{"kind": "error", "step": 0, "source": "runner", "evidence_class": "runtime_error", "category": error_category}]})
             for failure in score.failures:
                 failure_type = failure.get("type", "invalid_behavior")
-                if failure_type != "runtime_error":
+                # Runtime categories were counted once per failed attempt in
+                # the exception path above. Only behavioral failure types are
+                # added here.
+                if failure_type not in ERROR_CATEGORIES:
                     failure_counts[failure_type] += 1
+                failure_categories[str(failure.get("category") or "behavior_failure")] += 1
             score.attempts = attempts
             all_scores.append(score)
     by_capability: Dict[str, List[float]] = {}
@@ -173,12 +190,17 @@ def run_suite(
         "artifact_events": sum(1 for events in case_events.values() for event in events if event.artifact_sha256),
     }
     evidence_chain["link_coverage"] = round(evidence_chain["linked_events"] / evidence_chain["events"], 4) if evidence_chain["events"] else 0.0
+    error_cases = sum(1 for item in all_scores if item.status == "error")
     summary = {
         "run_id": resolved_run_id, "started_at": datetime.now(timezone.utc).isoformat(),
         "agent": agent.name, "cases": len(all_scores), "seed": seed, "retries": retries,
         "agent_metadata": agent.describe() if hasattr(agent, "describe") else {"adapter": type(agent).__name__, "agent": agent.name},
+        "score_valid": error_cases == 0,
+        "score_status": "valid" if error_cases == 0 else "invalid_runtime",
+        "completed_cases": len(all_scores) - error_cases,
+        "error_cases": error_cases,
         "observability": {"mode": "memory_state_unobservable", "disclaimer": "Per-case observability is authoritative; native memory is not inferred from text."},
-        "dimensions": dimensions, "failure_counts": dict(failure_counts),
+        "dimensions": dimensions, "failure_counts": dict(failure_counts), "failure_categories": dict(failure_categories),
         "overall": round(sum(item.score for item in all_scores) / len(all_scores) * 100, 2) if all_scores else 0.0,
         "results": [item.to_dict() for item in all_scores], "evidence": str(evidence_path),
         "evidence_schema_version": 2, "evidence_chain": evidence_chain, "metamorphic_groups": metamorphic_groups,

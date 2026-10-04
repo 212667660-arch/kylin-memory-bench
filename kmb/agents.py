@@ -4,6 +4,7 @@ import os
 import re
 import shlex
 import subprocess
+import sys
 import time
 from copy import deepcopy
 from abc import ABC, abstractmethod
@@ -27,6 +28,10 @@ class AgentAdapter(ABC):
             "memory_observability": "unknown",
             "native_memory_capability": "not_claimed",
         }
+
+    def preflight(self) -> Dict[str, Any]:
+        """Return a read-only readiness report before any benchmark turns run."""
+        return {"status": "ready", "checks": [], "agent": self.name}
 
     @abstractmethod
     def run(self, case: BenchmarkCase) -> List[EvidenceEvent]:
@@ -168,7 +173,9 @@ class CommandAgent(AgentAdapter):
             command = shlex.split(command)
         if not isinstance(command, list) or not command or not all(isinstance(item, str) and item for item in command):
             raise ValueError("command must be a non-empty string or argument list")
-        self.command = command
+        self.command = list(command)
+        if self.command[0] in ("python", "python3"):
+            self.command[0] = sys.executable
         self.timeout_seconds = float(timeout_seconds)
         self.env_allowlist = list(env_allowlist or [])
         self.cwd = cwd
@@ -186,6 +193,7 @@ class CommandAgent(AgentAdapter):
             input=json.dumps(asdict(case), ensure_ascii=False),
             text=True,
             encoding="utf-8",
+            errors="replace",
             capture_output=True,
             timeout=self.timeout_seconds,
             cwd=self.cwd,
@@ -307,9 +315,10 @@ class OpenAICompatibleAgent(AgentAdapter):
             raise RuntimeError("required environment variable %s is not set" % self.api_key_env)
         return key
 
-    def _request(self, messages: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _request(self, messages: List[Dict[str, Any]], extra_options: Dict[str, Any] = None) -> Dict[str, Any]:
         key = self._api_key()
         payload = dict(self.request_options)
+        payload.update(extra_options or {})
         payload["model"] = self.model
         payload["messages"] = messages
         request_headers = {"Content-Type": "application/json", "Authorization": "Bearer " + key}
@@ -843,6 +852,283 @@ class NoMemoryAgent(AgentAdapter):
 MemoryDisabledAgent = NoMemoryAgent
 
 
+class DecisionTextBackend:
+    """B-track tool-policy backend that decides from *user text*, not suite YAML ops.
+
+    Stands in for an LLM tool-calling loop. Real HTTP tool-calling backends can
+    replace this later; both B sides must share the same backend type.
+    """
+
+    def plan(self, user: str, memory: Any, step: int) -> List[Dict[str, Any]]:
+        text = str(user or "")
+        calls: List[Dict[str, Any]] = []
+        # Explicit update (multi-word values)
+        m = re.search(
+            r"([A-Za-z0-9_.-]+)\s*(?:changed\s+to|changed|is\s+now|→|->)\s+(.+?)\s*$",
+            text, re.I | re.M,
+        )
+        m2 = re.search(r"([A-Za-z0-9_.-]+)\s*(?:改成|改为|现在是)\s*(.+?)\s*$", text)
+        if m or m2:
+            mm = m or m2
+            value = mm.group(2).strip().strip("。.,，")
+            calls.append({"tool": "update", "key": mm.group(1), "value": value, "context": text})
+            return calls
+        # Remember k=v
+        m = re.search(r"remember\s+([A-Za-z0-9_.-]+)\s*=\s*([^\n]+)", text, re.I)
+        m2 = re.search(r"记住\s*([A-Za-z0-9_.-]+)\s*[=＝]\s*([^\n]+)", text)
+        if not m and not m2:
+            m3 = re.search(r"记住([A-Za-z0-9_.-]+)是([^\s，。]+)", text)
+            if m3:
+                m = m3
+        if m or m2:
+            mm = m or m2
+            value = mm.group(2).strip().strip("。.,，")
+            calls.append({"tool": "save", "key": mm.group(1).strip(), "value": value, "persist": True, "context": text})
+            return calls
+        # Ephemeral/sensitive mention -> agent still *attempts* save; memory layer may refuse
+        m = re.search(
+            r"(?:my\s+)?(?:one[-\s]?time\s+)?(?:code|otp|password|token|session\s*key)\s*(?:is|为|=|：)\s*([A-Za-z0-9_\-]+)",
+            text, re.I,
+        )
+        m2 = re.search(r"(验证码|密码|口令|token|密钥)\s*(?:是|为|=|：)\s*([A-Za-z0-9_\-]+)", text)
+        if m or m2:
+            mm = m or m2
+            key = "otp" if re.search(r"code|otp|验证码", text, re.I) else "secret_temp"
+            calls.append({"tool": "save", "key": key, "value": mm.group(1) if m else mm.group(2), "persist": True, "context": text})
+            return calls
+        # Recall
+        if re.search(r"(what\s+is|which|recall|use\s+my|where|do\s+you\s+remember)", text, re.I) or re.search(r"(是什么|哪个|回忆|调用|使用|在哪|记得)", text):
+            key_m = re.search(r"(?:what\s+is|which|recall|use)\s+(?:my\s+)?([A-Za-z0-9_.-]+)", text, re.I)
+            key_m2 = re.search(r"([A-Za-z0-9_.-]+)\s*(?:是什么|在哪|在哪里)", text)
+            key_m3 = re.search(r"(?:where\s+is\s+the\s+|do\s+you\s+remember\s+my\s+)([A-Za-z0-9_.-]+)", text, re.I)
+            key = ""
+            if key_m:
+                key = key_m.group(1)
+            elif key_m3:
+                key = key_m3.group(1)
+            elif key_m2:
+                key = key_m2.group(1)
+            elif re.search(r"one[-\s]?time|code|otp|验证码", text, re.I):
+                key = "otp"
+            elif re.search(r"venue|会议室", text, re.I):
+                key = "venue"
+            elif re.search(r"project", text, re.I):
+                key = "project"
+            key = key.strip()
+            if key:
+                calls.append({"tool": "recall", "key": key, "context": text})
+                return calls
+        # Task action
+        if re.search(r"(create|export|write|archive|put|report|file)", text, re.I) or re.search(r"(创建|导出|写入|归档|报表|报告|放到)", text):
+            key_m = re.search(r"(?:under|using|in|to)\s+(?:the\s+)?(?:remembered\s+)?([A-Za-z0-9_.-]+)", text, re.I)
+            key_m2 = re.search(r"(?:在|用|放到)\s*([A-Za-z0-9_.-]+)", text)
+            source_key = (key_m.group(1) if key_m else (key_m2.group(1) if key_m2 else "")).strip() or None
+            if not source_key:
+                for candidate in ("output_dir", "workspace", "cache", "export", "artifacts", "logs"):
+                    hit, _ = memory.recall(candidate) if hasattr(memory, "recall") else (False, None)
+                    if hit:
+                        source_key = candidate
+                        break
+            calls.append({"tool": "write_file", "source_key": source_key, "context": text})
+        return calls
+
+
+class OpenAICompatibleToolBackend:
+    """Standard OpenAI-compatible tool-calling loop for the B track.
+
+    The model chooses a tool from the declared schema; the local memory layer
+    executes it and returns a tool result for the model's final response.
+    """
+
+    TOOLS = [
+        {"type": "function", "function": {"name": "save_memory", "description": "Persist a non-sensitive fact", "parameters": {"type": "object", "properties": {"key": {"type": "string"}, "value": {}, "persist": {"type": "boolean"}}, "required": ["key", "value"]}}},
+        {"type": "function", "function": {"name": "update_memory", "description": "Update an existing fact", "parameters": {"type": "object", "properties": {"key": {"type": "string"}, "value": {}}, "required": ["key", "value"]}}},
+        {"type": "function", "function": {"name": "recall_memory", "description": "Recall a fact by key", "parameters": {"type": "object", "properties": {"key": {"type": "string"}}, "required": ["key"]}}},
+        {"type": "function", "function": {"name": "write_file", "description": "Write a report using a remembered path", "parameters": {"type": "object", "properties": {"source_key": {"type": "string"}}, "required": ["source_key"]}}},
+    ]
+
+    def __init__(self, backend: OpenAICompatibleAgent):
+        self.backend = backend
+        self.messages: List[Dict[str, Any]] = []
+
+    def _model_event(self, kind: str, data: Dict[str, Any], step: int) -> EvidenceEvent:
+        data = dict(data)
+        data.update({"backend": self.backend.name, "model": self.backend.model})
+        return EvidenceEvent(kind, data, step, source="model")
+
+    @staticmethod
+    def _canonical_call(call: Dict[str, Any]) -> Dict[str, Any]:
+        function = call.get("function") or {}
+        arguments = function.get("arguments", {})
+        if isinstance(arguments, str):
+            try:
+                arguments = json.loads(arguments)
+            except json.JSONDecodeError:
+                arguments = {"raw_arguments": arguments}
+        arguments = arguments if isinstance(arguments, dict) else {}
+        mapping = {"save_memory": "save", "update_memory": "update", "recall_memory": "recall", "write_file": "write_file"}
+        return {"tool": mapping.get(str(function.get("name") or ""), str(function.get("name") or "action")), "call_id": call.get("id", ""), **arguments}
+
+    def begin_turn(self, user: str, step: int) -> Dict[str, Any]:
+        self.messages.append({"role": "user", "content": user})
+        response = self.backend._request(deepcopy(self.messages), extra_options={"tools": self.TOOLS, "tool_choice": "auto"})
+        message = self.backend._message(response)
+        # DashScope-style backends reject assistant messages whose tool_calls
+        # list is present but empty — only include the key when tools were called.
+        assistant = {"role": "assistant", "content": message.get("content")}
+        if message.get("tool_calls"):
+            assistant["tool_calls"] = list(message["tool_calls"])
+        self.messages.append(assistant)
+        calls = [self._canonical_call(call) for call in (message.get("tool_calls") or []) if isinstance(call, dict)]
+        events = [self._model_event("model_request", {"tool_schema_count": len(self.TOOLS), "message_count": len(self.messages) - 1}, step)]
+        events.extend(self._model_event("memory_%s" % call["tool"] if call["tool"] in {"write", "update", "recall"} else "action", {"tool": call["tool"], "arguments": {key: value for key, value in call.items() if key not in {"tool", "call_id"}}, "tool_call_observed": True, "execution_observed": False}, step) for call in calls)
+        return {"calls": calls, "events": events, "response": response, "content": message.get("content") or ""}
+
+    def end_turn(self, tool_results: List[Dict[str, Any]], step: int) -> List[EvidenceEvent]:
+        for result in tool_results:
+            self.messages.append({"role": "tool", "tool_call_id": result.get("call_id", ""), "name": result.get("tool", "tool"), "content": json.dumps(result, ensure_ascii=False)})
+        response = self.backend._request(deepcopy(self.messages), extra_options={"tools": self.TOOLS, "tool_choice": "none"})
+        message = self.backend._message(response)
+        content = _content_text(message.get("content"))
+        self.messages.append({"role": "assistant", "content": content})
+        return [self._model_event("assistant_message", {"text": content, "tool_call_followup": True}, step), self._model_event("model_response", {"response_id": response.get("id"), "finish_reason": (response.get("choices") or [{}])[0].get("finish_reason")}, step)]
+
+
+class MemoryToolAgent(AgentAdapter):
+    """B-track agent: shared dialogue backend + pluggable memory implementation.
+
+    Tool decisions come from the backend policy (user language), not from
+    case.turns[].memory. Memory modules only execute save/update/recall.
+    Events from the store use source=memory_layer (system memory implementation).
+    """
+
+    def __init__(self, name: str, memory_impl: str = "kv", backend: Any = None, action_root: str = "runs/memory-tool-actions"):
+        from .memory_modules import build_memory_impl
+
+        self.name = name
+        self.memory_kind = str(memory_impl)
+        self.memory = build_memory_impl(memory_impl)
+        self.backend = backend or DecisionTextBackend()
+        self.action_root = Path(action_root)
+        if not self.action_root.is_absolute():
+            self.action_root = Path.cwd() / self.action_root
+        self.action_root.mkdir(parents=True, exist_ok=True)
+
+    def describe(self) -> Dict[str, Any]:
+        return {
+            "adapter": type(self).__name__,
+            "agent": self.name,
+            "memory_observability": "b_track_memory_layer",
+            "memory_impl": self.memory_kind,
+            "memory_policy": getattr(self.memory, "policy", ""),
+            "native_memory_capability": "memory_layer_observable",
+        }
+
+    @staticmethod
+    def _event(kind: str, data: Dict[str, Any], step: int, source: str = "memory_layer") -> EvidenceEvent:
+        return EvidenceEvent(kind, data, step, source=source)
+
+    def run(self, case: BenchmarkCase) -> List[EvidenceEvent]:
+        events: List[EvidenceEvent] = []
+        for step, turn in enumerate(case.turns, 1):
+            user = str(turn.get("user", ""))
+            events.append(self._event("user_message", {"text": user}, step, source="runner"))
+            model_turn = self.backend.begin_turn(user, step) if hasattr(self.backend, "begin_turn") else None
+            if model_turn:
+                events.extend(model_turn["events"])
+                calls = model_turn["calls"]
+            else:
+                calls = self.backend.plan(user, self.memory, step) or []
+            tool_results: List[Dict[str, Any]] = []
+            for call in calls:
+                tool = str(call.get("tool"))
+                if tool in ("save", "write"):
+                    key, value = str(call.get("key")), call.get("value")
+                    key = key.strip().lower()
+                    result = self.memory.save(key, value, persist=bool(call.get("persist", True)), context=str(call.get("context") or user))
+                    kind = "memory_write" if result.applied else "memory_suppress"
+                    events.append(self._event(kind, {
+                        "key": key,
+                        "value": value if result.applied else None,
+                        "old_value": result.old_value,
+                        "persist": result.applied,
+                        "refused_reason": result.refused_reason,
+                        "policy": result.policy,
+                        "state_observed": True,
+                        "decision": "agent_tool_save",
+                        "memory_impl": self.memory.name,
+                    }, step))
+                    tool_results.append({"call_id": call.get("call_id"), "tool": tool, "applied": result.applied, "value": result.value if result.applied else None, "refused_reason": result.refused_reason})
+                elif tool == "update":
+                    key, value = str(call.get("key")), call.get("value")
+                    key = key.strip().lower()
+                    result = self.memory.update(key, value, context=str(call.get("context") or user))
+                    kind = "memory_update" if result.applied else "memory_suppress"
+                    events.append(self._event(kind, {
+                        "key": key,
+                        "value": value if result.applied else result.old_value,
+                        "old_value": result.old_value,
+                        "persist": result.applied,
+                        "refused_reason": result.refused_reason,
+                        "policy": result.policy,
+                        "state_observed": True,
+                        "decision": "agent_tool_update",
+                        "memory_impl": self.memory.name,
+                    }, step))
+                    tool_results.append({"call_id": call.get("call_id"), "tool": tool, "applied": result.applied, "value": result.value if result.applied else None, "refused_reason": result.refused_reason})
+                elif tool == "recall":
+                    key = str(call.get("key")).strip().lower()
+                    hit, value = self.memory.recall(key)
+                    events.append(self._event("memory_recall", {
+                        "key": key, "value": value if hit else None, "hit": hit,
+                        "policy": self.memory.policy,
+                        "state_observed": True,
+                        "decision": "agent_tool_recall",
+                        "memory_impl": self.memory.name,
+                    }, step))
+                    tool_results.append({"call_id": call.get("call_id"), "tool": tool, "hit": hit, "value": value if hit else None})
+                    if not model_turn:
+                        text = "I don't know." if not hit else str(value)
+                        events.append(self._event("assistant_message", {"text": text}, step, source="model"))
+                elif tool == "write_file":
+                    source_key = call.get("source_key")
+                    path = None
+                    if source_key:
+                        hit, path = self.memory.recall(str(source_key))
+                        if not hit:
+                            path = None
+                    executed = path is not None
+                    actual_path = ""
+                    artifact_sha256 = ""
+                    if executed:
+                        actual_path_obj = self.action_root / (hashlib.sha256((case.id + str(step) + str(path)).encode("utf-8")).hexdigest() + ".txt")
+                        actual_path_obj.write_text("KylinMemoryBench memory-tool action\nsource_key=%s\nrequested_path=%s\n" % (source_key, path), encoding="utf-8")
+                        actual_path = str(actual_path_obj)
+                        artifact_sha256 = hashlib.sha256(actual_path_obj.read_bytes()).hexdigest()
+                    events.append(self._event("action", {
+                        "tool": "write_file",
+                        "path": path,
+                        "source_key": source_key,
+                        "executed": executed,
+                        "exit_code": 0 if executed else 1,
+                        "state_observed": executed,
+                        "actual_path": actual_path,
+                        "artifact_path": actual_path,
+                        "artifact_sha256": artifact_sha256,
+                        "decision": "agent_tool_action",
+                    }, step))
+                    if actual_path:
+                        events.append(self._event("file_artifact", {"path": actual_path, "artifact_path": actual_path, "artifact_sha256": artifact_sha256, "file_exists": True, "content": "KylinMemoryBench memory-tool action"}, step))
+                    tool_results.append({"call_id": call.get("call_id"), "tool": tool, "executed": executed, "exit_code": 0 if executed else 1, "path": path})
+            if model_turn:
+                events.extend(self.backend.end_turn(tool_results, step))
+            elif not any(c.get("tool") == "recall" for c in calls):
+                # Still produce a short assistant echo for conversational turns.
+                if user:
+                    events.append(self._event("assistant_message", {"text": "ok"}, step, source="model"))
+        return events
+
+
 def load_agent_config(path: str) -> Dict[str, Any]:
     config_path = Path(path)
     raw = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
@@ -852,7 +1138,7 @@ def load_agent_config(path: str) -> Dict[str, Any]:
     agent_type = str(raw.get("type", "")).strip().lower()
     if not name:
         raise ValueError("agent config requires name")
-    if agent_type not in {"deterministic", "replay", "command", "external", "http", "openai", "openai_compatible", "memory_controller", "memory_disabled"}:
+    if agent_type not in {"deterministic", "replay", "command", "external", "http", "openai", "openai_compatible", "memory_controller", "memory_disabled", "memory_tool"}:
         raise ValueError("unsupported agent type '%s'" % agent_type)
     if agent_type == "replay" and not raw.get("evidence") and not raw.get("evidence_path"):
         raise ValueError("replay agent config requires evidence")
@@ -860,6 +1146,14 @@ def load_agent_config(path: str) -> Dict[str, Any]:
         raise ValueError("command agent config requires command")
     if agent_type == "external" and not raw.get("command") and not raw.get("evidence"):
         raise ValueError("external agent config requires command or evidence")
+    if agent_type == "memory_tool" and not raw.get("memory_impl"):
+        raise ValueError("memory_tool agent config requires memory_impl (kv|similar)")
+    if agent_type == "memory_tool" and raw.get("backend"):
+        if not isinstance(raw["backend"], dict):
+            raise ValueError("memory_tool backend must be a mapping")
+        for field in ("base_url", "model", "api_key_env"):
+            if not raw["backend"].get(field):
+                raise ValueError("memory_tool backend requires %s" % field)
     if agent_type in {"http", "openai", "openai_compatible", "memory_controller", "memory_disabled"}:
         for field in ("base_url", "model", "api_key_env"):
             if not raw.get(field):
@@ -918,4 +1212,25 @@ def build_agent_from_config(path: str) -> AgentAdapter:
             headers=raw.get("headers", {}), evidence_field=raw.get("evidence_field", "kmb_evidence"),
         )
         return NoMemoryAgent(name, backend)
+    if agent_type == "memory_tool":
+        backend_config = raw.get("backend") or {}
+        backend = None
+        if backend_config:
+            if not isinstance(backend_config, dict):
+                raise ValueError("memory_tool backend must be a mapping")
+            backend = OpenAICompatibleToolBackend(OpenAICompatibleAgent(
+                name=name + "-model",
+                base_url=backend_config["base_url"],
+                model=backend_config["model"],
+                api_key_env=backend_config["api_key_env"],
+                endpoint=backend_config.get("endpoint", "/chat/completions"),
+                timeout_seconds=backend_config.get("timeout_seconds", 90),
+                system_prompt=backend_config.get("system_prompt", ""),
+                request_options=backend_config.get("request_options", {}),
+                headers=backend_config.get("headers", {}),
+            ))
+        action_root = raw.get("action_root", "runs/memory-tool-actions")
+        if not Path(action_root).is_absolute():
+            action_root = str(config_path.parent / action_root)
+        return MemoryToolAgent(name, memory_impl=str(raw.get("memory_impl") or "kv"), backend=backend, action_root=action_root)
     raise ValueError("external agent config is a template; use type command or replay after its protocol is confirmed")

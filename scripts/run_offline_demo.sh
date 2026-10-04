@@ -7,7 +7,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 OUT="${1:-runs/offline-demo}"
-PYTHON="${PYTHON:-python}"
+PYTHON="${PYTHON:-python3}"
+if ! command -v "$PYTHON" >/dev/null 2>&1; then
+  PYTHON=python
+fi
 
 echo "== KylinMemoryBench offline demo (no credentials) =="
 echo "workspace: $ROOT"

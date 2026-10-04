@@ -10,7 +10,7 @@ SUPPORTED_EVENT_KINDS = {
 }
 
 SUPPORTED_EVIDENCE_SOURCES = {
-    "unknown", "runner", "model", "wrapper", "provider_evidence", "simulated", "process",
+    "unknown", "runner", "model", "wrapper", "provider_evidence", "simulated", "process", "memory_layer",
 }
 SUPPORTED_EVIDENCE_CLASSES = {
     "unclassified", "runner_observation", "model_observation", "model_claim_unverified",
@@ -30,8 +30,8 @@ def classify_evidence(kind: str, source: str, data: Optional[Dict[str, Any]] = N
         return "runtime_error"
     if source == "runner" and data.get("memory_mode") == "no_memory_baseline":
         return "no_memory_baseline"
-    if source in ("wrapper", "process"):
-        # System-level execution (wrapper controller or external process agent).
+    if source in ("wrapper", "process", "memory_layer"):
+        # System-level execution: wrapper, external process, or B-track memory layer.
         return "wrapper_operation" if kind in MEMORY_EVENT_KINDS or kind in {"action", "tool_result", "file_artifact"} else "wrapper_observation"
     if source == "model":
         if kind in MEMORY_EVENT_KINDS and data.get("native") and data.get("state_observed"):
@@ -275,6 +275,7 @@ class CheckResult:
     reason: str
     failure_type: Optional[str] = None
     evidence_refs: List[Dict[str, Any]] = field(default_factory=list)
+    category: str = "behavior_failure"
 
     def to_dict(self) -> Dict[str, Any]:
         result = {
@@ -285,6 +286,7 @@ class CheckResult:
         }
         if self.failure_type:
             result["failure_type"] = self.failure_type
+        result["category"] = self.category
         return result
 
 

@@ -1,0 +1,7 @@
+name: b-memory-kv
+type: memory_tool
+memory_impl: kv
+action_root: runs/b-track-actions/kv
+description: >-
+  B-track memory 甲：精确 KV，策略偏可写尽写。决策来自 Agent 工具层
+  （默认 DecisionTextBackend，可换 HTTP 工具调用后端），不是 suite YAML 直写库。

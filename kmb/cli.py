@@ -50,10 +50,123 @@ def main(argv=None) -> int:
     serve.add_argument("--host", default="127.0.0.1", help="bind address (default: loopback only)")
     serve.add_argument("--port", type=int, default=8765, help="listen port")
     serve.add_argument("--root", default=".", help="project workspace root")
+    discover = sub.add_parser("discover-agents", help="discover supported Agents already installed on this host")
+    discover.add_argument("--root", default=".", help="project workspace root")
+    discover.add_argument(
+        "--json",
+        action="store_true",
+        help="emit machine-readable JSON (the default output format)",
+    )
+    quick = sub.add_parser("quick-compare", help="compare two installed Agents with fixed benchmark parameters")
+    quick.add_argument("--agents", nargs=2, metavar=("AGENT_A", "AGENT_B"), help="two discovered Agent ids")
+    quick.add_argument("--out", default="", help="result directory (default: runs/quick-compare-<id>)")
+    quick.add_argument("--root", default=".", help="project workspace root")
+    quick.add_argument("--preflight-only", action="store_true", help="read-only readiness check; starts no Agent turns and consumes no Tokens")
+    official = sub.add_parser("official-acceptance", help="run the one-command official acceptance path")
+    official.add_argument("--out", default="runs/official-acceptance")
+    official.add_argument("--mode", choices=("offline", "installed"), default="offline")
+    official.add_argument("--agent-a", default=None)
+    official.add_argument("--agent-b", default=None)
+    official.add_argument("--repeats", type=int, default=1)
+    repeat = sub.add_parser("official-repeat", help="run isolated repeat batches against two installed Agents")
+    repeat.add_argument("--agents", nargs=2, required=True, metavar=("AGENT_A", "AGENT_B"))
+    repeat.add_argument("--suite", default="suites/quick.yaml")
+    repeat.add_argument("--repeats", type=int, default=3)
+    repeat.add_argument("--seed", type=int, default=42)
+    repeat.add_argument("--timeout", type=float, default=180.0)
+    repeat.add_argument("--isolated-home", action="store_true", required=True)
+    repeat.add_argument("--out", required=True)
+    register = sub.add_parser(
+        "register-agent",
+        help="register an OpenAI-compatible model as http + memory_controller + memory_disabled pack",
+    )
+    register.add_argument("--name", required=True, help="display name, e.g. OpenRouter or MyBot")
+    register.add_argument("--base-url", required=True, help="e.g. https://api.example.com/v1")
+    register.add_argument("--model", required=True, help="model id sent to the API")
+    register.add_argument(
+        "--api-key-env",
+        default="",
+        help="environment variable name that holds the API key (value is never saved)",
+    )
+    register.add_argument("--endpoint", default="/chat/completions")
+    register.add_argument("--temperature", type=float, default=0.0)
+    register.add_argument("--timeout", type=int, default=180)
+    register.add_argument(
+        "--id",
+        default="",
+        help="config file id (default: slug of --name). Files become agent-<id>*.yaml",
+    )
+    register.add_argument(
+        "--configs-dir",
+        default="configs",
+        help="directory for agent YAML files (default: configs)",
+    )
     args = parser.parse_args(argv)
     if args.command in ("serve", "workbench"):
         from .workbench import serve as serve_workbench
         serve_workbench(root=args.root, host=args.host, port=args.port)
+        return 0
+    if args.command == "discover-agents":
+        from .agent_registry import discover_agents, profiles_to_dicts
+        print(json.dumps({"agents": profiles_to_dicts(discover_agents(Path(args.root).resolve()))}, ensure_ascii=False, indent=2))
+        return 0
+    if args.command == "quick-compare":
+        from .quick_compare import QuickCompareOptions, run_quick_compare
+        try:
+            result = run_quick_compare(
+                QuickCompareOptions(agent_ids=args.agents, out_dir=args.out, preflight_only=getattr(args, "preflight_only", False)),
+                root=Path(args.root).resolve(),
+            )
+        except (FileNotFoundError, RuntimeError, ValueError) as exc:
+            raise SystemExit(str(exc))
+        print(json.dumps({
+            "run_id": result["run_id"],
+            "agents": [item["id"] for item in result["agents"]],
+            "out": result["result_directory"],
+            "parameters": result["parameters"],
+        }, ensure_ascii=False))
+        return 0
+    if args.command == "official-acceptance":
+        from scripts.official_acceptance import run_official_acceptance
+        result = run_official_acceptance(args.out, args.mode, args.agent_a, args.agent_b, args.repeats)
+        print(json.dumps({"status": result.status, "exit_code": result.exit_code, "out": str(Path(args.out).resolve())}, ensure_ascii=False))
+        return result.exit_code
+    if args.command == "official-repeat":
+        from scripts.official_repeat import run_official_repeat
+        try:
+            summary = run_official_repeat(
+                args.agents,
+                args.out,
+                repeats=args.repeats,
+                suite=args.suite,
+                seed=args.seed,
+                timeout=args.timeout,
+            )
+        except (FileNotFoundError, RuntimeError, ValueError, FileExistsError) as exc:
+            raise SystemExit(str(exc))
+        print(json.dumps({
+            "status": summary["status"],
+            "agents": summary["agents"],
+            "repeats": summary["repeats"],
+            "out": str(Path(args.out).resolve()),
+        }, ensure_ascii=False))
+        return 0 if summary["status"] == "completed" else 3 if summary["status"] == "partial" else 2
+    if args.command == "register-agent":
+        from .register import register_from_args
+        try:
+            register_from_args(
+                name=args.name,
+                base_url=args.base_url,
+                model=args.model,
+                api_key_env=args.api_key_env,
+                endpoint=args.endpoint,
+                temperature=args.temperature,
+                timeout=args.timeout,
+                agent_id=args.id,
+                configs_root=Path(args.configs_dir),
+            )
+        except (ValueError, FileExistsError) as exc:
+            raise SystemExit(str(exc))
         return 0
     cases = load_suite(args.suite)
     if args.command == "validate":
@@ -68,7 +181,7 @@ def main(argv=None) -> int:
         agent = _build_agent(args.agent)
         summary = run_suite(agent, cases, args.out, timeout_seconds=args.timeout, retries=args.retries, run_id=args.run_id, seed=args.seed)
         write_markdown(summary, str(Path(args.out) / "result.md"))
-        (Path(args.out) / "radar.svg").write_text(radar_svg(summary["dimensions"]), encoding="utf-8")
+        (Path(args.out) / "radar.svg").write_text(radar_svg(summary["dimensions"], score_valid=summary.get("score_valid", True)), encoding="utf-8")
         write_html_report([summary], str(Path(args.out) / "result.html"))
         print(json.dumps({"agent": summary["agent"], "overall": summary["overall"], "out": args.out}, ensure_ascii=False))
         return 0

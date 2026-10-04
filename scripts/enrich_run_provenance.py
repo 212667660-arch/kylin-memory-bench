@@ -73,7 +73,7 @@ def enrich_run(source_dir: str, destination_dir: str) -> dict:
     enriched["evidence"] = str(destination / "evidence.jsonl")
     (destination / "result.json").write_text(json.dumps(enriched, ensure_ascii=False, indent=2), encoding="utf-8")
     write_markdown(enriched, str(destination / "result.md"))
-    (destination / "radar.svg").write_text(radar_svg(enriched.get("dimensions", {})), encoding="utf-8")
+    (destination / "radar.svg").write_text(radar_svg(enriched.get("dimensions", {}), score_valid=enriched.get("score_valid", True)), encoding="utf-8")
     write_html_report([enriched], str(destination / "result.html"))
     return enriched
 

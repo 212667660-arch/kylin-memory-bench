@@ -1,0 +1,24 @@
+# openKylin Token Center — OpenAI-compatible HTTP profile
+# Source: openkylin.top Token 中心说明（2026-09-09），见 docs/openkylin-token-center.md
+# 调研：research/openkylin-agent-ecosystem/REPORT.md
+# 本文件不含 API Key；完整 Key 仅在 Token 中心客户端申领时显示一次。
+name: openkylin-token
+type: http
+version: "token-center-template"
+base_url: https://llm-gateway.openkylin.top/v1
+endpoint: /chat/completions
+# 模型名以 Token 中心客户端列表为准。官方新闻示例：
+#   deepseek-v4-flash, deepseek-v4-pro,
+#   qwen3.8-max, qwen3.7-max, qwen3.7-plus
+model: deepseek-v4-flash
+api_key_env: OPENKYLIN_TOKEN_API_KEY
+timeout_seconds: 180
+request_options:
+  temperature: 0
+provider: openKylin Token Center
+description: >-
+  openKylin Token Center，完全兼容 OpenAI 协议。Key 由系统预装「Token 中心」
+  客户端申请领取，仅写入环境变量 OPENKYLIN_TOKEN_API_KEY（勿写入本文件）。
+  无 kmb_evidence 时仅为文本可观测轨（仅连通）；免费额度为每日签到发放，
+  具体数值/限流官方未公开。链路 Agent → OpenAI-compatible → Token Center →
+  模型后端。本仓库本轮未宣称已在 VM 实测 Token Center。

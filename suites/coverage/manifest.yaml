@@ -1,0 +1,841 @@
+schema_version: 1
+rule_version: 1
+suites:
+- path: suites/core-zh.yaml
+  name: core-zh
+  version: 1
+  sha256: b2f698e997d73ad17c89c8372c4a9dd780655af990b4fbd5ba0e48df4101f7f2
+  cases: 6
+- path: suites/core-zh-expanded.yaml
+  name: core-zh-expanded
+  version: 1
+  sha256: e4e9a78d5dc45a2be464100a04bc63fd5988273bfe567f51bc75e890e4908378
+  cases: 18
+- path: suites/adversarial/extended.yaml
+  name: adversarial-extended
+  version: 1
+  sha256: 7312bc9e8d0d148f9c8101983ddb8bc7e49d21c5710bf05506f4986ca7859e5d
+  cases: 19
+- path: suites/adversarial/multilingual-en.yaml
+  name: adversarial-multilingual-en
+  version: 1
+  sha256: 2049e1adba8b2b42da1c4262d837851766901a4e83d4c9e9819e09eab0fa6324
+  cases: 6
+cases:
+- id: retention-001
+  suite: suites/core-zh.yaml
+  version: 1
+  capability: retention
+  language: zh
+  tags:
+  - persistent
+  - recall
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - memory_recall
+- id: recall-001
+  suite: suites/core-zh.yaml
+  version: 1
+  capability: memory_recall
+  language: zh
+  tags:
+  - persistent
+  - recall
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - memory_recall
+- id: update-001
+  suite: suites/core-zh.yaml
+  version: 1
+  capability: dynamic_update
+  language: zh
+  tags:
+  - conflict_update
+  - persistent
+  - recall
+  - update
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - answer_not_contains
+  - memory_value
+- id: similar-001
+  suite: suites/core-zh.yaml
+  version: 1
+  capability: similar_distinction
+  language: zh
+  tags:
+  - persistent
+  - recall
+  - similar_entity
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - memory_recall
+- id: boundary-001
+  suite: suites/core-zh.yaml
+  version: 1
+  capability: boundary
+  language: zh
+  tags:
+  - ephemeral
+  - recall
+  - sensitive
+  - suppression
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_not_contains
+  - memory_absent
+- id: reuse-001
+  suite: suites/core-zh.yaml
+  version: 1
+  capability: task_reuse
+  language: zh
+  tags:
+  - action
+  - cross_task
+  - persistent
+  - write
+  similar_group: ''
+  cross_task_group: reuse-001
+  expected_actions:
+  - write_file
+  evidence_requirements:
+  - action_path
+  - action_tool
+- id: retention-101-pref
+  suite: suites/core-zh-expanded.yaml
+  version: 1
+  capability: retention
+  language: zh
+  tags:
+  - noise
+  - persistent
+  - recall
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - memory_recall
+- id: retention-102-path
+  suite: suites/core-zh-expanded.yaml
+  version: 1
+  capability: retention
+  language: zh
+  tags:
+  - persistent
+  - recall
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - memory_recall
+- id: retention-103-locale
+  suite: suites/core-zh-expanded.yaml
+  version: 1
+  capability: retention
+  language: zh
+  tags:
+  - persistent
+  - recall
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - memory_recall
+- id: recall-101-template
+  suite: suites/core-zh-expanded.yaml
+  version: 1
+  capability: memory_recall
+  language: zh
+  tags:
+  - persistent
+  - recall
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - memory_recall
+- id: recall-102-multi
+  suite: suites/core-zh-expanded.yaml
+  version: 1
+  capability: memory_recall
+  language: zh
+  tags:
+  - noise
+  - persistent
+  - recall
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - memory_recall
+- id: recall-103-timezone
+  suite: suites/core-zh-expanded.yaml
+  version: 1
+  capability: memory_recall
+  language: zh
+  tags:
+  - persistent
+  - recall
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - memory_recall
+- id: update-101-role
+  suite: suites/core-zh-expanded.yaml
+  version: 1
+  capability: dynamic_update
+  language: zh
+  tags:
+  - conflict_update
+  - persistent
+  - recall
+  - update
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - answer_not_contains
+  - memory_value
+- id: update-102-env
+  suite: suites/core-zh-expanded.yaml
+  version: 1
+  capability: dynamic_update
+  language: zh
+  tags:
+  - conflict_update
+  - persistent
+  - recall
+  - update
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - memory_value
+- id: update-103-double
+  suite: suites/core-zh-expanded.yaml
+  version: 1
+  capability: dynamic_update
+  language: zh
+  tags:
+  - conflict_update
+  - persistent
+  - recall
+  - update
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - answer_not_contains
+  - memory_value
+- id: similar-101-dev-prod
+  suite: suites/core-zh-expanded.yaml
+  version: 1
+  capability: similar_distinction
+  language: zh
+  tags:
+  - persistent
+  - recall
+  - sensitive
+  - similar_entity
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - answer_not_contains
+  - memory_recall
+- id: similar-102-user-agent
+  suite: suites/core-zh-expanded.yaml
+  version: 1
+  capability: similar_distinction
+  language: zh
+  tags:
+  - persistent
+  - recall
+  - similar_entity
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - memory_recall
+- id: similar-103-near-key
+  suite: suites/core-zh-expanded.yaml
+  version: 1
+  capability: similar_distinction
+  language: zh
+  tags:
+  - persistent
+  - recall
+  - similar_entity
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - memory_recall
+- id: boundary-101-otp-suffix
+  suite: suites/core-zh-expanded.yaml
+  version: 1
+  capability: boundary
+  language: zh
+  tags:
+  - ephemeral
+  - recall
+  - sensitive
+  - suppression
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_not_contains
+  - sensitive_not_persisted
+- id: boundary-102-risk-cmd
+  suite: suites/core-zh-expanded.yaml
+  version: 1
+  capability: boundary
+  language: zh
+  tags:
+  - ephemeral
+  - recall
+  - risk
+  - suppression
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - sensitive_not_persisted
+- id: boundary-103-password
+  suite: suites/core-zh-expanded.yaml
+  version: 1
+  capability: boundary
+  language: zh
+  tags:
+  - ephemeral
+  - recall
+  - sensitive
+  - suppression
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_not_contains
+  - memory_absent
+- id: reuse-101-report-dir
+  suite: suites/core-zh-expanded.yaml
+  version: 1
+  capability: task_reuse
+  language: zh
+  tags:
+  - action
+  - cross_task
+  - persistent
+  - write
+  similar_group: ''
+  cross_task_group: reuse-101-report-dir
+  expected_actions:
+  - write_file
+  evidence_requirements:
+  - action_path
+  - action_tool
+- id: reuse-102-state
+  suite: suites/core-zh-expanded.yaml
+  version: 1
+  capability: task_reuse
+  language: zh
+  tags:
+  - action
+  - cross_task
+  - persistent
+  - write
+  similar_group: ''
+  cross_task_group: reuse-102-state
+  expected_actions:
+  - write_file
+  evidence_requirements:
+  - action_path
+  - state_sequence
+- id: reuse-103-then-update
+  suite: suites/core-zh-expanded.yaml
+  version: 1
+  capability: task_reuse
+  language: zh
+  tags:
+  - action
+  - conflict_update
+  - cross_task
+  - persistent
+  - update
+  - write
+  similar_group: ''
+  cross_task_group: reuse-103-then-update
+  expected_actions:
+  - write_file
+  evidence_requirements:
+  - action_path
+  - answer_not_contains
+- id: conflict-001-meeting
+  suite: suites/adversarial/extended.yaml
+  version: 1
+  capability: dynamic_update
+  language: mixed
+  tags:
+  - conflict_update
+  - persistent
+  - recall
+  - update
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - answer_not_contains
+  - memory_value
+- id: conflict-002-owner
+  suite: suites/adversarial/extended.yaml
+  version: 1
+  capability: dynamic_update
+  language: mixed
+  tags:
+  - conflict_update
+  - persistent
+  - recall
+  - update
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - answer_not_contains
+  - memory_value
+- id: conflict-003-tier
+  suite: suites/adversarial/extended.yaml
+  version: 1
+  capability: dynamic_update
+  language: mixed
+  tags:
+  - conflict_update
+  - persistent
+  - recall
+  - update
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - answer_not_contains
+  - memory_value
+- id: similar-ext-001-db
+  suite: suites/adversarial/extended.yaml
+  version: 1
+  capability: similar_distinction
+  language: mixed
+  tags:
+  - persistent
+  - recall
+  - similar_entity
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - answer_not_contains
+  - memory_recall
+- id: similar-ext-002-region
+  suite: suites/adversarial/extended.yaml
+  version: 1
+  capability: similar_distinction
+  language: mixed
+  tags:
+  - persistent
+  - recall
+  - similar_entity
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - memory_recall
+- id: similar-ext-003-build
+  suite: suites/adversarial/extended.yaml
+  version: 1
+  capability: similar_distinction
+  language: mixed
+  tags:
+  - persistent
+  - recall
+  - similar_entity
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - answer_not_contains
+  - memory_recall
+- id: noise-ext-001-chatter
+  suite: suites/adversarial/extended.yaml
+  version: 1
+  capability: retention
+  language: mixed
+  tags:
+  - noise
+  - persistent
+  - recall
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - memory_recall
+- id: noise-ext-002-distractor
+  suite: suites/adversarial/extended.yaml
+  version: 1
+  capability: memory_recall
+  language: mixed
+  tags:
+  - noise
+  - persistent
+  - recall
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - memory_recall
+- id: noise-ext-003-multi-noise
+  suite: suites/adversarial/extended.yaml
+  version: 1
+  capability: retention
+  language: mixed
+  tags:
+  - noise
+  - persistent
+  - recall
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - memory_recall
+- id: sensitive-ext-001-card
+  suite: suites/adversarial/extended.yaml
+  version: 1
+  capability: boundary
+  language: mixed
+  tags:
+  - ephemeral
+  - recall
+  - sensitive
+  - suppression
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_not_contains
+  - sensitive_not_persisted
+- id: sensitive-ext-002-email
+  suite: suites/adversarial/extended.yaml
+  version: 1
+  capability: boundary
+  language: mixed
+  tags:
+  - ephemeral
+  - recall
+  - sensitive
+  - suppression
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_not_contains
+  - sensitive_not_persisted
+- id: sensitive-ext-003-session
+  suite: suites/adversarial/extended.yaml
+  version: 1
+  capability: boundary
+  language: mixed
+  tags:
+  - ephemeral
+  - recall
+  - sensitive
+  - suppression
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_not_contains
+  - sensitive_not_persisted
+- id: cross-task-001-artifact
+  suite: suites/adversarial/extended.yaml
+  version: 1
+  capability: task_reuse
+  language: mixed
+  tags:
+  - action
+  - cross_task
+  - persistent
+  - write
+  similar_group: ''
+  cross_task_group: cross-task-001-artifact
+  expected_actions:
+  - write_file
+  evidence_requirements:
+  - action_path
+  - action_tool
+- id: cross-task-002-export-new
+  suite: suites/adversarial/extended.yaml
+  version: 1
+  capability: task_reuse
+  language: mixed
+  tags:
+  - action
+  - conflict_update
+  - cross_task
+  - persistent
+  - update
+  - write
+  similar_group: ''
+  cross_task_group: cross-task-002-export-new
+  expected_actions:
+  - write_file
+  evidence_requirements:
+  - action_path
+  - state_sequence
+- id: cross-task-003-logs
+  suite: suites/adversarial/extended.yaml
+  version: 1
+  capability: task_reuse
+  language: mixed
+  tags:
+  - action
+  - cross_task
+  - persistent
+  - write
+  similar_group: ''
+  cross_task_group: cross-task-003-logs
+  expected_actions:
+  - write_file
+  evidence_requirements:
+  - action_path
+  - action_tool
+- id: conflict-104-brightness
+  suite: suites/adversarial/extended.yaml
+  version: 1
+  capability: dynamic_update
+  language: mixed
+  tags:
+  - conflict_update
+  - persistent
+  - recall
+  - update
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - answer_not_contains
+  - memory_value
+- id: noise-ext-004-bilingual-feed
+  suite: suites/adversarial/extended.yaml
+  version: 1
+  capability: memory_recall
+  language: mixed
+  tags:
+  - conflict_update
+  - noise
+  - persistent
+  - recall
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - memory_recall
+- id: sensitive-ext-004-iban
+  suite: suites/adversarial/extended.yaml
+  version: 1
+  capability: boundary
+  language: mixed
+  tags:
+  - ephemeral
+  - recall
+  - sensitive
+  - suppression
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_not_contains
+  - sensitive_not_persisted
+- id: boundary-104-risk-pipeline
+  suite: suites/adversarial/extended.yaml
+  version: 1
+  capability: boundary
+  language: mixed
+  tags:
+  - ephemeral
+  - recall
+  - risk
+  - suppression
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_not_contains
+  - sensitive_not_persisted
+- id: retention-en-101-editor
+  suite: suites/adversarial/multilingual-en.yaml
+  version: 1
+  capability: retention
+  language: en
+  tags:
+  - persistent
+  - recall
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - memory_recall
+- id: recall-en-102-noisy-standup
+  suite: suites/adversarial/multilingual-en.yaml
+  version: 1
+  capability: memory_recall
+  language: en
+  tags:
+  - noise
+  - persistent
+  - recall
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - memory_recall
+- id: conflict-en-103-deploy-window
+  suite: suites/adversarial/multilingual-en.yaml
+  version: 1
+  capability: dynamic_update
+  language: en
+  tags:
+  - conflict_update
+  - persistent
+  - recall
+  - update
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - answer_not_contains
+  - memory_value
+- id: similar-en-104-bucket
+  suite: suites/adversarial/multilingual-en.yaml
+  version: 1
+  capability: similar_distinction
+  language: en
+  tags:
+  - persistent
+  - recall
+  - similar_entity
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_contains
+  - answer_not_contains
+  - memory_recall
+- id: boundary-en-105-otp
+  suite: suites/adversarial/multilingual-en.yaml
+  version: 1
+  capability: boundary
+  language: en
+  tags:
+  - ephemeral
+  - recall
+  - sensitive
+  - suppression
+  - write
+  similar_group: ''
+  cross_task_group: ''
+  expected_actions: []
+  evidence_requirements:
+  - answer_not_contains
+  - sensitive_not_persisted
+- id: reuse-en-106-report-dir
+  suite: suites/adversarial/multilingual-en.yaml
+  version: 1
+  capability: task_reuse
+  language: en
+  tags:
+  - action
+  - cross_task
+  - persistent
+  - write
+  similar_group: ''
+  cross_task_group: reuse-en-106-report-dir
+  expected_actions:
+  - write_file
+  evidence_requirements:
+  - action_path
+  - action_tool

@@ -69,6 +69,20 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(events[0].kind, "assistant_message")
         self.assertEqual(events[0].data["text"], "ok")
 
+    def test_command_agent_uses_current_runtime_for_generic_python_command(self):
+        import sys
+
+        command = ["python", "-c", "import json; print(json.dumps({'case_id':'command-1','kind':'assistant_message','data':{'text':'ok'},'step':1}))"]
+        agent = CommandAgent("external-command", command)
+        self.assertEqual(agent.command[0], sys.executable)
+
+        case = BenchmarkCase.from_dict({
+            "id": "command-1", "capability": "memory_recall", "title": "command",
+            "turns": [], "checks": [],
+        })
+        events = agent.run(case)
+        self.assertEqual(events[0].data["text"], "ok")
+
     def test_agent_config_requires_command_for_command_type(self):
         import tempfile
         from pathlib import Path

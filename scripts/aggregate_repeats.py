@@ -87,6 +87,19 @@ def _innovation_metrics(result, evidence_rows):
     }
 
 
+def _failure_class(category):
+    value = str(category or "runtime_error").lower()
+    if any(term in value for term in ("billing", "quota", "balance", "payment", "402")):
+        return "billing"
+    if any(term in value for term in ("credential", "auth", "unauthorized", "forbidden", "401", "403")):
+        return "credential"
+    if any(term in value for term in ("provider", "http_4", "http_5", "api_error")):
+        return "provider"
+    if "timeout" in value or "timed_out" in value:
+        return "timeout"
+    if any(term in value for term in ("behavior", "boundary", "recall", "mismatch", "incorrect", "missing_memory")):
+        return "behavior"
+    return "runtime"
 def aggregate_repeats(runs_root, output_path=None, pattern="repeat-*"):
     root = Path(runs_root)
     if not root.exists():
@@ -107,11 +120,15 @@ def aggregate_repeats(runs_root, output_path=None, pattern="repeat-*"):
         "evidence_chain_link_coverage": [],
     }
     security_failures = Counter()
+    failure_types = Counter()
+    source_counts = Counter()
     metamorphic_group_count = metamorphic_group_passed = 0
     lifecycle_check_count = lifecycle_check_passed = 0
     action_count = action_success_count = 0
     artifact_event_count = 0
     execution_error_runs = 0
+    strict_invalid_runs = 0
+    score_valid_runs = 0
     case_count = 0
     passing_cases = 0
 
@@ -119,24 +136,49 @@ def aggregate_repeats(runs_root, output_path=None, pattern="repeat-*"):
         result_path = directory / "result.json"
         evidence_path = directory / "evidence.jsonl"
         if not result_path.exists() or not evidence_path.exists():
-            raise ValueError("run is missing result.json or evidence.jsonl: %s" % directory)
-        verification = verify_run(str(directory), strict=True)
+            strict_invalid_runs += 1
+            records.append({"directory": str(directory), "verification_status": "invalid", "verification_error": "missing result.json or evidence.jsonl", "score_valid": False, "overall": None, "failure_counts": {}})
+            continue
+        try:
+            verification = verify_run(str(directory), strict=True)
+        except Exception as exc:
+            strict_invalid_runs += 1
+            records.append({"directory": str(directory), "verification_status": "invalid", "verification_error": str(exc), "score_valid": False, "overall": None, "failure_counts": {}})
+            continue
         result = json.loads(result_path.read_text(encoding="utf-8"))
         evidence_rows = [json.loads(line) for line in evidence_path.read_text(encoding="utf-8").splitlines() if line.strip()]
         run_failures = {str(key): int(value) for key, value in (result.get("failure_counts") or {}).items()}
         failures.update(run_failures)
         errors = [row for row in evidence_rows if row.get("kind") == "error"]
+        for error in errors:
+            category = str((error.get("data") or {}).get("category") or (error.get("data") or {}).get("failure_type") or "runtime_error")
+            failure_types[_failure_class(category)] += 1
         if errors:
             execution_error_runs += 1
         rows = result.get("results") or []
-        case_count += len(rows)
-        passing_cases += sum(1 for row in rows if row.get("status") == "pass")
-        overall = float(result.get("overall", 0.0))
-        overall_values.append(overall)
+        runtime_cases = {str(row.get("case_id")) for row in errors}
+        for case in rows:
+            if case.get("status") != "pass" and str(case.get("case_id")) not in runtime_cases:
+                failure_types["behavior"] += 1
+        declared_score_valid = result.get("score_valid")
+        if declared_score_valid is None:
+            # Preserve compatibility with historical summaries that predate
+            # the explicit field, while still rejecting runtime-invalid runs.
+            score_valid = not errors and result.get("score_status") not in {"invalid", "invalid_runtime"}
+        else:
+            score_valid = declared_score_valid is True
+        if score_valid:
+            score_valid_runs += 1
+            case_count += len(rows)
+            passing_cases += sum(1 for row in rows if row.get("status") == "pass")
+        overall = float(result.get("overall", 0.0)) if score_valid else None
+        if score_valid:
+            overall_values.append(overall)
         dimensions = result.get("dimensions") or {}
-        for key in DIMENSIONS:
-            if key in dimensions:
-                dimension_values[key].append(float(dimensions[key]))
+        if score_valid:
+            for key in DIMENSIONS:
+                if key in dimensions:
+                    dimension_values[key].append(float(dimensions[key]))
         latencies = _latency(evidence_path)
         latency_values.extend(latencies)
         innovation = _innovation_metrics(result, evidence_rows)
@@ -152,11 +194,21 @@ def aggregate_repeats(runs_root, output_path=None, pattern="repeat-*"):
         action_success_count += innovation["action_success_count"]
         artifact_event_count += innovation["artifact_events"]
         security_failures.update(innovation["security_red_team_failure_counts"])
+        sources = (result.get("observability") or {}).get("sources") or {}
+        for row in evidence_rows:
+            source = row.get("source") or (row.get("data") or {}).get("source")
+            if source:
+                sources[source] = int(sources.get(source, 0)) + 1
+        for source in ("process", "wrapper", "model", "simulated"):
+            if int(sources.get(source, 0)) > 0:
+                source_counts[source] += 1
         records.append({
             "directory": str(directory),
+            "verification_status": "valid",
             "run_id": result.get("run_id"),
             "agent": result.get("agent"),
             "overall": overall,
+            "score_valid": score_valid,
             "dimensions": {key: dimensions.get(key) for key in DIMENSIONS},
             "cases": int(result.get("cases", len(rows))),
             "evidence_events": verification["evidence_events"],
@@ -171,8 +223,8 @@ def aggregate_repeats(runs_root, output_path=None, pattern="repeat-*"):
 
     dimension_stats = {key: _stats(values) for key, values in dimension_values.items()}
     consistency = {
-        "overall_all_equal": len(set(overall_values)) <= 1,
-        "dimensions_all_equal": all(len(set(values)) <= 1 for values in dimension_values.values() if values),
+        "overall_all_equal": bool(overall_values) and len(set(overall_values)) <= 1,
+        "dimensions_all_equal": bool(overall_values) and all(len(set(values)) <= 1 for values in dimension_values.values() if values),
         "identical_result_count": sum(1 for value in overall_values if value == overall_values[0]) if overall_values else 0,
     }
     payload = {
@@ -181,11 +233,16 @@ def aggregate_repeats(runs_root, output_path=None, pattern="repeat-*"):
         "pattern": pattern,
         "agent": records[0].get("agent") if records else None,
         "batch_count": len(records),
-        "valid_batch_count": len(records),
-        "execution_success_count": len(records) - execution_error_runs,
-        "execution_failure_count": execution_error_runs,
-        "execution_success_rate": round((len(records) - execution_error_runs) / len(records) * 100, 2),
-        "execution_failure_rate": round(execution_error_runs / len(records) * 100, 2),
+        "valid_batch_count": sum(1 for record in records if record.get("verification_status") == "valid"),
+        "strict_invalid_count": strict_invalid_runs,
+        "score_valid_count": score_valid_runs,
+        "score_valid_rate": round(score_valid_runs / len(directories), 4) if directories else 0.0,
+        "execution_success_count": sum(1 for record in records if record.get("verification_status") == "valid" and not record.get("execution_error_events")),
+        "execution_failure_count": len(directories) - sum(1 for record in records if record.get("verification_status") == "valid" and not record.get("execution_error_events")),
+        "execution_success_rate": round(sum(1 for record in records if record.get("verification_status") == "valid" and not record.get("execution_error_events")) / len(directories) * 100, 2) if directories else 0.0,
+        "execution_failure_rate": round((len(directories) - sum(1 for record in records if record.get("verification_status") == "valid" and not record.get("execution_error_events"))) / len(directories) * 100, 2) if directories else 0.0,
+        "success_rate": round(sum(1 for record in records if record.get("verification_status") == "valid" and not record.get("execution_error_events")) / len(directories), 4) if directories else 0.0,
+        "score_valid_rate_percent": round(score_valid_runs / len(directories) * 100, 2) if directories else 0.0,
         "behavioral_case_count": case_count,
         "behavioral_pass_count": passing_cases,
         "behavioral_case_pass_rate": round(passing_cases / case_count * 100, 2) if case_count else 0.0,
@@ -216,6 +273,9 @@ def aggregate_repeats(runs_root, output_path=None, pattern="repeat-*"):
         },
         "security_red_team_failure_counts": dict(sorted(security_failures.items())),
         "failure_counts": dict(sorted(failures.items())),
+        "failure_types": {key: failure_types.get(key, 0) for key in ("provider", "billing", "credential", "timeout", "runtime", "behavior")},
+        "source": max(source_counts, key=source_counts.get) if source_counts else "simulated",
+        "source_counts": dict(sorted(source_counts.items())),
         "consistency": consistency,
         "observability": {
             "mode": sorted(set(record.get("mode") for record in records)),
@@ -232,6 +292,11 @@ def aggregate_repeats(runs_root, output_path=None, pattern="repeat-*"):
     return payload
 
 
+def aggregate_repeat_runs(runs_root, output_path=None, pattern="repeat-*"):
+    """Stable public API used by the official acceptance report."""
+    return aggregate_repeats(runs_root, output_path=output_path, pattern=pattern)
+
+
 def _disclaimer(modes):
     modes = set(modes)
     if "system_level_wrapper_assisted" in modes:
@@ -246,7 +311,9 @@ def _write_markdown(payload, path):
         "# 重复运行稳定性汇总", "", 
         "> %s" % payload["observability"]["disclaimer"], "",
         "- 批次：%d" % payload["batch_count"],
+        "- 严格结构有效批次：%d/%d" % (payload["valid_batch_count"], payload["batch_count"]),
         "- 执行成功率：%.2f%%" % payload["execution_success_rate"],
+        "- 有效分数率：%.2f%%" % payload["score_valid_rate_percent"],
         "- 行为案例通过率：%.2f%%" % payload["behavioral_case_pass_rate"],
         "- Overall 均值/标准差/最小/最大：%(mean)s / %(stdev)s / %(min)s / %(max)s" % payload["overall"],
         "- 模型响应延迟均值/标准差/最小/最大(ms)：%(mean)s / %(stdev)s / %(min)s / %(max)s" % payload["latency_ms"],
@@ -264,7 +331,11 @@ def _write_markdown(payload, path):
         lines.append("- %s: %d" % (key, value))
     lines.extend(["", "## 批次", "", "| Run ID | Overall | 证据事件 | 模型响应 | 延迟均值(ms) |", "|---|---:|---:|---:|---:|"])
     for record in payload["runs"]:
-        lines.append("| `%s` | %.2f | %d | %d | %s |" % (record["run_id"], record["overall"], record["evidence_events"], record["model_responses"], record["latency_ms"]["mean"]))
+        if record.get("verification_status") != "valid":
+            lines.append("| `%s` | strict verify 失败 | 0 | 0 | - |" % record.get("directory"))
+        else:
+            overall = "%.2f" % record["overall"] if record.get("score_valid") else "不可评分"
+            lines.append("| `%s` | %s | %d | %d | %s |" % (record.get("run_id"), overall, record["evidence_events"], record["model_responses"], record["latency_ms"]["mean"]))
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 

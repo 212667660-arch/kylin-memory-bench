@@ -1,0 +1,19 @@
+# Real KylinBot command adapter (agent-owned memory via brain.db)
+# Path on guest: ~/.kylinbot/workspace/memory/brain.db
+# Override: env KYLINBOT_BRAIN_DB
+# Stand-in (NOT real KylinBot): configs/agent-kylinbot-process.yaml
+# Gate docs: docs/native-memory-compare.md 门禁计数
+name: kylinbot-command
+type: command
+version: "cli-driver-kylinbot-braindb"
+# openKylin 3.0 guest provides python3 (not a python alias).
+command: ["python3", "scripts/kylinbot_command_agent.py"]
+timeout_seconds: 60
+env_allowlist:
+  - KYLINBOT_BRAIN_DB
+  - KYLINBOT_COMMAND
+  - PYTHONUTF8
+description: >-
+  Real KylinBot CLI driver: sends each case turn with one shared session file,
+  observes stdout and brain.db deltas, and emits kmb_evidence JSONL. Events
+  are agent-owned process evidence, not model_native_memory.

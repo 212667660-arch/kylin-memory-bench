@@ -1,0 +1,19 @@
+# OpenClaw command 适配器骨架（占位）
+# 级别：独立 MIT 开源（openclaw/openclaw）；openKylin 3.0 官方新闻「可完整运行」
+#   — 社区生态/官方点名可运行，非 openKylin 官方开发
+# Linux 安装：curl -fsSL https://openclaw.ai/install.sh | bash
+# 规格：docs/ecosystem-agent-export.md
+name: openclaw-command
+type: command
+version: "exporter-pending"
+# 占位：实现后替换为 scripts/export_openclaw_evidence.py
+command: ["python3", "scripts/export_openclaw_evidence.py"]
+working_dir: "."
+timeout_seconds: 120
+env_allowlist:
+  - OPENCLAW_MODEL
+  - OPENKYLIN_TOKEN_API_KEY
+description: >-
+  OpenClaw command 包装骨架。stdin=case JSON，stdout=kmb_evidence JSONL。
+  Skills=~/.openclaw/skills；MCP 为独立 mcp.servers 层（勿与 openkylin-skills
+  混为官方 MCP 注册表）。包装器只转译 Agent 自有日志/DB/工具事件。

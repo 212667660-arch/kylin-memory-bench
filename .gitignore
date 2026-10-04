@@ -27,6 +27,10 @@ node_modules/
 _ui_ref/
 _codexpp_research/
 .codexpp_research/
+_migrate_stage/
+%SystemDrive%/
+ConciseView
+network-setup-before-vmnet-retry.evtx
 tmp/
 tmp*/
 *.tmp
@@ -48,3 +52,6 @@ build/
 
 # Local session extracts (may contain pasted secrets)
 _codex_threads/
+
+# Host-local one-off diagnostics (not product source)
+enable-vmnet-diagnostics.ps1

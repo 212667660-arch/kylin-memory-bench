@@ -45,6 +45,20 @@ def _is_executed_action(event: EvidenceEvent) -> bool:
     return True
 
 
+def _action_category(check_type: str, events: List[EvidenceEvent], passed: bool) -> str:
+    """Separate behavior errors from unsupported or unobservable actions."""
+    if passed or check_type not in {"action_path", "action_tool", "artifact_exists", "artifact_contains", "action_exit_code"}:
+        return "behavior_failure"
+    actions = _events(events, "action") + _events(events, "tool_result")
+    if not actions:
+        return "not_observable"
+    if any(event.data.get("unsupported") or event.data.get("capability") == "unsupported_action" for event in actions):
+        return "unsupported_action"
+    if any(event.data.get("blocked") or event.data.get("execution_observed") is False for event in actions):
+        return "not_observable"
+    return "behavior_failure"
+
+
 def _evaluate(check: Dict[str, Any], events: List[EvidenceEvent]) -> CheckResult:
     check_type = str(check.get("type", ""))
     assistants = [str(event.data.get("text", "")) for event in _events(events, "assistant_message")]
@@ -190,14 +204,15 @@ def _evaluate(check: Dict[str, Any], events: List[EvidenceEvent]) -> CheckResult
         reason = "state sequence for %s is %s" % (key, actual) if passed else "state sequence for %s is %s, expected %s" % (key, actual, expected)
     else:
         passed, reason = False, "unsupported check type %s" % check_type
-    return CheckResult(check, passed, reason, None if passed else _failure_type(check_type), refs)
+    category = _action_category(check_type, events, passed)
+    return CheckResult(check, passed, reason, None if passed else _failure_type(check_type), refs, category)
 
 
 def score_case(case: BenchmarkCase, events: List[EvidenceEvent]) -> ScoreResult:
     checks = [_evaluate(check, events) for check in case.checks]
     passed = sum(1 for check in checks if check.passed)
     score = (passed / len(checks)) if checks else 1.0
-    failures = [{"type": check.failure_type, "reason": check.reason, "check": check.check} for check in checks if not check.passed]
+    failures = [{"type": check.failure_type, "category": check.category, "reason": check.reason, "check": check.check} for check in checks if not check.passed]
     return ScoreResult(case.id, case.capability, score, "pass" if score == 1.0 else "fail", checks, failures)
 
 

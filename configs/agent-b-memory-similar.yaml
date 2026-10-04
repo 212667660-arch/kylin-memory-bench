@@ -1,0 +1,7 @@
+name: b-memory-similar
+type: memory_tool
+memory_impl: similar
+action_root: runs/b-track-actions/similar
+description: >-
+  B-track memory 乙：相似检索 + 拒绝敏感/一次性持久化。与 memory 甲共用同一
+  工具决策骨架；事件 source=memory_layer。结论为记忆机制差异，非模型记忆强弱。

@@ -30,6 +30,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 import yaml
 
+from .agent_registry import discover_agents, profiles_to_dicts
 from .agents import build_agent_from_config, load_agent_config
 from .report import radar_svg, write_compare, write_html_report, write_markdown
 from .runner import load_suite, run_suite, validate_cases
@@ -60,6 +61,18 @@ CREDENTIAL_NAMES = {
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _fix_hint(profile: Any) -> str:
+    """Return the action a user must take before this Agent becomes runnable."""
+    evidence_mode = str(getattr(profile, "evidence_mode", "") or "")
+    if getattr(profile, "runnable", False):
+        return ""
+    if evidence_mode == "gui_observed":
+        return "修复条件：提供结构化 GUI/服务记忆事件导出；GUI 或服务运行状态本身不构成记忆证据"
+    if evidence_mode == "conversation_only":
+        return "修复条件：完成该 Agent 初始化以生成结构化记忆存储"
+    return "修复条件：在已安装该 Agent 的环境中运行，并确保记忆存储路径与可执行命令同时存在"
 
 
 def _is_credential_name(name: str) -> bool:
@@ -340,6 +353,14 @@ class WorkbenchState:
     def config_path(self, raw: Any) -> Path:
         return _resolve_workspace_path(self.root, raw, (self.config_root,))
 
+    def list_agents(self) -> List[Dict[str, Any]]:
+        """Return safe metadata for supported Agents already on this host."""
+        profiles = discover_agents(self.root)
+        payload = profiles_to_dicts(profiles)
+        for profile, item in zip(profiles, payload):
+            item["fix_hint"] = _fix_hint(profile)
+        return payload
+
     def create_config(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Create a non-secret OpenAI-compatible HTTP profile atomically."""
         if not isinstance(payload, dict):
@@ -394,42 +415,110 @@ class WorkbenchState:
         if len(description) > 500:
             raise ValueError("description 最多 500 个字符")
         path = self.config_root / ("agent-" + profile_id + ".yaml")
-        if path.exists() or path.is_symlink():
-            raise FileExistsError("配置档案已存在：%s" % path.name)
-        config = {
-            "name": name,
-            "type": "http",
+        memory_path = self.config_root / ("agent-" + profile_id + "-memory.yaml")
+        no_memory_path = self.config_root / ("agent-" + profile_id + "-no-memory.yaml")
+        for existing in (path, memory_path, no_memory_path):
+            if existing.exists() or existing.is_symlink():
+                raise FileExistsError("配置档案已存在：%s" % existing.name)
+        timeout_value = int(timeout_seconds) if float(timeout_seconds).is_integer() else timeout_seconds
+        temperature_value = int(temperature) if float(temperature).is_integer() else temperature
+        base_fields = {
             "version": str(payload.get("version") or "用户配置")[:64],
             "base_url": base_url,
             "endpoint": endpoint,
             "model": model,
             "api_key_env": api_key_env,
-            "timeout_seconds": int(timeout_seconds) if timeout_seconds.is_integer() else timeout_seconds,
-            "request_options": {"temperature": int(temperature) if temperature.is_integer() else temperature},
-            "description": description or "用户新增的 OpenAI-compatible API 配置。",
+            "request_options": {"temperature": temperature_value},
         }
         if provider:
-            config["provider"] = provider
+            base_fields["provider"] = provider
+        http_config = {
+            "name": name,
+            "type": "http",
+            **base_fields,
+            "timeout_seconds": timeout_value,
+            "description": description or (
+                "OpenAI-compatible HTTP agent (%s / %s). Only model text is observable; "
+                "prefer the memory_controller pack for long-term-memory scoring." % (name, model)
+            ),
+        }
+        memory_config = {
+            "name": profile_id + "-memory",
+            "type": "memory_controller",
+            **base_fields,
+            "api_timeout_seconds": timeout_value,
+            "action_root": "../runs/controller-actions",
+            "description": (
+                "Transparent memory/action controller over %s (%s). "
+                "Memory/file events are source=wrapper (system-level); "
+                "model replies are source=model. Does not claim native model memory."
+                % (name, model)
+            ),
+        }
+        no_memory_config = {
+            "name": profile_id + "-no-memory",
+            "type": "memory_disabled",
+            **base_fields,
+            "api_timeout_seconds": timeout_value,
+            "description": (
+                "Same backend as %s with external memory/actions disabled "
+                "(no_memory_baseline). Contrast for controller on/off."
+                % profile_id
+            ),
+        }
         self.config_root.mkdir(parents=True, exist_ok=True)
-        serialized = yaml.safe_dump(config, allow_unicode=True, sort_keys=False)
-        fd, temporary = tempfile.mkstemp(prefix=".agent-", suffix=".yaml.tmp", dir=str(self.config_root))
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as handle:
-                handle.write(serialized)
-                handle.flush()
-                os.fsync(handle.fileno())
-            os.replace(temporary, path)
-        except Exception:
+
+        def _atomic_write(target: Path, config: Dict[str, Any]) -> None:
+            serialized = yaml.safe_dump(config, allow_unicode=True, sort_keys=False)
+            fd, temporary = tempfile.mkstemp(prefix=".agent-", suffix=".yaml.tmp", dir=str(self.config_root))
             try:
-                os.unlink(temporary)
-            except OSError:
-                pass
+                with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                    handle.write(serialized)
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                os.replace(temporary, target)
+            except Exception:
+                try:
+                    os.unlink(temporary)
+                except OSError:
+                    pass
+                raise
+
+        # Write all three only after every target was confirmed missing above.
+        _atomic_write(path, http_config)
+        try:
+            _atomic_write(memory_path, memory_config)
+            _atomic_write(no_memory_path, no_memory_config)
+        except Exception:
+            for leftover in (path, memory_path, no_memory_path):
+                try:
+                    if leftover.exists():
+                        leftover.unlink()
+                except OSError:
+                    pass
             raise
         load_credentials_file(self.root)
-        metadata = next((item for item in self.list_configs() if item.get("path") == _relative(path, self.root)), None)
-        if not metadata:
+        configs = self.list_configs()
+        metadata = next((item for item in configs if item.get("path") == _relative(path, self.root)), None)
+        memory_meta = next((item for item in configs if item.get("path") == _relative(memory_path, self.root)), None)
+        no_memory_meta = next((item for item in configs if item.get("path") == _relative(no_memory_path, self.root)), None)
+        if not metadata or not memory_meta or not no_memory_meta:
             raise RuntimeError("配置已写入但无法重新读取")
-        return {"config": metadata, "credential_env": api_key_env, "credential_file": _credential_file_status()}
+        return {
+            "config": metadata,
+            "configs": [metadata, memory_meta, no_memory_meta],
+            "generated": [
+                {"path": memory_meta.get("path"), "name": memory_meta.get("name"), "type": "memory_controller"},
+                {"path": no_memory_meta.get("path"), "name": no_memory_meta.get("name"), "type": "memory_disabled"},
+                {"path": metadata.get("path"), "name": metadata.get("name"), "type": "http"},
+            ],
+            "credential_env": api_key_env,
+            "credential_file": _credential_file_status(),
+            "note": (
+                "已生成三件套：http 仅连通；memory_controller / no-memory 为包装轨"
+                "（系统级可观测证据，非模型原生长期记忆）。"
+            ),
+        }
 
     def suite_path(self, raw: Any) -> Path:
         return _resolve_workspace_path(self.root, raw, (self.suite_root,))
@@ -514,12 +603,16 @@ class WorkbenchState:
             "started_at": result.get("started_at"),
             "agents": [str(result.get("agent", ""))],
             "agent": str(result.get("agent", "")),
-            "overall": result.get("overall"),
+            "overall": result.get("overall") if result.get("score_valid", True) is not False else None,
+            "score_valid": result.get("score_valid", True),
+            "score_status": result.get("score_status", "valid"),
             "dimensions": result.get("dimensions") or {},
             "cases": result.get("cases", len(result.get("results", []))),
             "mode": _mode_for_result(result),
             "observability": result.get("observability") or {},
+            "preflight": result.get("preflight") or {},
             "failure_counts": result.get("failure_counts") or {},
+            "failure_categories": result.get("failure_categories") or {},
             "evidence_chain": result.get("evidence_chain") or {},
             "agent_metadata": {
                 "adapter": metadata.get("adapter"),
@@ -546,9 +639,12 @@ class WorkbenchState:
             statuses = []
             modes = []
             overalls = []
+            score_validities = []
             for item in agents:
                 if isinstance(item, dict):
-                    overalls.append(item.get("overall"))
+                    valid = item.get("score_valid", True) is not False
+                    score_validities.append(valid)
+                    overalls.append(item.get("overall") if valid else None)
                     modes.append(_mode_for_result(item))
             entries.append({
                 "id": path.parent.name,
@@ -556,7 +652,7 @@ class WorkbenchState:
                 "path": relative,
                 "result_path": _relative(path, self.root),
                 "kind": "comparison",
-                "status": "completed" if agents else "unknown",
+                "status": "failed" if score_validities and not all(score_validities) else "completed" if agents else "unknown",
                 "started_at": max((item.get("started_at") for item in agents if isinstance(item, dict) and item.get("started_at")), default=None),
                 "agents": [str(item.get("agent", "")) for item in agents if isinstance(item, dict)],
                 "overall": overalls,
@@ -755,6 +851,42 @@ class WorkbenchState:
         self.executor.submit(self._run_job, job_id, [primary, comparison], cases, output, seed, retries, timeout, scorer_version)
         return self._public_job(job)
 
+    def start_quick_compare(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        from .quick_compare import DEFAULT_RETRIES, DEFAULT_SEED, DEFAULT_TIMEOUT, _select_profiles
+
+        raw_agents = payload.get("agents") or payload.get("agent_ids") or []
+        if not isinstance(raw_agents, list):
+            raise ValueError("agents 必须是 Agent id 数组")
+        profiles = discover_agents(self.root)
+        try:
+            selected = _select_profiles(
+                type("QuickOptions", (), {"agent_ids": [str(item) for item in raw_agents] or None})(),
+                profiles,
+            )
+        except ValueError as exc:
+            blockers = [profile for profile in profiles if not profile.runnable]
+            detail = "；".join(
+                "%s（%s；%s）" % (profile.id, profile.reason or "不可自动运行", _fix_hint(profile))
+                for profile in blockers
+            )
+            raise ValueError("%s。阻断详情：%s" % (exc, detail or "未发现任何已安装 Agent")) from None
+        job_id = "quick-" + datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8]
+        output = self.runs_root / "workbench" / job_id
+        output.mkdir(parents=True, exist_ok=False)
+        job = {
+            "id": job_id, "kind": "quick_compare", "status": "queued", "created_at": _utc_now(), "updated_at": _utc_now(),
+            "progress": {"completed": 0, "total": 2, "phase": "排队中", "current_agent": None},
+            "params": {"seed": DEFAULT_SEED, "retries": DEFAULT_RETRIES, "timeout": DEFAULT_TIMEOUT, "suite": "suites/quick.yaml"},
+            "agents": [profile.id for profile in selected],
+            "output": _relative(output, self.root), "error": None,
+        }
+        with self.lock:
+            self.jobs[job_id] = job
+            self.cancel_events[job_id] = threading.Event()
+        self._write_job(job)
+        self.executor.submit(self._run_quick_job, job_id, [profile.id for profile in selected], output)
+        return self._public_job(job)
+
     def _write_job(self, job: Dict[str, Any]) -> None:
         output = self.root / str(job.get("output", ""))
         output.mkdir(parents=True, exist_ok=True)
@@ -794,7 +926,7 @@ class WorkbenchState:
                     return
                 summary["workbench"] = {"scorer_version": scorer_version, "config": _relative(config_path, self.root), "suite": self.jobs.get(job_id, {}).get("params", {}).get("suite")}
                 write_markdown(summary, str(agent_dir / "result.md"))
-                (agent_dir / "radar.svg").write_text(radar_svg(summary.get("dimensions", {})), encoding="utf-8")
+                (agent_dir / "radar.svg").write_text(radar_svg(summary.get("dimensions", {}), score_valid=summary.get("score_valid", True)), encoding="utf-8")
                 write_html_report([summary], str(agent_dir / "result.html"))
                 (agent_dir / "result.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
                 summaries.append(summary)
@@ -808,6 +940,27 @@ class WorkbenchState:
             }
             (output / "workbench-run.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
             self._update_job(job_id, status="completed", progress={"completed": len(config_paths), "total": len(config_paths), "phase": "已完成", "current_agent": None}, result_path=_relative(output, self.root), comparison=comparison)
+        except Exception as exc:
+            message = _redact_text("%s: %s" % (type(exc).__name__, exc))
+            (output / "workbench-error.log").write_text(str(message) + "\n", encoding="utf-8")
+            self._update_job(job_id, status="error", progress=self.jobs.get(job_id, {}).get("progress", {}), error=message, result_path=_relative(output, self.root))
+
+    def _run_quick_job(self, job_id: str, agent_ids: List[str], output: Path) -> None:
+        from .quick_compare import QuickCompareOptions, run_quick_compare
+
+        try:
+            self._update_job(job_id, status="running", progress={"completed": 0, "total": 2, "phase": "准备快速对比", "current_agent": None})
+            result = run_quick_compare(
+                QuickCompareOptions(agent_ids=agent_ids, out_dir=str(output)),
+                root=self.root,
+            )
+            self._update_job(
+                job_id,
+                status="completed",
+                progress={"completed": 2, "total": 2, "phase": "已完成", "current_agent": None},
+                result_path=_relative(output, self.root),
+                comparison=result.get("comparison"),
+            )
         except Exception as exc:
             message = _redact_text("%s: %s" % (type(exc).__name__, exc))
             (output / "workbench-error.log").write_text(str(message) + "\n", encoding="utf-8")
@@ -884,6 +1037,8 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         try:
             if path == "/api/configs":
                 self._send_json({"configs": self.state.list_configs()})
+            elif path == "/api/agents":
+                self._send_json({"agents": self.state.list_agents()})
             elif path == "/api/suites":
                 self._send_json({"suites": self.state.list_suites()})
             elif path == "/api/runs":
@@ -934,6 +1089,8 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
                 self._send_json(self.state.health(str(payload.get("config", ""))))
             elif parsed.path == "/api/runs":
                 self._send_json(self.state.start_run(payload), HTTPStatus.ACCEPTED)
+            elif parsed.path == "/api/quick-compare":
+                self._send_json(self.state.start_quick_compare(payload), HTTPStatus.ACCEPTED)
             elif parsed.path.startswith("/api/jobs/") and parsed.path.endswith("/stop"):
                 job_id = parsed.path[len("/api/jobs/"):-len("/stop")].strip("/")
                 if not job_id:

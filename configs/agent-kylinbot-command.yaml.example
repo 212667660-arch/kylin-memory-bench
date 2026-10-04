@@ -1,0 +1,21 @@
+# KylinBot command 适配器（guest CLI 驱动版）
+# 级别：openKylin 3.0 官方原生智能体；真实会话驱动 / 需门禁复核
+# 规格：docs/ecosystem-agent-export.md
+# 本机 stand-in（非真实 KylinBot）：configs/agent-kylinbot-process.yaml
+# 实机：将 command 指向真实包装脚本，只转译被测方自有事件，禁止按套件答案代写 memory op。
+name: kylinbot-command
+type: command
+version: "cli-driver"
+command: ["python3", "scripts/kylinbot_command_agent.py"]
+working_dir: "."
+timeout_seconds: 120
+# 仅允许密钥/模型等环境变量名；YAML 与日志不写密钥值
+env_allowlist:
+  - KYLINBOT_MODEL
+  - OPENKYLIN_TOKEN_API_KEY
+  - KYLINBOT_COMMAND
+description: >-
+  KylinBot（openKylin 3.0 官方原生智能体）CLI 驱动器。stdin=case JSON，
+  stdout=kmb_evidence JSONL；逐轮复用临时 session-state-file，并以 brain.db
+  增量核验记忆事件。正式门禁仍需在 guest 中复跑。
+  与本机 process stand-in 区分：stand-in 不是真实 Bot。

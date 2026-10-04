@@ -951,6 +951,37 @@ a:hover { text-decoration: underline; }
 .score-low { color: var(--status-error); font-weight: 700; }
 .score-high { color: var(--status-success); font-weight: 700; }
 
+/* Quick compare uses the discovered host Agents and the fixed quick suite. */
+.quick-compare-panel { margin: 16px 0; }
+.quick-compare-panel .surface-toolbar { align-items: center; }
+.quick-compare-panel .surface-toolbar p { max-width: 620px; }
+.quick-compare-count { color: var(--muted-foreground); font-size: 11px; white-space: nowrap; }
+.quick-compare-body { padding: 0 16px 16px; }
+.quick-agent-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.quick-agent-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: hsl(226 20% 9% / 0.35);
+  cursor: pointer;
+}
+.quick-agent-row:hover { border-color: var(--input); background: var(--sidebar-muted); }
+.quick-agent-row.unavailable { cursor: not-allowed; opacity: 0.66; }
+.quick-agent-row input { width: 16px; height: 16px; margin: 0; accent-color: var(--brand-accent); }
+.quick-agent-copy { display: grid; gap: 3px; min-width: 0; }
+.quick-agent-copy strong { color: var(--foreground); font-size: 12.5px; font-weight: 650; }
+.quick-agent-copy small { color: var(--muted-foreground); font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
+.quick-compare-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+.quick-compare-notice { margin-top: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; line-height: 1.45; }
+.quick-compare-notice.error { color: var(--status-error); border-color: hsl(358 82% 64% / 0.35); background: hsl(358 82% 64% / 0.08); }
+.quick-compare-notice.success { color: var(--status-success); border-color: hsl(152 62% 48% / 0.35); background: hsl(152 62% 48% / 0.08); }
+.quick-job-progress { display: grid; gap: 7px; margin-top: 12px; color: var(--muted-foreground); font-size: 11px; }
+
 /* Tables */
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -1544,6 +1575,9 @@ td strong { color: var(--foreground); font-weight: 600; }
   .form-grid, .grid.two, .grid.three, .overview-columns { grid-template-columns: 1fr; }
   .metric-strip, .result-metrics, .investigation-score-strip, .result-score-line { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .agent-compare-grid, .case-agent-grid, .dashboard-hero { grid-template-columns: 1fr; }
+  .quick-agent-list { grid-template-columns: 1fr; }
+  .quick-compare-actions { align-items: stretch; flex-direction: column; }
+  .quick-compare-actions .button { width: 100%; }
   .agent-pane + .agent-pane { border-left: 0; border-top: 1px solid var(--border); }
   .case-list-row { grid-template-columns: minmax(90px, 1fr) 90px 80px 16px; }
   .agent-registry-row { flex-wrap: wrap; }
