@@ -638,3 +638,19 @@ nohup python3 -m kmb.cli official-acceptance --mode installed --agent-a kylinbot
   7. residual_check → 0（`/usr/bin/kmb`、`/usr/share/kylin-memory-bench` 均不存在）
 - 至此 `.deb` 在 openKylin 3.0 VM 的完整生命周期证据补齐（此前仅 09-08 旧 VM 与包内解包 smoke）；文档已同步 `docs/release-freeze.md`、`docs/requirements-traceability.md`。
 - 全程零 token 消耗（dpkg 本地操作 + 包内离线 smoke）。
+
+## 代码提交完成（2026-10-04 深夜，应用户"执行1"指令）
+
+- **提交前纪律**：全量密钥扫描（sk-/私钥/Bearer/字面 api_key/password 模式）——唯一命中是 `tests/test_agent_env_fingerprint.py` 的测试夹具假密钥（安全）；`configs/agent-openkylin-token.yaml` 确认只有 `api_key_env` 变量名引用；`research/`（84KB 调研报告，被导出规格引用）纳入；`enable-vmnet-diagnostics.ps1`（无文档引用的宿主机一次性诊断脚本）加入 .gitignore。
+- **身份**：复用仓库既有作者 `arch <212667660-arch@users.noreply.github.com>`（本机未配置 git identity，从历史提交恢复）。
+- **两个提交**（未 push，origin 存在于 github.com/212667660-arch/kylin-memory-bench，推送与否由用户决定）：
+  - `97543ba` feat: official acceptance readiness — 代码/测试/配置/套件/脚本（含 agent_adapters、memory_modules、official 系列、指纹工具、49 案例、B 轨 real 配置）
+  - `211e19c` docs: scorecard/traceability/freeze to 100/100（README/docs/tasks/research/工作日志；B 正式勾选）
+- **提交后状态**：工作区 **0 未提交变更**；全量 135 项测试 OK；runs/ 与 dist/ 按既定 .gitignore 继续留在本地（证据目录以文档路径引用，为仓库既有约定）。
+- 注意：`runs/`、`dist/` 不入库是仓库既有约定（.gitignore 首版即如此），评分证据在本机保留并可复现；如需随仓库分发证据，需要用户显式决定改变该约定。
+
+## 发布动作：push + 100/100 发布包（2026-10-04 深夜，应用户"开始进行"）
+
+- **push**：`fc9d284..211e19c main -> main`（github.com/212667660-arch/kylin-memory-bench；远程原落后 7 个提交，快进合并，未强推）。未配置全局 git 身份，已复用仓库既有作者 `arch` 到本仓库 local 配置。
+- **发布包**：`dist/official-bundle-20261004/`（192 文件 + manifest=193）——`build_official_bundle.py` 构建，`audit_official_bundle.py --strict` **pass 无 issue**。抽查确认：指纹工具/official_score/49 案例套件/评分卡/计划文档均在；`runs/`、`.env`、`research/` 已排除；`docs/migrate-openkylin-20260918/` 作为项目文档保留。manifest format=`kmb-official-bundle-v1`。
+- **提交收尾**：本节日志以 `docs:` 小提交入库（工作日志为仓库文件，保持与提交同步）。
