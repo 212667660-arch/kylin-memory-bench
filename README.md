@@ -2,9 +2,19 @@
 
 KylinMemoryBench 是面向 openKylin 的智能体长期记忆自动化评测 Benchmark。它不是聊天机器人或 RAG 产品，而是通过统一适配器收集真实运行事件，并以可审计的确定性规则评估六类能力：长期保持、记忆调用、动态更新、相近区分、边界识别、任务复用。
 
+非视频赛题要求与代码/命令/证据的逐项对应见 [`docs/requirements-traceability.md`](docs/requirements-traceability.md)。
+
 ## 快速开始
 
-需要 Python 3.9+ 和 PyYAML 6。评审可先跑**无云凭据离线闭环**（约 5 分钟，说明见 [docs/judge-reproduction-card.md](docs/judge-reproduction-card.md)）：
+需要 Python 3.9+ 和 PyYAML 6。评审可先用一条命令完成无云凭据验收（说明见 [docs/official-acceptance.md](docs/official-acceptance.md)）：
+
+```bash
+python3 -m kmb.cli official-acceptance --out runs/official-acceptance
+```
+
+该入口自动生成严格校验摘要和可打开报告；不会下载 Agent、要求填写 YAML 或接收网页密钥。若要只运行离线演示脚本（约 5 分钟，说明见 [docs/judge-reproduction-card.md](docs/judge-reproduction-card.md)）：
+
+如果目标是直接比较当前 openKylin 中已有的 Agent，推荐先看[快速对比](docs/quick-start.md)：工作台会自动发现 Agent，用户只需选择两个并点击一次，不需要下载 Agent、编辑 YAML 或填写套件参数。
 
 ```bash
 bash scripts/run_offline_demo.sh runs/offline-demo
@@ -15,16 +25,16 @@ bash scripts/run_offline_demo.sh runs/offline-demo
 或逐步执行：
 
 ```bash
-python -m unittest discover -s tests -v
-python -m kmb.cli validate --strict --suite suites/core-zh.yaml
-python -m kmb.cli validate --strict --suite suites/core-zh-expanded.yaml
-python -m kmb.cli validate --strict --suite suites/adversarial/extended.yaml
-python -m kmb.cli compare \
+python3 -m unittest discover -s tests -v
+python3 -m kmb.cli validate --strict --suite suites/core-zh.yaml
+python3 -m kmb.cli validate --strict --suite suites/core-zh-expanded.yaml
+python3 -m kmb.cli validate --strict --suite suites/adversarial/extended.yaml
+python3 -m kmb.cli compare \
   --agents configs/agent-reference.yaml configs/agent-kylinbot-process.yaml \
   --suite suites/core-zh.yaml --out runs/compare --seed 42 --retries 0 --timeout 30
 ```
 
-现代 pip 可使用 `python -m pip install .` 安装 CLI。**本阶段结论以本机开发与测试为准**；openKylin 实机迁移验收后置。仓库中 `runs/openkylin-validation-*`、`runs/deb-lifecycle-*` 与 `0.2.0+release7` 为历史归档记录，迁移后需在目标机重跑验收命令，详见 `docs/release-freeze.md` 与 `tasks/todo.md`。
+现代 pip 可使用 `python3 -m pip install .` 安装 CLI。当前代码已在 openKylin 3.0 VM 完成非视频验收；仓库中 `runs/openkylin-validation-*`、`runs/deb-lifecycle-*` 与 `0.2.0+release7` 为历史归档记录，最新实机命令与边界见 `docs/requirements-traceability.md`、`docs/release-freeze.md` 与 `tasks/todo.md`。
 
 输出包括：
 
@@ -36,10 +46,12 @@ python -m kmb.cli compare \
 本地浏览器工作台（CLI 仍保持完整可用）：
 
 ```bash
-python -m kmb.cli serve --host 127.0.0.1 --port 8765 --root .
+python3 -m kmb.cli serve --host 127.0.0.1 --port 8765 --root .
 ```
 
 打开 `http://127.0.0.1:8765/` 后，可从真实 `configs/` 选择两个 Agent、运行相同套件并查看 `runs/` 中的结果、证据和失败下钻。工作台默认突出 Grok 与 DeepSeek 两个云端提供商，同时支持在“API 配置”页新增其他 OpenAI-compatible Chat Completions API 档案；标准 API、记忆开启和无记忆基线是同一提供商的不同运行模式。本地服务会在启动或刷新时安全读取 `~/.config/kmb/credentials.env`（仅接受权限 `600` 的文件），包括新增档案 `api_key_env` 引用的变量；API Key 不进入浏览器、配置 YAML 或结果文件。Windows 服务不会自动读取 openKylin VM 的凭据，需在 VM 内启动或通过受控 SSH 隧道访问；详细页面、白名单和复现方式见 [`docs/workbench.md`](docs/workbench.md)。
+
+总览页的“快速对比”面板是已有 openKylin Agent 的主入口；原有 YAML、云 API 和自定义套件操作保留在高级流程中。
 
 生命周期与安全边界扩展套件：
 
@@ -98,6 +110,8 @@ bash scripts/run_acceptance.sh configs/agent-a.yaml configs/agent-b.yaml
 
 对于 Grok/NewAPI 与 DeepSeek 的 OpenAI 兼容 API，可参考：
 
+**openKylin Token Center**（3.0 预装，OpenAI 兼容）：配置模板 `configs/agent-openkylin-token.yaml`（`api_key_env: OPENKYLIN_TOKEN_API_KEY`，**无密钥**）；说明见 [`docs/openkylin-token-center.md`](docs/openkylin-token-center.md)。生态 Agent（KylinBot/OpenClaw）command 导出规格见 [`docs/ecosystem-agent-export.md`](docs/ecosystem-agent-export.md)。
+
 ```bash
 # Windows PowerShell
 $env:GROK_API_KEY = "从控制台获取的新密钥"
@@ -118,6 +132,8 @@ python -m kmb.cli compare --agents configs/agent-grok-memory.yaml configs/agent-
 ```
 
 包装层事件和模型事件带有不同 `source` 与 `evidence_class` 标记；结果和报告会列出“观测模式、原生记忆事件、包装层记忆事件、未证实模型自述”。包装层分数只能表述为“模型后端 + 外部控制器”的系统级长期记忆行为，不能表述为模型原生长期记忆能力。动作结果只写入项目内 `runs/controller-actions/<agent>/<case>/`，不同 Agent 不会互相覆盖。
+
+**R0 口径（主结论路径）**：上述包装/HTTP/三件套能力**保留**，但属于 **C 轨对照**，**不是**赛题「不同智能体长期记忆」主结论。主结论路径见 [`docs/native-memory-compare.md`](docs/native-memory-compare.md)：**A**（KylinBot，已通过 Agent 自有记忆可观测门禁）+ **B**（同一 LLM 两套真实记忆机制）并排。A 轨的 2026-09-22 VM 门禁已产生 `source=process` 的真实 `memory_write`/`memory_recall` 与 assistant 输出；`native_memory_events=0` 仍表示没有模型原生记忆证据，不能把该结果写成模型原生能力。B 轨仍须按其自身门禁单独判断。评审标准句：包装轨同分是因为测同一包装层。
 
 如需加入同一真实后端的无记忆对照，可使用 `type: memory_disabled` 配置。它仍逐案例调用真实 API 并参加评分，但不保存外部记忆、不执行依赖记忆的动作，并记录 `no_memory_baseline` 事件、recall miss 和阻断原因：
 
@@ -170,6 +186,21 @@ python scripts/aggregate_stability.py \
 
 实现 `kmb.agents.AgentAdapter` 的 `run(case) -> List[EvidenceEvent]`，把智能体的对话、记忆存取、工具调用和文件结果映射为统一事件即可。真实 Agent 的外部 API、进程或 GUI 操作应在适配器内完成；评分器不读取模型内部状态，也不依赖 LLM 裁判。
 
+**一键注册 OpenAI-compatible 模型（生成三件套）**：
+
+```bash
+python -m kmb.cli register-agent \
+  --name OpenRouter \
+  --base-url https://openrouter.ai/api/v1 \
+  --model openai/gpt-4.1-mini \
+  --api-key-env OPENROUTER_API_KEY
+# 等价脚本：python scripts/register_openai_agent.py（同一实现）
+# 产物：agent-<id>.yaml (http，仅连通)
+#       agent-<id>-memory.yaml (memory_controller，source=wrapper)
+#       agent-<id>-no-memory.yaml (memory_disabled 对照)
+# 密钥值不写入 YAML；任一目标已存在则整体拒绝
+```
+
 **openKylin 生态进程适配器（本机已跑通）**：
 
 ```bash
@@ -183,7 +214,7 @@ python -m kmb.cli run \
 
 ## 当前边界
 
-内置 `reference` 和 `flawed` 是离线、确定性的演示基线，用于验证 Benchmark 能区分正确行为与错误持久化/混淆/复用。它们不是赛事最终指定的两款真实 Agent，结果会标为 `simulated_baseline`。`kylinbot-process` 是本机已跑通的 openKylin 生态**进程适配器**（`source=process`，系统级）。历史目录 `runs/openkylin-validation-*` 记录过 VM 上的 Grok/DeepSeek 与 wrapper/no-memory 对比；两款云 API 未导出原生记忆状态，结论只能表述为系统级行为。桌面演示视频尚未录制；openKylin 实机迁移验收后置。
+内置 `reference` 和 `flawed` 是离线、确定性的演示基线，用于验证 Benchmark 能区分正确行为与错误持久化/混淆/复用。它们不是赛事最终指定的两款真实 Agent，结果会标为 `simulated_baseline`。`kylinbot-process` 是本机已跑通的 openKylin 生态**进程适配器**（`source=process`，系统级）。最新 openKylin 3.0 VM 批次已在独立 HOME 中完成 KylinBot/OpenClaw 六案例快速对比；两者的结果仍只能表述为系统级行为，`native_memory_events=0`，不能归因模型原生记忆。桌面演示视频尚未录制；项目级 LICENSE 仍待确认。
 
 详细流程、评分规则和复现说明见 [`docs/solution.md`](docs/solution.md)。
 外部 Agent 的 JSONL 证据格式见 [`docs/evidence-protocol.md`](docs/evidence-protocol.md)。

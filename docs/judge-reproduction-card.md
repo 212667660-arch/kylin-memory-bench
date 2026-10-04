@@ -97,6 +97,8 @@ python -m kmb.cli compare \
 | `process` / `wrapper` | 系统级进程/控制器行为 | 模型原生长期记忆 |
 | `model`（native_memory_events=0） | API 文本与请求 | 原生记忆能力 |
 
+**R0 / 门禁**：wrapper、HTTP、三件套、offline demo 属 **C 轨对照**（`C: wrapper-only` 等），**不是**赛题主结论。不同智能体长期记忆差异须在 **A/B 轨**讨论，且正式结论需被测方自有记忆事件（例如 `source=process` 的 Agent 存储事件、`source=memory_layer`，或另有 `native_memory_events>0`）通过门禁。详见 [`docs/native-memory-compare.md`](docs/native-memory-compare.md)。评审标准句：包装轨同分是因为测同一包装层。
+
 ## 8. 更多材料
 
 - 方案：`docs/solution.md`

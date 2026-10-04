@@ -12,6 +12,12 @@ python -m kmb.cli serve --host 127.0.0.1 --port 8765 --root .
 
 然后在本机浏览器打开 `http://127.0.0.1:8765/`。`--host` 默认只绑定回环地址；需要远程访问时应由用户自行配置受控 SSH 隧道，不要直接暴露到公共网卡。
 
+## 快速对比
+
+总览页会调用 `GET /api/agents` 发现当前主机已安装的 KylinBot、Hermes、OpenClaw 和 KylinAgent。用户只需选择两个标记为“可自动运行”的 Agent，点击“开始快速对比”；后端使用固定 `suites/quick.yaml`、Seed `42`、重试 `1`、单案例超时 `180` 秒，并在完成后自动打开结果中心。工作台不会下载或安装 Agent。
+
+KylinAgent 即使检测到运行时和数据库，也会显示为“已安装但不可自动驱动”，因为当前适配器只能确认 GUI/服务级状态，不能伪造结构化记忆事件。需要完整参数、YAML 或自定义套件时，再进入“新建评测”高级流程。详细用户步骤见 [`docs/quick-start.md`](quick-start.md)。
+
 `serve` 启动时会尝试读取 `~/.config/kmb/credentials.env`。只有文件权限为 `600` 时才加载，并且只读取固定的 `GROK_*`、`DEEPSEEK_*` 字段及工作区配置档案中声明的安全环境变量名；已有进程环境变量优先。文件不存在或权限不安全时，页面会显示“未检测到凭据”，云端连接检查不会成功。Windows 本机服务不会自动获得 openKylin VM 的凭据，需在 VM 内启动工作台，或通过受控 SSH 隧道访问 VM 服务。
 
 ## 界面与数据来源
@@ -20,14 +26,26 @@ python -m kmb.cli serve --host 127.0.0.1 --port 8765 --root .
 - **结果中心**：显示运行 ID、套件哈希、六个固定维度（长期保持、记忆调用、动态更新、相近区分、边界识别、任务复用）、稳定性摘要和失败入口。条形图是精确比较，雷达图只作概览。
 - **失败案例**：从结果 JSON 的失败项定位到同一案例的 `evidence.jsonl`，在侧栏展示事实/版本、状态操作、来源、动作、工件、退出码和规则理由。证据不存在时显示未观测，而不是通过。
 - **历史运行**：只读浏览工作区内的单 Agent 和双 Agent 结果，并标记包装层、无记忆基线、模拟基线或失败运行。
-- **API 配置**：页面默认将 Grok、DeepSeek 作为正式云端提供商展示；每个提供商下的“标准 API”“记忆开启”“无记忆基线”是运行模式，不是额外模型版本。通过“新增 API 配置档案”可以接入其他 OpenAI-compatible Chat Completions 服务。表单只提交配置标识、名称、Base URL、接口路径、模型 ID、超时和 `api_key_env`，后端以白名单字段原子写入 `configs/agent-*.yaml`，禁止覆盖已有档案和提交 `api_key`/Authorization/headers。新增档案会进入“其他 API、本地基线与接入模板”区域，并可直接发起连接检查。
+- **API 配置**：页面默认将 Grok、DeepSeek 作为正式云端提供商展示；每个提供商下的“标准 API”“记忆开启”“无记忆基线”是运行模式，不是额外模型版本。通过“新增 API 配置档案”可以接入其他 OpenAI-compatible Chat Completions 服务。表单只提交配置标识、名称、Base URL、接口路径、模型 ID、超时和 `api_key_env`，后端以白名单字段原子写入 **三件套**（与 CLI `scripts/register_openai_agent.py` 对齐），禁止覆盖已有档案和提交 `api_key`/Authorization/headers。新增档案会进入“其他 API、本地基线与接入模板”区域，并可直接发起连接检查。
 - **系统设置**：显示 Python、PyYAML、CLI、目录和系统级场景能力矩阵。普通包装层重建不会显示为真实系统重启。
 
 ## 新增 API 配置
 
 工作台只接受 OpenAI-compatible 的 JSON Chat Completions 接口。网页表单只保存非敏感元数据，API Key 必须在同一运行环境中通过安全凭据文件或进程环境变量提供。新增档案会出现在“其他 API、本地基线与接入模板”区域。
 
-配置示例：
+**提交后自动生成三件套**（与 `python -m kmb.cli register-agent` / `scripts/register_openai_agent.py` 共用 `kmb/register.py` 字段约定；任一目标文件已存在则整体拒绝）：
+
+| 文件 | type | 接入层级 |
+|------|------|----------|
+| `configs/agent-<id>.yaml` | `http` | **仅连通**（只观测模型文本） |
+| `configs/agent-<id>-memory.yaml` | `memory_controller` | **具备可观测证据**（`source=wrapper`，系统级包装轨） |
+| `configs/agent-<id>-no-memory.yaml` | `memory_disabled` | 同一后端无记忆对照（`no_memory_baseline`） |
+
+表述边界：包装轨可支撑长期记忆评测的系统级结论；**不得**写成「模型原生长期记忆」。http 轨仅用于连通与对照，不能单独作为长期记忆验收。
+
+**R0**：工作台自动生成的三件套属于 **C 轨（对照/接入）**，不得作为赛题「不同智能体原生/可观测记忆」主结论。A/B 主结论路径、证据门禁与状态标签见 [`docs/native-memory-compare.md`](docs/native-memory-compare.md)。功能（自动包装、register-agent）**保留**，仅叙事降级。
+
+配置示例（http 轨；memory / no-memory 由后端一并写出）：
 
 ```yaml
 name: openrouter
@@ -40,6 +58,8 @@ timeout_seconds: 60
 request_options:
   temperature: 0
 ```
+
+推荐在「新建评测」中选用 `<id>-memory` 与另一款 memory 配置做对比。
 
 凭据文件示例（输入时不回显密钥）：
 

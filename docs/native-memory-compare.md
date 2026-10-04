@@ -26,7 +26,7 @@
 
 | 轨道 | 对比什么 | 结论可写 | 不可写 |
 |------|----------|----------|--------|
-| **A** | 两款 openKylin 生态 Agent 的记忆行为（对象待选型） | 智能体长期记忆**系统级行为**差异 | 模型原生记忆排名 |
+| **A** | 两款 openKylin 生态 Agent 的记忆行为（首个对象已选 KylinBot，第二对象待门禁） | 智能体长期记忆**系统级行为**差异 | 模型原生记忆排名 |
 | **B** | 同一 LLM + 两种真实记忆实现 | 不同长期记忆**机制**的行为差异 | 两个聊天模型谁记性好 |
 | **C** | HTTP / wrapper / no-memory / reference / flawed | 可观测文本、包装系统流、边际价值、评分器区分度 | 用 C 冒充 A/B 主结论 |
 
@@ -58,7 +58,7 @@
 | **B 轨**：记忆层自有事件 | `source=memory_layer` 的记忆事件 | 记忆层事件 > 0 且决策非案例预写库 | 不得写成「模型原生记忆」 |
 
 **A 轨主结论**：不同智能体系统级长期记忆**行为**差异。  
-**状态标签**：`A: exporter-pending` / `A: ready(agent-memory-observable)` / `C: wrapper-only` / `B: skeleton-only` 等。  
+**状态标签**：`A: snapshot-only` / `A: exporter-pending` / `A: ready(agent-memory-observable)` / `C: wrapper-only` / `B: skeleton-only` 等。
 `native_memory_events>0` 为原生轨加分项，不是 A 轨 ready 的唯一标准。
 
 **计数示例（导出 JSONL / result.json）**：
@@ -74,16 +74,16 @@ agent_owned_memory_events =
 
 ---
 
-## 3. A 侧选型标准（当前无候选）
+## 3. A 侧选型标准（首个候选：KylinBot）
 
-A 暂无具体 Agent 候选 → 只落地标准，**不点名**虚构已就绪对象。
+KylinBot 已作为首个候选。2026-09-22 在 openKylin 3.0 VM 通过真实 CLI 最小门禁，当前状态为 `A: ready(agent-memory-observable)`；该状态表示 Agent 自有存储事件可观测，不等于模型原生记忆已被证明。
 
 - openKylin 可安装 / 已有包，可脚本化（stdin / CLI / HTTP 任一）。  
 - 可无人工逐步聊天跑完案例。  
 - 至少一种可审计轨迹：记忆 DB/文件、工具日志或官方 memory API。  
 - 仅有最终回答、无记忆侧信道 → **不作为**记忆主结论对象。
 
-状态默认：`A: candidate-pending`。
+未选定的第二个 A 轨对象状态仍为：`A: candidate-pending`。
 
 ---
 
@@ -93,6 +93,7 @@ A 暂无具体 Agent 候选 → 只落地标准，**不点名**虚构已就绪�
 |------|------|
 | `A: candidate-pending` | 尚无合格被测 Agent |
 | `A: exporter-pending` | 有对象但无可审计记忆导出 |
+| `A: snapshot-only` | 可读取被测存储快照，但没有当前用例的驱动与写入时序证据 |
 | `A/B: gate-failed` | 门禁硬信号未满足 |
 | `A: ready` / `B: ready` | 门禁通过，可进入正式叙事 |
 | `C: wrapper-only` | 仅包装/HTTP/离线对照 |
@@ -223,27 +224,26 @@ A 暂无具体 Agent 候选 → 只落地标准，**不点名**虚构已就绪�
 
 | 轨道 | 状态 | 说明 |
 |------|------|------|
-| A · KylinBot | **`A: ready(agent-memory-observable)`**（导出路径） | 真实 `brain.db` → `source=process` 记忆事件 **3 条**；门禁计数见 §2b；`native_memory_events=0` 单独记录，不作 A 轨否决 |
-| A · 其他生态 | `exporter-pending` / `candidate-pending` | OpenClaw/Hermes/kylin-agent 尚无本轮导出器 |
+| A · KylinBot | **`A: ready(agent-memory-observable)`** | 2026-09-22 VM 真实 CLI 门禁通过；`source=process` 的写入、回忆和 assistant 输出均有逐轮证据。系统级 wrapper-assisted，不等于模型原生记忆 |
+| A · 其他生态 | `exporter-pending` / `candidate-pending` | OpenClaw/Hermes/kylin-agent 尚无本轮正式导出器 |
 | B | **`B: skeleton-only`** | `DecisionTextBackend` 非真实 LLM 工具决策 |
 | C | **`C: wrapper-only`** | HTTP/wrapper/no-memory 仅对照 |
 
-### A 轨门禁实验（2026-09-18，本机 + openKylin 3.0 VM）
+### A 轨门禁实验（2026-09-18 取证，2026-09-21 复核）
 
 | 项 | 结果 |
 |----|------|
 | VM | `E:\openkylin\Ubuntu 64-bit.vmx`，openKylin **3.0 (huanghe)**，`Cisyam@192.168.141.128:22` |
 | 记忆库 | `/home/Cisyam/.kylinbot/workspace/memory/brain.db`（只读拷贝至宿主 `_migrate_stage/kylinbot-brain.db`） |
-| DB 内容 | `user_msg`（conversation，曾更新）、`project_codename=Atals`（core）——**烟测数据**，非本轮新驱动写入 |
-| 导出 | `scripts/export_kylinbot_evidence.py` + `scripts/kylinbot_command_wrapper.py` |
-| 评分 | `runs/kylinbot-native-gate/`（`agent-kylinbot-command` × `suites/native/kylinbot-gate.yaml`） |
-| Agent 自有记忆事件 | **3**（`memory_update`×1 + `memory_write`×1 + `memory_recall`×1，`source=process`） |
+| DB 内容 | 门禁前已有烟测数据保留；门禁新增的 `benchmark_alias` 与两条关联 `user_msg_*` 已在门禁后清理 |
+| 驱动与导出 | `configs/agent-kylinbot-command.yaml` + `scripts/kylinbot_command_agent.py`；逐轮调用 `kylin-bot agent --message` 并观察 `brain.db` 差异 |
+| 评分 | `runs/kylinbot-gate-20260922/result.json`，overall **100.0**；套件为单案例最小门禁，不替代完整六维套件 |
+| Agent 自有记忆事件 | `source=process`：`memory_write`（`benchmark_alias`）、精确 `memory_recall` 命中 Atlas，以及两轮 `assistant_message` |
 | `native_memory_events` | **0**（符合协议：process ≠ model_native） |
-| 案例得分 | overall **0.0**：DB 键为 `project_codename/Atals`，案例检查 `project=Atlas` → omission（如实） |
-| `verify --strict` | **未通过**：单案例套件仅 `retention`，缺其余五维（门禁套件设计如此） |
-| 非 stand-in | 事件来自 KylinBot **brain.db 行**，非 `openkylin_ecosystem_agent.py` |
+| 观测模式 | `system_level_wrapper_assisted`；`wrapper_memory_events=4`，可证明 KylinBot Agent 记忆行为，不可证明模型原生长期记忆 |
+| 非 stand-in | 事件来自真实 KylinBot **brain.db** 行和 CLI stdout，非 `openkylin_ecosystem_agent.py` |
 
-**表述**：导出器与 A 轨「Agent 自有可观测记忆」路径 **ready**；案例得分低源于**预热烟测数据与门禁用例键不一致**，不是伪造通过。正式套件前需清理/标记 Atalas 等预热数据，并在 VM 上驱动 KylinBot 完成目标用例。
+**表述**：A 轨最小门禁已通过，当前可标记为 **`A: ready(agent-memory-observable)`**。该结论来自 VM 内真实 CLI 会话与 `brain.db` 增量，不把旧快照或 stand-in 事件计入当前案例；正式报告仍须把 `system_level_wrapper_assisted` 与 `native_memory_events=0` 一并展示。
 
 ### 与 stand-in / C 轨边界
 
@@ -258,3 +258,16 @@ A 暂无具体 Agent 候选 → 只落地标准，**不点名**虚构已就绪�
 （空）
 
 
+## 2026-10-04 增补：B 轨真实 LLM 工具调用证据
+
+B 轨两套记忆机制已由**真实模型**（openKylin Token 网关 `deepseek-v4-flash`，标准 OpenAI tool-calling）驱动完成正式轨运行，替代此前"离线规则后端仅模拟"的状态：
+
+| 机制 | 得分 | 有效性 | 关键证据 |
+|---|---|---|---|
+| KV（甲） | 94.44 | `score_valid=true`，strict valid（79 事件） | 跨轮写 6、召回 3、更新 1、动作 1（文件工件含 SHA-256） |
+| similar（乙） | 77.78 | `score_valid=true`，strict valid（80 事件） | 相近实体区分与敏感拒绝路径由真实模型决策触发 |
+
+- 决策真实性：工具调用由模型在 `tool_choice=auto` 下自主发起（`source=model` 的 `model_request/assistant_message`），记忆层执行事件为 `source=memory_layer`，决策非案例预写。
+- 边界不变：B 轨证明的是"**真实模型 + 外部记忆层**"协同，`native_memory_events=0`，**不得写成模型原生长期记忆**。
+- 顺带修复：`OpenAICompatibleToolBackend` 在模型纯文本回答时向历史写入空 `tool_calls` 数组，被 DashScope 系后端 400 拒绝（`runs/b-track-real-20261004/` 保留失败证据）；已修复并由 `tests.test_memory_tool` 回归锁定。
+- 证据：`runs/b-track-kv-real-20261004/`、`runs/b-track-similar-real-20261004/`；配置 `configs/agent-b-memory-{kv,similar}-real.yaml`（密钥仅经环境变量注入）。

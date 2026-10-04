@@ -5,6 +5,7 @@
 - `suites/core-zh.yaml`、`suites/core-en.yaml`、`suites/adversarial/core.yaml`、`suites/adversarial/core-en.yaml`、`examples/*.jsonl` 为“忆衡”项目内的案例与协议示例，用于六类长期记忆评测。中英文套件保持相同的六类能力和检查结构；对抗套件额外覆盖冲突、噪声、相似实体、敏感/注入边界和跨任务复用。
 - 当前项目没有将 MemoryAgentBench、GoodAI、MemEval、HaluMem、GateMem、kylinOS-agent-memory 或 openkylin/llm-agent 的数据集、Prompt、图表或模型输出原样复制到 `kmb/`、`suites/`、`examples/`。
 - `.tmp-github-research/` 仅用于研究核查，禁止作为发行物内容。其文件来源、许可证和再分发条件不因留在本地缓存而发生变化。
+- 覆盖标签与版本清单由 `scripts/coverage_report.py` 从套件结构生成，清单固定在 `suites/coverage/manifest.yaml`。当前 49 个中文/英文/混合语言案例覆盖六类能力（2026-09-27 增补 `suites/adversarial/multilingual-en.yaml` 六条英文案例与 `suites/adversarial/extended.yaml` 四条中文案例；敏感与风险案例要求 `sensitive_not_persisted` 抑制证据）；标签、必需证据类型和 SHA-256 由脚本复算，不依赖文档中的手工总数。
 
 ## Prompt 与模型输出
 
@@ -18,3 +19,15 @@
 2. 对不可商用、禁止衍生、无许可证或用途不明的内容执行替换、隔离或书面授权。
 3. 将发行包排除 `.tmp-github-research/`、虚拟环境、pip 缓存和未经脱敏的 `runs/`。
 4. 由项目负责人确认项目级 LICENSE；当前 `NOTICE` 不替代许可证。
+
+## 覆盖复算
+
+在仓库根目录执行：
+
+```bash
+python3 scripts/coverage_report.py \
+  --suites suites/core-zh.yaml suites/core-zh-expanded.yaml suites/adversarial/extended.yaml \
+  --out runs/coverage-report --manifest suites/coverage/manifest.yaml
+```
+
+该命令输出案例级 `manifest.yaml`、聚合 `coverage.json` 和 `coverage.md`。修改套件后必须重新生成并审阅差异；出现重复 ID、缺失能力或没有评分证据要求的案例时以非零退出。

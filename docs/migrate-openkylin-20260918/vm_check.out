@@ -1,0 +1,7 @@
+kmb_file /data/usershare/kylin-memory-bench-20260918/.kmb-venv/lib/python3.12/site-packages/kmb/__init__.py
+yaml 6.0.1
+kmb_under_root True
+probe_status ok
+openkylin null
+secret_scan ['vm_check.py']
+DONE_CHECK

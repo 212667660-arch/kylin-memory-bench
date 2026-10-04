@@ -62,3 +62,16 @@ Grok 的 repeat-01 为真实连接拒绝、repeat-03 含真实超时；失败批
 ## 限制
 
 本批次没有执行 OS 重启和真实跨用户切换；这些场景需要具备恢复通道的 VM 控制器/已认证 root 与专用测试用户。innovation no-memory 对照已完成两 Agent 各 5 批，但 Grok 含连接拒绝/超时失败，不能宣称五批全部成功或绝对稳定。所有结果均未将包装层行为称作模型原生长期记忆；当前发布候选为 release7，manifest 以 `runs/openkylin-validation-20260909/release-manifest-release7/release-manifest-release7.json` 为准。
+
+
+## 2026-10-04 增补：openKylin 生态 Agent 真实重复批次稳定性
+
+openKylin 3.0 VM 上的生态双 Agent（KylinBot/OpenClaw，均为系统级外部记忆/动作控制器观测，`native_memory_events=0`）完成 `--repeats 2` 重复批次（独立 HOME、清空记忆表、固定 seed 42 与套件 `suites/quick.yaml`）：
+
+- KylinBot：63.89 / 61.11（均值 62.50，标准差 1.97）——两批差异 2.78 分，波动小
+- OpenClaw：22.22 / 22.22（标准差 0.00）——完全一致
+- 两批双 Agent `score_valid=true`，strict verify 退出码 0；失败类型（omission/confusion/erroneous_reuse 等）与历史基线同源，无 error 级案例
+- 环境指纹（技能树/配置/二进制 SHA-256，`runs/env-fingerprint-20261001.json`）与跑批日采集一致，排除环境漂移
+- 证据：`runs/official-installed-20261004/`（VM 原始目录 `/home/Cisyam/kmb-official-review-20260924-r2/runs/official-installed-20261004/`）
+
+边界：本数据描述"模型后端 + Agent 外部记忆/动作控制器"的系统级稳定性；不构成模型原生长期记忆证据。执行波动史（429/402 系列）见 `runs/official-installed-20261001{,-r2}/`。

@@ -198,3 +198,26 @@ PDF 要求总数：**19 条**（其中 PDF-01 为背景边界，PDF-13 至 PDF-1
 - **扩展套件与真实证据**：中文扩展对抗、英文核心和英文对抗均有真实双 Agent 运行；英文对抗第一次 Grok 503 失败证据保留，第二次成功证据位于 `runs/openkylin-validation-20260908/adversarial-en-compare-rerun2/`。严格校验退出码均为 `0` 的成功批次才纳入结论。
 - **发布候选与最终非视频检查**：`0.2.0+release1` 包和 `runs/final-nonvideo-20260908/` 已完成构建/内容审计、测试、四套件校验、离线 smoke、结果结构、敏感扫描和路径检查；离线 `reference/flawed` 仅是机制验证，不是真实 Agent 结果。
 - **仍未解除的要求**：PDF-12 桌面视频、根目录生效 `LICENSE`、云 API/模型输出展示授权和 openKylin 原生 Agent 独立接入仍未完成或待确认；包装层结果仍不得归因模型原生长期记忆。
+
+## 最新状态更正（2026-09-24）
+
+本节覆盖上文历史审计的“当前”措辞，不删除历史记录。最新工作区回归为本机 **104 项 unittest 通过**；openKylin 3.0 VM 在独立 HOME、空白临时记忆库中完成 KylinBot/OpenClaw 六案例真实快速对比，批次为 `/home/Cisyam/kmb-agent-validation-20260923/runs/quick-compare-isolated-20260924/`。两侧 `score_valid=true`，`verify_run.py --strict` 均退出码 0；KylinBot `63.89`、OpenClaw `13.89`，证据事件分别为 51/34 条。
+
+按 PDF 交付项重新核对：
+
+- **PDF-06 至 PDF-11：当前已具备并有可复核代码/产物**；其中 PDF-10/11 另有 openKylin VM、`.deb`、CLI/GUI 和真实双 Agent 批次证据。
+- **PDF-13 至 PDF-15、PDF-17 至 PDF-18：当前实现已覆盖**；报告必须继续标明外部记忆/动作控制器边界。
+- **PDF-16：仍是部分完成**。本轮证明一次双 Agent 六案例批次可复现，但还不是多批稳定性统计，不能写成绝对稳定。
+- **PDF-19：真实证据已增加，但仍只能得出系统级结论**；最新批次 `native_memory_events=0`，不证明模型原生长期记忆。
+- **PDF-12：仍是唯一明确未交付的 PDF 项**，桌面录屏及视频哈希/时长材料不存在，按用户要求暂不处理。
+
+项目级 `LICENSE`、云输出展示授权和 KylinAgent 的结构化 GUI/服务证据不是 PDF-12 之外的代码缺失，但仍是公开发布/完整生态矩阵的独立待确认项。
+
+
+## 最新状态更正（2026-10-04）
+
+本节覆盖上文历史审计中 PDF-16 的"部分完成"措辞（不删除历史记录）。openKylin 3.0 VM 已于 2026-10-04 完成 openKylin 生态双 Agent（KylinBot/OpenClaw）的重复批次验收：`--repeats 2`、独立 HOME、清空记忆表，两批双 Agent 全部 `score_valid=true` 且 `verify_run.py --strict` 退出码 0（KylinBot 63.89/61.11，OpenClaw 22.22/22.22），`repeat-summary.json` status=completed、有效率 100%。环境指纹（技能树/配置/二进制 SHA-256）与 2026-10-01 采集一致。证据：`runs/official-installed-20261004/`；官方评分据此更新为 **100/100**（`runs/official-final-20261004/scorecard/`），其中 PDF-16 15/15 pass。
+
+- **PDF-16：已完成**（就本 VM 双 Agent 口径；`native_memory_events=0` 边界不变，仍为系统级外部记忆/动作控制器观测）。
+- **PDF-12 桌面视频与根目录项目级 `LICENSE`**：仍按用户要求未处理，不因总分变化而改变。
+- 执行波动史（429 限流一次、402 余额三次、均为外部原因）完整保留于 `runs/official-installed-20260927{,-r2}/`、`runs/official-installed-20261001{,-r2}/` 与 `docs/official-scorecard.md` 的历史证据节。

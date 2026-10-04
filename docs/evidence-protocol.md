@@ -14,6 +14,14 @@
 }
 ```
 
+## openKylin 生态 Agent（command / replay）
+
+KylinBot、OpenClaw 等的包装器职责、字段清单、门禁与配置骨架见 [`docs/ecosystem-agent-export.md`](ecosystem-agent-export.md)。要点：
+
+- 包装器**只转译**被测方自有日志/DB/工具事件，**禁止**按套件答案代写 `memory_*`。
+- Token Center HTTP 模板见 [`docs/openkylin-token-center.md`](openkylin-token-center.md)（无证据时仅连通）。
+- 未过「被测方自有记忆事件 > 0」门禁前，不得写原生/可观测记忆主结论。
+
 ## 生命周期与证据链扩展（schema v2）
 
 `EvidenceEvent` 可选地携带以下审计字段；`kmb run` 会为缺失字段补齐事件 ID、关联 ID和父事件关系，旧 JSONL 仍可读取：
@@ -122,3 +130,12 @@ api_key_env: GROK_API_KEY
 api_timeout_seconds: 180
 action_root: ../runs/controller-actions
 ```
+
+
+## 2026-10-04 增补：B 轨真实调用的来源标记
+
+B 轨（`type: memory_tool`）现已支持真实 LLM 工具调用后端（配置 `backend:` 块，密钥仅经环境变量）。来源标记规则不变且已在真实批次中验证：
+
+- 模型决策过程：`source=model`（`model_request`、`assistant_message`、`model_response`）
+- 记忆层执行结果：`source=memory_layer`（`memory_write/update/recall/suppress`、文件工件）
+- 两类事件在证据链中并存即可证明"真实模型决策 + 本地记忆层执行"，仍属系统级观测；`native_memory_events=0` 不变。

@@ -294,19 +294,45 @@ PDF/文档要求基于**真实运行证据**自动评分，并覆盖六类记忆
 
 ## 计划中
 
-### [2026-09-18] 测试修复 + A 轨门禁口径 + KylinBot 导出器
-- **状态**: 计划中
-- **意图**: 修 test_memory_tool；门禁改为「Agent 自有可观测记忆事件」；实现 export_kylinbot_evidence.py；最小门禁实验
+### [2026-09-23] 真实 Agent 快速对比隔离与赛题非视频验收
+- **状态**: 已完成（非视频交付；视频与许可证仍后置）
+- **意图**: 在不污染用户日常记忆的临时 Agent HOME 中，用重新可用的 Token 复测 KylinBot/OpenClaw 六维快速对比，并按 PDF 交付项校正完成口径。
 - **改动点**:
-  - `docs/native-memory-compare.md` — 门禁计数专节
-  - `tests/test_memory_tool.py` — 修复
-  - `scripts/export_kylinbot_evidence.py` — 新建
-  - `configs/agent-kylinbot-command.yaml` — 指向导出器
-  - `docs/mimo.md` / 文档口径
-- **接入层级**: A 轨=agent-owned observable（process 等）；native_memory_events 单独记录
-- **保留/禁止**: 不删 stand-in/wrapper/C 轨；不 commit 除非授权；无密钥
-- **验收**: unittest 无 IndentationError；导出器存在；门禁实验结果如实记录
+  - `kmb/agent_adapters/openclaw.py` — 为每个案例生成独立会话键；支持显式本地隔离模式并将子进程 HOME 指向适配器 HOME
+  - `tests/test_agent_adapters.py` — 验证会话隔离、临时 HOME 与本地模式
+  - `docs/requirements-traceability.md`、`docs/release-freeze.md`、`tasks/todo.md`、`docs/Zcode-agent对比方案.md`、`docs/mimo.md` — 按新鲜验证与真实 Agent 结果更新状态
+- **接入层级**: KylinBot/OpenClaw 真实系统级 Agent 行为，可观测记忆事件；不声称模型原生记忆
+- **保留/禁止**: 使用空白临时记忆库与副本配置；不修改原 Agent 记忆/配置；Token 不回显、不入库
+- **验收**: 全量 104+ unittest、隔离 VM 六案例双 Agent quick-compare、各结果 `verify_run.py --strict`；证据路径写入追踪清单
+- **结果**: VM `/home/Cisyam/kmb-agent-validation-20260923/runs/quick-compare-isolated-20260924/`；KylinBot `63.89`、OpenClaw `13.89`；两侧 `score_valid=true`，strict 退出码 0（51/34 条证据）；新 Token `/v1/models` 返回 200，未再出现 402
+- **边界**: 结果为系统级外部记忆/动作控制器行为，`native_memory_events=0`；Hermes 本轮未重跑，KylinAgent 仍不可自动驱动；视频与 LICENSE 仍后置
 - **本次是否已同步本台账**: 是
+
+### [2026-09-18] 测试修复 + A 轨门禁口径 + KylinBot 导出器（历史快照，已由 2026-09-22 门禁条目替代）
+- **状态**: 已完成（门禁实验已跑；案例得分与 strict 限制如实记录）
+- **意图**: 修 test_memory_tool；A 门禁改为 Agent 自有可观测记忆事件；实现 KylinBot 导出器
+- **改动点**:
+  - `docs/native-memory-compare.md` — §2 门禁口径修正 + §2b 门禁计数 + §11 实验状态
+  - `tests/test_memory_tool.py` — 重写（KV/相似/B 骨架/门禁计数）
+  - `scripts/export_kylinbot_evidence.py` — brain.db → kmb_evidence JSONL
+  - `scripts/kylinbot_command_wrapper.py` — CommandAgent 协议包装
+  - `configs/agent-kylinbot-command.yaml` — command 指向导出器（保留 stand-in 配置）
+  - `suites/native/kylinbot-gate.yaml` — 单案例门禁套件
+  - `kmb/agents.py` — CommandAgent subprocess `errors=replace`（Windows UTF-8）
+  - `docs/mimo.md` — 本条
+- **门禁口径**: A 轨 = Agent 自有记忆事件（`source=process/memory_layer/wrapper` 的 memory_*）；**不要求** `native_memory_events>0`；原生轨单独记录
+- **A 轨实验**:
+  - VM openKylin 3.0 `192.168.141.128:22`；`brain.db` 真实拷贝 `_migrate_stage/kylinbot-brain.db`
+  - 历史实现曾把全库行计为 **agent_owned_memory_events=3**；2026-09-21 复核后已撤销该口径，当前 case 只保留精确键的 snapshot recall
+  - `native_memory_events=0`
+  - overall 0.0：DB 键 `project_codename/Atals` vs 案例 `project=Atlas`（烟测数据，如实 omission）
+  - `verify --strict` 失败：单案例套件仅 retention（非导出器伪造）
+- **当时标签**: `A: snapshot-only / gate-pending`；`B: skeleton-only`；`C: wrapper-only`
+- **git**: 已 `git add` 关键文件；**未 commit**（待负责人授权）
+- **保留/禁止**: stand-in/wrapper 未删；无密钥入库；未宣称四 Agent 正式评测完成
+- **验收**: 2026-09-21 `unittest discover` **78 tests OK**；VM `python3` + 真实 `brain.db` 快照烟测通过，正式会话门禁未通过
+- **本次是否已同步本台账**: 是
+
 
 
 ---
@@ -327,5 +353,31 @@ PDF/文档要求基于**真实运行证据**自动评分，并覆盖六类记忆
 
 
 
+
+### [2026-09-22] KylinBot 真实 CLI 门禁通过与证据归档
+- **状态**: 已完成（A 轨最小门禁通过）
+- **意图**: 在已启动的 openKylin 3.0 VM 中核对真实会话驱动，区分快照/stand-in 与当前 Agent 自有记忆事件。
+- **改动点**:
+  - `scripts/kylinbot_command_agent.py` — 逐轮调用 `kylin-bot agent --message`，复用临时 session state，读取 `brain.db` 前后差异并输出真实事件
+  - `configs/agent-kylinbot-command.yaml` — 从只读快照 exporter 切换为真实 CLI 驱动
+  - `suites/native/kylinbot-gate.yaml` — 自然语言 remember/recall 门禁
+  - `README.md`、`docs/Zcode-agent对比方案.md`、`docs/native-memory-compare.md`、`docs/ecosystem-agent-export.md` — 更新当前门禁口径
+- **VM**: openKylin 3.0 (huanghe)，`Cisyam@192.168.141.128:22`；`kylin-bot` 可执行；用户级 OpenClaw 与 Kylin-Agent runtime 服务 `active`。
+- **结果**: `runs/kylinbot-gate-20260922/result.json`，`overall=100.0`；`evidence.jsonl` 含 `source=process` 的 `memory_write`、精确 `memory_recall` 命中 Atlas 和两轮 assistant 输出。
+- **观测口径**: `system_level_wrapper_assisted`，`wrapper_memory_events=4`，`native_memory_events=0`；可标记 `A: ready(agent-memory-observable)`，不可宣称模型原生记忆。
+- **清理**: 仅删除本轮新增 `benchmark_alias` 与两条关联 `user_msg_*`；既有烟测数据保留。
+- **回归**: `.venv-kmb-system\Scripts\python.exe -m unittest discover -s tests -v`，**83 tests OK**；`verify_run.py runs/kylinbot-gate-20260922` 退出码 0。该单案例门禁的 `--strict` 按设计因缺少其余五个维度退出码 2。
+- **本次是否已同步本台账**: 是
+
+### [2026-09-22] 四 Agent 快速对比代码整改与 openKylin 3.0 验收
+- **状态**: 已完成（代码、本地回归、VM 快速对比）
+- **意图**: 将用户流程收敛为“发现已有 Agent → 选择两个 → 一次点击”，保留证据边界，不自动下载 Agent。
+- **代码**: 新增 `kmb/agent_registry.py`、四个原生 Agent 适配器、`kmb/quick_compare.py`、`suites/quick.yaml`；工作台新增 `GET /api/agents`、`POST /api/quick-compare` 和总览页快速对比面板。
+- **本地回归**: `.venv-kmb-system\\Scripts\\python.exe -m unittest discover -s tests -v`，**94 tests OK**；`node --check kmb/web/app.js` 通过；快速套件严格校验通过。
+- **VM**: openKylin 3.0 (huanghe)，`Cisyam@192.168.141.128:22`；KylinBot、Hermes、OpenClaw 自动适配可用；KylinAgent 已安装但因 GUI/服务级证据限制标记为不可自动驱动。
+- **VM 结果**: `~/kmb-quick-compare-20260922/runs/openkylin-validation-20260922/quick-compare/kylinbot-hermes/` 与 `kylinbot-openclaw/`；两组均生成六案例双 Agent结果、`comparison.*`、`quick-compare.json`，四份 `result/evidence` 通过 `scripts/verify_run.py --strict`。
+- **观测结论**: KylinBot + Hermes 总分分别 `63.89`、`22.22`；KylinBot + OpenClaw 分别 `41.67`、`27.78`。失败项保留为真实 omission/stale_update/confusion/runtime_error/erroneous_reuse，不把网关账单拒绝或模型文本自述计为通过。
+- **安全**: 未复制 Agent 数据库、密钥或原始凭据到仓库；VM 结果目录位于 `runs/`（gitignored），只记录脱敏路径和摘要。
+- **本次是否已同步本台账**: 是
 
 
