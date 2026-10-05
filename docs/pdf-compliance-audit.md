@@ -197,7 +197,7 @@ PDF 要求总数：**19 条**（其中 PDF-01 为背景边界，PDF-13 至 PDF-1
 - **PDF-10/18 `.deb` 生命周期**：批次 106 已在同一 openKylin VM 取得 `preflight/install/version/verify/build_upgrade/upgrade/verify_after_upgrade/uninstall/residual_check` 全部退出码 `0`；旧的“系统级 dpkg 待验证”文字仅属于历史报告，当前结论以 `runs/deb-lifecycle-authorized-20260908-rerun6/` 为准。
 - **扩展套件与真实证据**：中文扩展对抗、英文核心和英文对抗均有真实双 Agent 运行；英文对抗第一次 Grok 503 失败证据保留，第二次成功证据位于 `runs/openkylin-validation-20260908/adversarial-en-compare-rerun2/`。严格校验退出码均为 `0` 的成功批次才纳入结论。
 - **发布候选与最终非视频检查**：`0.2.0+release1` 包和 `runs/final-nonvideo-20260908/` 已完成构建/内容审计、测试、四套件校验、离线 smoke、结果结构、敏感扫描和路径检查；离线 `reference/flawed` 仅是机制验证，不是真实 Agent 结果。
-- **仍未解除的要求**：PDF-12 桌面视频、根目录生效 `LICENSE`、云 API/模型输出展示授权和 openKylin 原生 Agent 独立接入仍未完成或待确认；包装层结果仍不得归因模型原生长期记忆。
+- **仍未解除的要求**：PDF-12 桌面视频、云 API/模型输出展示授权和 openKylin 原生 Agent 独立接入仍未完成或待确认（根目录 `LICENSE` 已于 2026-10-05 生效 MIT）；包装层结果仍不得归因模型原生长期记忆。
 
 ## 最新状态更正（2026-09-24）
 
@@ -211,7 +211,7 @@ PDF 要求总数：**19 条**（其中 PDF-01 为背景边界，PDF-13 至 PDF-1
 - **PDF-19：真实证据已增加，但仍只能得出系统级结论**；最新批次 `native_memory_events=0`，不证明模型原生长期记忆。
 - **PDF-12：仍是唯一明确未交付的 PDF 项**，桌面录屏及视频哈希/时长材料不存在，按用户要求暂不处理。
 
-项目级 `LICENSE`、云输出展示授权和 KylinAgent 的结构化 GUI/服务证据不是 PDF-12 之外的代码缺失，但仍是公开发布/完整生态矩阵的独立待确认项。
+云输出展示授权和 KylinAgent 的结构化 GUI/服务证据不是 PDF-12 之外的代码缺失，但仍是完整生态矩阵的独立待确认项；项目级 `LICENSE` 已于 2026-10-05 生效（MIT）。
 
 
 ## 最新状态更正（2026-10-04）

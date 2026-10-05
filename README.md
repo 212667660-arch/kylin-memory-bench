@@ -158,7 +158,7 @@ bash scripts/upgrade_deb.sh dist/kylin-memory-bench_<new-version>_all.deb
 bash scripts/uninstall_deb.sh
 ```
 
-`verify_deb.sh` 先运行包内最小离线测试，再使用 reference/flawed 校验包内 CLI/评分链路，不是正式真实 Agent 结果。当前项目级 LICENSE 尚未由负责人选择，`.deb` 在完成许可证决策前仅作为技术验收包使用，详见 `docs/deb-release.md`。
+`verify_deb.sh` 先运行包内最小离线测试，再使用 reference/flawed 校验包内 CLI/评分链路，不是正式真实 Agent 结果。项目级 LICENSE 为 MIT（2026-10-05 负责人确认生效），`.deb` 分发边界见 `docs/deb-release.md` 与 `THIRD_PARTY_NOTICES.md`。
 
 具备 `sudo/root` 的 openKylin 终端可用 `bash scripts/record_deb_lifecycle.sh` 一次性记录安装、升级、验证、卸载和残留检查。桌面演示录屏命令见 `docs/demo-script.md`；无图形会话时不得把脚本预检当作已录制视频。
 
@@ -214,7 +214,7 @@ python -m kmb.cli run \
 
 ## 当前边界
 
-内置 `reference` 和 `flawed` 是离线、确定性的演示基线，用于验证 Benchmark 能区分正确行为与错误持久化/混淆/复用。它们不是赛事最终指定的两款真实 Agent，结果会标为 `simulated_baseline`。`kylinbot-process` 是本机已跑通的 openKylin 生态**进程适配器**（`source=process`，系统级）。最新 openKylin 3.0 VM 批次已在独立 HOME 中完成 KylinBot/OpenClaw 六案例快速对比；两者的结果仍只能表述为系统级行为，`native_memory_events=0`，不能归因模型原生记忆。桌面演示视频尚未录制；项目级 LICENSE 仍待确认。
+内置 `reference` 和 `flawed` 是离线、确定性的演示基线，用于验证 Benchmark 能区分正确行为与错误持久化/混淆/复用。它们不是赛事最终指定的两款真实 Agent，结果会标为 `simulated_baseline`。`kylinbot-process` 是本机已跑通的 openKylin 生态**进程适配器**（`source=process`，系统级）。最新 openKylin 3.0 VM 批次已在独立 HOME 中完成 KylinBot/OpenClaw 六案例快速对比；两者的结果仍只能表述为系统级行为，`native_memory_events=0`，不能归因模型原生记忆。桌面演示视频尚未录制（演示脚本与录制工具已就绪）；项目级 LICENSE 为 MIT（已生效）。
 
 详细流程、评分规则和复现说明见 [`docs/solution.md`](docs/solution.md)。
 外部 Agent 的 JSONL 证据格式见 [`docs/evidence-protocol.md`](docs/evidence-protocol.md)。

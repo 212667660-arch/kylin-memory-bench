@@ -70,23 +70,32 @@ def calculate_official_score(evidence: Dict[str, Any], root: Optional[Path | str
     add("PDF-17", WEIGHTS["PDF-17"] if has_reports else 6, "pass" if has_reports else "partial", "JSON/Markdown/HTML 摘要及对比雷达产物可复核。", "python -m kmb.cli official-acceptance")
     items["PDF-17"]["evidence"] = [str(path) for path in report_files if path.is_file()]
     has_bundle = bundle_manifest.is_file()
-    add("PDF-18", WEIGHTS["PDF-18"] if has_bundle and checks_pass else 6, "pass" if has_bundle and checks_pass else "partial", "官方脱敏包审计和 CLI/打包入口已具备；许可证仍单列为排除项。", "python scripts/build_official_bundle.py && python scripts/audit_official_bundle.py --strict")
+    license_active = (base / "LICENSE").is_file()
+    pdf18_reason = "官方脱敏包审计和 CLI/打包入口已具备；根目录 LICENSE 已生效（MIT，2026-10-05 负责人确认）。" if license_active else "官方脱敏包审计和 CLI/打包入口已具备；许可证仍单列为排除项。"
+    add("PDF-18", WEIGHTS["PDF-18"] if has_bundle and checks_pass else 6, "pass" if has_bundle and checks_pass else "partial", pdf18_reason, "python scripts/build_official_bundle.py && python scripts/audit_official_bundle.py --strict")
     items["PDF-18"]["evidence"] = [str(path) for path in (base / "dist").glob("official-bundle-*/release-manifest.json")]
     total = sum(points.values())
-    return {"generated_at": datetime.now(timezone.utc).isoformat(), "weights": dict(WEIGHTS), "points": points, "items": items, "total": total, "max_total": sum(WEIGHTS.values()), "excluded_from_score": list(EXCLUDED), "acceptance_status": evidence.get("status"), "limitations": ["PDF-12 桌面视频按用户要求未处理。", "LICENSE 按用户要求未处理；不存在根目录生效许可证不能视为发布许可。", "native_memory_events=0 时只报告系统级观测，不宣称模型原生记忆。"]}
+    license_note = (
+        "根目录 LICENSE 已生效（MIT，2026-10-05 项目负责人确认；评分模型不变，LICENSE 仍不计分）。"
+        if license_active else
+        "LICENSE 按用户要求未处理；不存在根目录生效许可证不能视为发布许可。"
+    )
+    return {"generated_at": datetime.now(timezone.utc).isoformat(), "weights": dict(WEIGHTS), "points": points, "items": items, "total": total, "max_total": sum(WEIGHTS.values()), "excluded_from_score": list(EXCLUDED), "acceptance_status": evidence.get("status"), "license": {"active": license_active, "text": "MIT"}, "limitations": ["PDF-12 桌面视频按用户要求未处理。", license_note, "native_memory_events=0 时只报告系统级观测，不宣称模型原生记忆。"]}
 
 
 def _write_outputs(out: Path, score: Dict[str, Any]) -> None:
     out.mkdir(parents=True, exist_ok=True)
     (out / "scorecard.json").write_text(json.dumps(score, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    lines = ["# 官方视角自评分", "", "- 总分：**%d/%d**" % (score["total"], score["max_total"]), "- 排除：`PDF-12`（视频）、`LICENSE`（许可证）", "", "| 项目 | 权重 | 得分 | 状态 | 依据 |", "|---|---:|---:|---|---|"]
+    license_line = "- LICENSE：已生效（MIT）" if (score.get("license") or {}).get("active") else "- 排除：`LICENSE`（许可证）"
+    lines = ["# 官方视角自评分", "", "- 总分：**%d/%d**" % (score["total"], score["max_total"]), "- 排除：`PDF-12`（视频）", license_line, "", "| 项目 | 权重 | 得分 | 状态 | 依据 |", "|---|---:|---:|---|---|"]
     for key in WEIGHTS:
         item = score["items"][key]
         lines.append("| %s | %d | %d | %s | %s |" % (key, item["weight"], item["points"], item["status"], item["reason"]))
     lines.extend(["", "## 边界", "", *["- " + item for item in score["limitations"]], ""])
     (out / "scorecard.md").write_text("\n".join(lines), encoding="utf-8")
     rows = "".join("<tr><td>%s</td><td>%d</td><td>%d</td><td>%s</td></tr>" % (key, score["items"][key]["weight"], score["items"][key]["points"], html.escape(score["items"][key]["status"])) for key in WEIGHTS)
-    (out / "official-review.html").write_text("<!doctype html><meta charset='utf-8'><title>官方视角自评分</title><h1>官方视角自评分：%d/%d</h1><table border='1'><tr><th>项目</th><th>权重</th><th>得分</th><th>状态</th></tr>%s</table><p>PDF-12 视频和 LICENSE 按用户要求未处理。</p>" % (score["total"], score["max_total"], rows), encoding="utf-8")
+    html_footer = "PDF-12 视频按用户要求未处理；LICENSE 已生效（MIT）。" if (score.get("license") or {}).get("active") else "PDF-12 视频和 LICENSE 按用户要求未处理。"
+    (out / "official-review.html").write_text("<!doctype html><meta charset='utf-8'><title>官方视角自评分</title><h1>官方视角自评分：%d/%d</h1><table border='1'><tr><th>项目</th><th>权重</th><th>得分</th><th>状态</th></tr>%s</table><p>%s</p>" % (score["total"], score["max_total"], rows, html_footer), encoding="utf-8")
 
 
 def main(argv: Optional[Iterable[str]] = None) -> int:

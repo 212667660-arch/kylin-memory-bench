@@ -1,6 +1,6 @@
 # KylinMemoryBench 任务清单
 
-> 口径与 `docs/release-freeze.md`、README 一致。**PDF a-d 的代码、CLI/GUI、样例与真实双 Agent 快速对比已复核；桌面视频（e）和项目级 LICENSE 仍后置。**
+> 口径与 `docs/release-freeze.md`、README 一致。**PDF a-d 的代码、CLI/GUI、样例与真实双 Agent 快速对比已复核；桌面视频（e）待录制；项目级 LICENSE 已生效（MIT，2026-10-05）。**
 
 ## 必须完成（本机）
 
@@ -32,7 +32,7 @@
 - openKylin 3.0 VM（`192.168.141.128:22`）已完成离线闭环、`.deb` 包内 smoke/strict verify、工作台 HTTP 和 Agent 发现；本轮在独立 HOME 中完成 KylinBot/OpenClaw 六案例真实快速对比。
 - 最新批次：`~/kmb-agent-validation-20260923/runs/quick-compare-isolated-20260924`；KylinBot `63.89`、OpenClaw `13.89`，两侧 `score_valid=true`，strict 校验通过。Token Center `/v1/models` 返回 200，未再出现 402；结果仍按系统级外部记忆证据解释，`native_memory_events=0`。
 - 桌面演示视频仍待录（`docs/demo-script.md`）。
-- 项目级 LICENSE 仍待负责人确认。
+- 项目级 LICENSE 已生效（MIT，2026-10-05 负责人确认）。
 
 ## 表述边界（强制）
 
@@ -66,7 +66,7 @@
 
 ## 2026-10-04 里程碑：官方自评分 100/100
 
-- **PDF-16 补齐**：openKylin 3.0 VM 真实双 Agent 重复批次 `runs/official-installed-20261004/`（--repeats 2，独立 HOME/清空记忆表）两批双 Agent 全部 `score_valid=true`（KylinBot 63.89/61.11 σ1.97；OpenClaw 22.22/22.22 σ0），strict verify 通过；官方评分重生成 `runs/official-final-20261004/scorecard/` = **100/100**（PDF-16 15/15 pass）。桌面视频与 LICENSE 仍按用户要求排除。
+- **PDF-16 补齐**：openKylin 3.0 VM 真实双 Agent 重复批次 `runs/official-installed-20261004/`（--repeats 2，独立 HOME/清空记忆表）两批双 Agent 全部 `score_valid=true`（KylinBot 63.89/61.11 σ1.97；OpenClaw 22.22/22.22 σ0），strict verify 通过；官方评分重生成 `runs/official-final-20261004/scorecard/` = **100/100**（PDF-16 15/15 pass）。桌面视频仍待录制（脚本/工具就绪）；LICENSE 已生效（MIT）。
 - 附加产出：环境指纹工具 `scripts/agent_env_fingerprint.py`（跨日批次环境同一性哈希背书，今日指纹与 10-01 一致）；`--preflight-only` 零消耗预检命令；prompt-caching 实测结论（后端 89% 命中但网关全价扣费，已形成官方改进建议）。
 - 执行波动史（429 一次、402 三次）全部保留在分母与归档目录，未用重跑替换失败批。
 

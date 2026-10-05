@@ -105,7 +105,7 @@ release7 已在目标 VM 执行 `dpkg-deb --contents`、禁止内容、核心/�
 
 ## 当前状态边界
 
-- `0.2.0+release7` 发布候选已包含当前创新代码、系统场景执行器、套件、统计修复和文档并通过 VM 包内容审计；`.deb` 对外再分发仍受项目级许可证未确认限制。
+- `0.2.0+release7` 发布候选已包含当前创新代码、系统场景执行器、套件、统计修复和文档并通过 VM 包内容审计；`.deb` 对外再分发限制已随项目级 LICENSE（MIT，2026-10-05）生效解除；第三方边界见 THIRD_PARTY_NOTICES.md。
 - Grok/DeepSeek 真实轨道均未导出原生记忆状态；所有 wrapper/no-memory 结果均为系统级行为或基线描述。
 - **R0**：包装/HTTP/三件套历史 runs **保留**为 C 轨对照证据；赛题「不同智能体长期记忆」主结论路径为 A+B 且须通过证据门禁（见 `docs/native-memory-compare.md`）。**不得**将 wrapper 互比写成主结论或原生记忆对比。
 - 英文/扩展/创新套件已有真实运行；创新 memory-enabled 与 no-memory 两 Agent 均已归档各 5 批统计，Grok 两条轨道均保留真实失败样本。
@@ -118,7 +118,7 @@ release7 已在目标 VM 执行 `dpkg-deb --contents`、禁止内容、核心/�
 
 - 官方离线验收：`runs/official-final-20260925-r2/`，退出码 `0`。
 - 官方评分：`runs/official-final-20261004/scorecard/`，当前得分 **100/100**（2026-10-04；90/100 历史基线保留于 `runs/official-final-20260925-r2/scorecard-final/`）。
-- 评分排除：`PDF-12` 桌面视频和根目录项目级 `LICENSE`，两项均未处理。
+- 评分排除：`PDF-12` 桌面视频（仍未处理）。根目录 `LICENSE` 已于 2026-10-05 生效（MIT，仍不计入评分权重）。
 - 评分明细文档：`docs/official-scorecard.md`；机器可读来源为 `scorecard.json`。
 - 评分回归：`tests.test_official_score`、`tests.test_official_repeat` 共 6 项通过；完整测试仍以本轮全量命令输出为准。
 - 真实 VM 重复批次（当前）：`runs/official-installed-20261004/`（2026-10-04，openKylin 3.0 VM，--repeats 2）：两批双 Agent 全部 `score_valid=true`（KylinBot 63.89/61.11，OpenClaw 22.22/22.22），环境指纹与 10-01 一致；PDF-16 据此计满分。历史批次（09-24 的 1/3 与 0/3、09-27 的 402、10-01 的 429/402 系列）全部保留并记录于 `docs/official-scorecard.md`。

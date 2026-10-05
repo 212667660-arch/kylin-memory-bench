@@ -37,5 +37,12 @@ class OfficialBundleTests(unittest.TestCase):
                 audit_bundle(root, strict=True)
 
 
+    def test_official_bundle_ships_active_license(self):
+        """根目录 LICENSE（MIT）必须随发布包分发，且候选文件不再出现。"""
+        with tempfile.TemporaryDirectory() as directory:
+            bundle = build_bundle(Path(directory))
+            self.assertTrue(bundle.contains("LICENSE"))
+            self.assertFalse(bundle.contains("LICENSE-MIT-CANDIDATE.txt"))
+
 if __name__ == "__main__":
     unittest.main()

@@ -63,6 +63,6 @@ payload smoke，以确认包内启动器、CLI 和套件可运行；这不能替
 `credentials.env` 和字节码文件；不要向包内写入 API Key、密码、私有数据、模型权重或
 未经授权的第三方材料。
 
-当前项目尚未选定项目级 LICENSE；`LICENSE-MIT-CANDIDATE.txt` 只是非生效候选文本。故 `.deb` 可作为内部技术验收和赛事现场复现材料构建、
-安装和验证，但不得在没有项目负责人完成 LICENSE 选择、版权声明和第三方审计前宣称可对外
+项目级 LICENSE 为 MIT（2026-10-05 负责人确认生效，见根目录 `LICENSE`）。`.deb` 的构建、
+安装和验证材料可按 MIT 分发；云输出与第三方边界仍见 `THIRD_PARTY_NOTICES.md`
 再分发。候选方案见 `docs/license-decision.md`，详见 `NOTICE` 与 `docs/license-audit.md`。

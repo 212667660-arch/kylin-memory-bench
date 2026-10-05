@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 INCLUDE_DIRS = ("kmb", "configs", "suites", "docs", "scripts", "tests", "packaging")
 INCLUDE_FILES = (
     "README.md", "CHANGELOG.md", "NOTICE", "THIRD_PARTY_NOTICES.md",
-    "LICENSE-MIT-CANDIDATE.txt", "pyproject.toml", "setup.py",
+    "LICENSE", "pyproject.toml", "setup.py",
 )
 FORBIDDEN_NAMES = {
     ".git", ".tmp-github-research", ".venv", ".venv-kmb-system", "runs",

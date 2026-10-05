@@ -41,5 +41,15 @@ class OfficialScoreTests(unittest.TestCase):
             self.assertIn(str(manifest), score["items"]["PDF-18"]["evidence"])
 
 
+    def test_license_limitation_reflects_root_license(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            score_absent = calculate_official_score({"status": "pass", "checks": []}, root=root)
+            self.assertTrue(any("未处理" in item for item in score_absent["limitations"]))
+            (root / "LICENSE").write_text("MIT License\n", encoding="utf-8")
+            score_present = calculate_official_score({"status": "pass", "checks": []}, root=root)
+            self.assertTrue(any("已生效" in item and "MIT" in item for item in score_present["limitations"]))
+            self.assertEqual(score_present["excluded_from_score"], ["PDF-12", "LICENSE"])
+
 if __name__ == "__main__":
     unittest.main()

@@ -45,4 +45,4 @@ python3 scripts/env_probe.py --require-openkylin --json
 | 系统包生命周期 | 第六批九步骤均为 0，含卸载/残留检查 | `runs/deb-lifecycle-authorized-20260908-rerun6/` |
 | 真实 Agent | Grok 4.6、DeepSeek v4 flash；原生记忆事件 0 | `runs/openkylin-validation-20260906/final-event-report.md`、`runs/openkylin-validation-20260908/` |
 
-该附录只覆盖已记录的单个 VM/KARE 版本；不能外推到其他镜像或版本。桌面视频仍未录制，项目级许可证仍待确认。
+该附录只覆盖已记录的单个 VM/KARE 版本；不能外推到其他镜像或版本。桌面视频仍未录制（脚本/工具就绪）；项目级许可证为 MIT（2026-10-05 已生效）。

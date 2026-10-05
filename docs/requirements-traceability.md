@@ -65,6 +65,6 @@
 | 发布包 | 已具备 | `dist/official-bundle-final-20260925-official/` 严格脱敏审计通过；Debian 包在 openKylin VM 临时副本中构建、解包 smoke、核心套件 strict validate 和评分脚本检查均通过 |
 | 原生记忆结论 | 不可观测 | 真实 KylinBot/OpenClaw 批次 `native_memory_events=0`，只报告系统级行为 |
 | PDF-12 视频 | 未处理 | 按用户要求排除 |
-| 项目级 `LICENSE` | 未处理 | 按用户要求排除，候选文件不等于生效许可 |
+| 项目级 `LICENSE` | 已生效（MIT，2026-10-05 负责人确认） | 根目录 `LICENSE`；评分模型不变，仍不计入权重 |
 
-当前评审结论：非视频代码、验收入口、证据链、评分器和脱敏发布材料已形成可复核闭环；PDF-16 受真实 billing/timeout 批次影响只给部分分，视频和 `LICENSE` 不在本轮工作范围内。
+当前评审结论：官方评分 100/100（含 PDF-16 VM 真实批次满分），非视频交付闭环完整；视频仍在待录状态，`LICENSE` 已生效（MIT）。
