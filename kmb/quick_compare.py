@@ -80,7 +80,9 @@ def run_quick_compare(options: QuickCompareOptions, root: Optional[Path] = None)
     if not suite_path.is_absolute():
         suite_path = workspace / suite_path
     cases = load_suite(str(suite_path))
-    validate_cases(cases, require_all_capabilities=True)
+    # The built-in quick suite must cover all six capabilities; an explicitly
+    # selected custom suite (e.g. a small demo/smoke suite) is validated as-is.
+    validate_cases(cases, require_all_capabilities=(options.suite == QUICK_SUITE))
     output = Path(options.out_dir) if options.out_dir else workspace / "runs" / ("quick-compare-" + uuid.uuid4().hex[:12])
     if not output.is_absolute():
         output = workspace / output

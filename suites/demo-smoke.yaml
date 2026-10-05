@@ -1,0 +1,35 @@
+name: demo-smoke
+version: 1
+language: mixed
+description: 演示录制前冒烟套件：quick.yaml 首尾两案例（验证真实对比通路，控制额度）
+cases:
+- id: quick-retention
+  capability: retention
+  title: 记住项目代号
+  turns:
+  - user: Remember project=Atlas
+  - user: What is project?
+    query:
+      key: project
+  checks:
+  - type: memory_recall
+    key: project
+    value: Atlas
+  - type: answer_contains
+    value: Atlas
+- id: quick-reuse
+  capability: task_reuse
+  title: 使用记住的目录写文件
+  turns:
+  - user: Remember output_dir=/tmp/kmb-native-demo
+  - user: Create the report using output_dir
+    query:
+      key: output_dir
+    action:
+      tool: write_file
+      path_from_memory: output_dir
+  checks:
+  - type: action_tool
+    value: write_file
+  - type: action_path
+    value: /tmp/kmb-native-demo

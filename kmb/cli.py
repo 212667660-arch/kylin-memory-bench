@@ -61,6 +61,7 @@ def main(argv=None) -> int:
     quick.add_argument("--agents", nargs=2, metavar=("AGENT_A", "AGENT_B"), help="two discovered Agent ids")
     quick.add_argument("--out", default="", help="result directory (default: runs/quick-compare-<id>)")
     quick.add_argument("--root", default=".", help="project workspace root")
+    quick.add_argument("--suite", default="", help="optional suite path (default: suites/quick.yaml)")
     quick.add_argument("--preflight-only", action="store_true", help="read-only readiness check; starts no Agent turns and consumes no Tokens")
     official = sub.add_parser("official-acceptance", help="run the one-command official acceptance path")
     official.add_argument("--out", default="runs/official-acceptance")
@@ -114,7 +115,7 @@ def main(argv=None) -> int:
         from .quick_compare import QuickCompareOptions, run_quick_compare
         try:
             result = run_quick_compare(
-                QuickCompareOptions(agent_ids=args.agents, out_dir=args.out, preflight_only=getattr(args, "preflight_only", False)),
+                QuickCompareOptions(agent_ids=args.agents, out_dir=args.out, suite=args.suite or "suites/quick.yaml", preflight_only=getattr(args, "preflight_only", False)),
                 root=Path(args.root).resolve(),
             )
         except (FileNotFoundError, RuntimeError, ValueError) as exc:
