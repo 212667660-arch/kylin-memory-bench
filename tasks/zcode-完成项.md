@@ -705,3 +705,5 @@ nohup python3 -m kmb.cli official-acceptance --mode installed --agent-a kylinbot
 - **发布包**：`dist/official-bundle-20261005/`（194 文件）——`build_official_bundle.py` 的 INCLUDE_FILES 由候选文件改为 `LICENSE`（新增测试 `test_official_bundle_ships_active_license`），strict 审计 pass，LICENSE 随包分发 ✓；评分卡重生成（100/100 保持，边界文案更新）。
 - **回归**：全量 **143 项测试 OK**（+2 LICENSE 相关）。
 - ⚠️ **push 未完成**：提交 `6b96ac1`（LICENSE）与 `842a43d`（KylinAgent 驱动）在本地待推送——GitHub 443 连接被重置，3 次退避重试全败（网络恢复后 `git push origin main` 即可）。
+
+- **push 补录（2026-10-05 晚）**：网络恢复，`41cc657..f3209b5 main -> main` 推送成功——KylinAgent 驱动、LICENSE 生效与工作日志全部入库，本地与远程一致（0 未提交）。
