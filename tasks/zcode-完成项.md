@@ -654,3 +654,20 @@ nohup python3 -m kmb.cli official-acceptance --mode installed --agent-a kylinbot
 - **push**：`fc9d284..211e19c main -> main`（github.com/212667660-arch/kylin-memory-bench；远程原落后 7 个提交，快进合并，未强推）。未配置全局 git 身份，已复用仓库既有作者 `arch` 到本仓库 local 配置。
 - **发布包**：`dist/official-bundle-20261004/`（192 文件 + manifest=193）——`build_official_bundle.py` 构建，`audit_official_bundle.py --strict` **pass 无 issue**。抽查确认：指纹工具/official_score/49 案例套件/评分卡/计划文档均在；`runs/`、`.env`、`research/` 已排除；`docs/migrate-openkylin-20260918/` 作为项目文档保留。manifest format=`kmb-official-bundle-v1`。
 - **提交收尾**：本节日志以 `docs:` 小提交入库（工作日志为仓库文件，保持与提交同步）。
+
+## KylinAgent 深度侦察——"等官方"结论被推翻，解锁路径实证存在（2026-10-04 深夜）
+
+用户指示"先做3"（KylinAgent 结构化证据问题）。零成本只读侦察（SSH + 本地 GET），**三项关键发现**：
+
+1. **架构真相**：`~/.kylin-agent-runtime/` 的运行时服务就是 **hermes-agent 平台**（进程 `agent-runtime/venv/bin/hermes gateway run`，pid 1930），监听 **127.0.0.1:8642**；Qt GUI（经 `~/.cache/kylin-agent.socket`）只是它的前端之一。KylinAgent = openKylin 基于 hermes-agent 引擎的发行形态。
+2. **结构化证据一直在磁盘上**：
+   - `state.db`（3.9M）：34 会话 / 285 消息，**完整 tool_calls 字段**——模型真实调用过工具：**memory ×25**、read_file ×47、terminal ×30、search_files ×23、execute_code ×6、write_file ×2；
+   - `sessions/*-details.log`：**JSONL 事件流**（`model.request`、`delegation.router.decision` 等，含 provider/model 字段）；
+   - `sessions/*-usage.log`：逐调用 token 计量（input≈11.6K/调用——KylinAgent 的上下文远小于 KylinBot 的 37.6K，且有 cache_read=3,584 的前缀缓存命中）。
+3. **本地 HTTP API 可驱动**：`GET /health`→`{"status":"ok","platform":"hermes-agent"}`；`GET /api/sessions` 列会话；`GET /api/sessions/{id}/messages` 返回完整结构化消息（role/content/tool_calls/reasoning_content/timestamp）。会话列表里能看到历史测试对话（"我的项目代号是Atals"，source=desktop）。
+
+**解锁路径（待建工程）**：为 kylinagent 写 HTTP 驱动适配器（POST 会话消息端点，GUI 同款路径）+ 结构化证据导出（state.db/details.log → `source=memory_layer`/`model` 事件，与 B 轨标记规则一致）→ 预检从 blocked 转 ready → 真实批次。**成本预估**：每回合 ~12-15K token，6 案例批次 ≈ **30-40 万**（远低于 KylinBot 的 220 万/批对）。
+
+**待用户拍板的一点**：驱动路径写进**真实 state.db**（会污染日常使用的 KylinAgent 数据）vs **克隆运行时目录起隔离实例**（干净但要解决第二个实例的端口/配置指向）。存量证据已证明 memory 工具被真实调用，解锁的科学价值明确。
+
+侦察过程全只读、零 token 消耗。
