@@ -72,5 +72,5 @@
 
 ## 下一步
 
-1. 如需完整四 Agent 矩阵，补跑 Hermes；KylinAgent 需先提供可结构化 GUI/服务证据后再接入
+1. 四 Agent 矩阵：KylinBot/OpenClaw/Hermes 已有真实分数；KylinAgent 已解锁驱动（`scripts/kylinagent_driver.py`，hermes-agent 引擎+memory_recall 证据提取）但批次受 openKylin 网关挂死 bug 阻断（`runs/kylinagent-real-20261005/`，官方修复后重跑即可）
 2. LICENSE 与 3–5 分钟桌面视频

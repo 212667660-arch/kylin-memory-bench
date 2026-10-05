@@ -671,3 +671,27 @@ nohup python3 -m kmb.cli official-acceptance --mode installed --agent-a kylinbot
 **待用户拍板的一点**：驱动路径写进**真实 state.db**（会污染日常使用的 KylinAgent 数据）vs **克隆运行时目录起隔离实例**（干净但要解决第二个实例的端口/配置指向）。存量证据已证明 memory 工具被真实调用，解锁的科学价值明确。
 
 侦察过程全只读、零 token 消耗。
+
+## KylinAgent 解锁工程——工程完成，最后卡在 openKylin 网关 bug（2026-10-05，诚实停点）
+
+**用户拍板 B 路线（隔离实例）后完成的工程**：
+
+1. **驱动器** `scripts/kylinagent_driver.py`（CommandAgent 协议，stdin=案例 → stdout=证据 JSONL）：映射函数 TDD（6 测试，含"不得伪造键值写事件"的不变量）——KylinAgent 的 memory 工具是**会话检索范式**（`{query,limit}` → FTS 搜索过往会话），映射为 `memory_recall(key=query, hit, value=snippet)`；**无键值写路径，绝不伪造 memory_write**。
+2. **隔离实例**：`~/kmb-kylinagent-isolated-20261004/`（config+auth 克隆、状态全新）+ `HERMES_HOME/AGENT_RUNTIME_HOME` 重定向——实测隔离目录生成独立的 `kylin_agent_runtime_state.db`/`memory.db`/`sessions/`，用户日常数据零接触。
+3. **证据提取实证**：14+8 条 `memory_recall(memory_layer)` 事件、模型工具调用（memory/terminal/write_file）全部结构化捕获；`native_memory_events=0` 边界不变。
+
+**过程中诊断并解决/定位的三层问题**：
+
+| 层 | 问题 | 处置 |
+|---|---|---|
+| 驱动层 | Agent 横幅污染 stdout（CommandAgent 逐行 JSON 解析会崩） | 交互期 sys.stdout→stderr 重定向 |
+| runtime 层 | 隔离库无 FTS 索引（聊天持久化先建库，schema 迁移被版本检查跳过）→ memory 搜索全 0 命中 | 驱动启动时用 runtime 自带 `FTS_SQL` 建表+回填；修复后 **8 条 recall 命中 4 条** |
+| runtime 层 | 流式传输挂死（`model.transport.start, streaming:true` 后无完成事件）| 用 runtime 自带降级钩子 `agent._disable_streaming=True` → 转非流式 |
+
+**最终阻断（openKylin 网关侧 bug，证据已固定）**：非流式模式下，特定确定性载荷（`terminal ls` 执行后的第 5 次模型请求）**网关不返回**——`model.transport.start(streaming:false)` 后日志终止，连接挂死直到 runner 600 秒超时。同 seed 四轮复现（r2/r3/1005 两轮），流式与非流式皆中；terminal 输出无控制字符；guardrails/超时调整无效。这是网关对特定请求载荷的编码/处理缺陷，harness 无法绕过。
+
+**四轮 KylinAgent 运行的诚实产出**（`runs/kylinagent-real-2026100{4,4-r2,4-r3,05}/`，~160 万 token）：
+- 结构化记忆证据提取链路完全打通（memory_recall 命中含过往会话片段）；
+- **架构发现**：KylinAgent 记忆=会话检索范式——(a) 无键值写事件；(b) **边界案例真实失败**：临时 OTP 被会话索引并在后续检索中复述（`confusion` 失败）——检索型记忆没有"拒绝存储"概念，这是与 KV 型 Agent 的实质差异，已记录；
+- 完整有效批次未达成：`score_valid=false`（error 级超时），KylinAgent 在矩阵中保持"已解锁驱动、批次受网关 bug 阻断"的状态。
+- **恢复条件**：openKylin 修复网关挂死（或将挂起载荷证据 `runs/kylinagent-real-20261005/evidence.jsonl` + details.log 提交官方复现）后重跑同一命令即可。

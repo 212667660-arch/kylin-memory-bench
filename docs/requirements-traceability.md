@@ -45,7 +45,7 @@
 - `node --check kmb/web/app.js` 通过。
 - `suites/quick.yaml`、核心、英文、扩展、对抗、生命周期和 native gate 均可校验；native gate 是单案例门禁，正确命令是不加 `--strict`。
 - `scripts/run_offline_demo.sh runs/verification-offline-20260923` 成功，四组比较和所有 agent 结果均通过严格证据校验；最新 openKylin VM 批次为 `/tmp/kmb-verification/runs/verification-openkylin-20260923-v2`。
-- openKylin 3.0 VM（`192.168.141.128:22`）已复核离线四组比较、`.deb` 包内 smoke/strict verify、工作台 HTTP 接口，并发现四个生态 Agent；KylinAgent 因 GUI/服务级证据不可结构化而安全阻断。
+- openKylin 3.0 VM（`192.168.141.128:22`）已复核离线四组比较、`.deb` 包内 smoke/strict verify、工作台 HTTP 接口，并发现四个生态 Agent；KylinAgent：2026-10-05 已实现隔离实例无头驱动（`scripts/kylinagent_driver.py`，hermes-agent 引擎 + 结构化 memory_recall 证据提取），批次受 openKylin 网关挂死 bug 阻断（证据 `runs/kylinagent-real-20261005/`），维持安全阻断直至官方修复。
 - 最新真实批次：`/home/Cisyam/kmb-agent-validation-20260923/runs/quick-compare-isolated-20260924/`。在空白临时记忆库与独立 HOME 中运行 KylinBot/OpenClaw 六案例，KylinBot `63.89`、OpenClaw `13.89`，均 `score_valid=true`；两侧 strict 校验分别为 51/34 条证据、退出码 0。结果是系统级外部记忆/动作控制器行为，均 `native_memory_events=0`，不能解释为模型原生记忆能力。
 - 本轮新 Token 的 `/v1/models` 连通性返回 HTTP 200；真实 Agent 调用未再出现 402。临时副本不修改用户日常记忆，Token 未写入仓库或结果文件。
 - 桌面视频未纳入本清单，按用户要求后置。
