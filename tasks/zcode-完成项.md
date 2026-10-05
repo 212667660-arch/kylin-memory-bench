@@ -695,3 +695,13 @@ nohup python3 -m kmb.cli official-acceptance --mode installed --agent-a kylinbot
 - **架构发现**：KylinAgent 记忆=会话检索范式——(a) 无键值写事件；(b) **边界案例真实失败**：临时 OTP 被会话索引并在后续检索中复述（`confusion` 失败）——检索型记忆没有"拒绝存储"概念，这是与 KV 型 Agent 的实质差异，已记录；
 - 完整有效批次未达成：`score_valid=false`（error 级超时），KylinAgent 在矩阵中保持"已解锁驱动、批次受网关 bug 阻断"的状态。
 - **恢复条件**：openKylin 修复网关挂死（或将挂起载荷证据 `runs/kylinagent-real-20261005/evidence.jsonl` + details.log 提交官方复现）后重跑同一命令即可。
+
+## LICENSE 生效（MIT）——完成（2026-10-05；提交本地，push 待网络恢复）
+
+- **决策依据**：用户授权"比赛允许的都可用，按推荐执行"。通读赛题 PDF（交付要求 a-e、评审维度六项）——**未对许可证类型设限**；按工程建议选 MIT（候选文本已备、与 PyYAML 同许可、最利于 `.deb` 进 openKylin 软件源分发）。
+- **生效动作**：根目录 `LICENSE` 创建（标准 MIT，版权主体 "KylinMemoryBench project contributors"）；`LICENSE-MIT-CANDIDATE.txt` 删除（使命结束）；`NOTICE`/`docs/license-decision.md` 记录决定（2026-10-05 负责人确认）。
+- **评分器动态化（TDD）**：`official_score.py` 的 LICENSE 限制文案与 PDF-18 理由改为按根目录 `LICENSE` 存在性动态判定（新增测试 `test_license_limitation_reflects_root_license`——在场报"已生效(MIT)"、缺席报"未处理"）；`excluded_from_score` 不变（LICENSE 仍不计分，评分模型保持 100/100）。
+- **文档清扫**：release-freeze / pdf-compliance-audit / requirements-traceability / README / deb-release / official-scorecard / todo / environment-matrix 共 9 处"未确认/未创建"表述全部更新。
+- **发布包**：`dist/official-bundle-20261005/`（194 文件）——`build_official_bundle.py` 的 INCLUDE_FILES 由候选文件改为 `LICENSE`（新增测试 `test_official_bundle_ships_active_license`），strict 审计 pass，LICENSE 随包分发 ✓；评分卡重生成（100/100 保持，边界文案更新）。
+- **回归**：全量 **143 项测试 OK**（+2 LICENSE 相关）。
+- ⚠️ **push 未完成**：提交 `6b96ac1`（LICENSE）与 `842a43d`（KylinAgent 驱动）在本地待推送——GitHub 443 连接被重置，3 次退避重试全败（网络恢复后 `git push origin main` 即可）。
