@@ -729,3 +729,15 @@ nohup python3 -m kmb.cli official-acceptance --mode installed --agent-a kylinbot
 - **push 全部完成（2026-10-11，SSH 通道）**：GitHub HTTPS 持续被阻断，诊断发现 SSH 端口可达但本机密钥未注册——用户将 `codex-openkylin-vm` 公钥加入 GitHub 后，`~/.ssh/config` 指定 GitHub 使用该钥匙，`cdca012..61463c3` 全部推送成功，本地与远程一致（0 未提交）。今后 push 走 SSH，不再受 HTTPS 阻断影响。
 
 - **配置清理（2026-10-11，应用户要求）**：删除 7 个历史云供应商配置（grok×3 / deepseek×3 / doubao）与被 100/100 官方流程取代的旧验证脚本 `openkylin_full_validation.sh`——配置从 20 → 11 个（reference/flawed 基线、kylinbot-process/command、openkylin-token、B 轨四件套、接入模板）；工作台"API/模型"页实测 18 → 11；release8 .deb 重新构建（234KB，仅含必需配置）；143 测试全绿。历史 runs/ 证据（Grok/DeepSeek 对照）不受影响——它们是过去的运行记录，不依赖配置文件存在。
+
+## 工作台界面自审与修复（2026-10-11，录屏前自审）
+
+用户要求审视前端。五个页面走查 + 代码对照，发现并修复：
+
+- **P0 平均分污染**：总览"最近使用智能体"把无效批次（`overall=null`）当 0 分平均（`Number(null)`===0 的 JS 陷阱）——KylinBot 显示 28.15 与真实批次 63.89/61.11 矛盾。修复：空值守卫 + 元信息标注有效次数。修复后 **KylinBot 52.78（45 次·24 有效）、OpenClaw 33.33（42 次·21 有效）**，与官方评分口径一致。
+- **P0 "固定运行"显示混乱**：`runs/test-retry` 的 run_id 字面就是 `fixed-run`，被 UI 映射机械翻译成"固定运行"且带"状态未观测/不稳定"假字段。修复：移除内部类别名的机械翻译，按原文显示。
+- **P0 "真实智能体 A"命名误导**：replay 示例模板被显示为"真实智能体 A"→ 改为"回放示例（模板）"。
+- **P1 新建评测默认值偏航**：默认选中 B 轨配置+旧套件 → 改为 **reference vs flawed**（离线零凭据、演示安全）。
+- **P1 凭据横幅文案**：泄漏实现细节（"隐藏输入命令/VM 凭据不同步 Windows"）→ 改为动作导向。
+- 过程中插曲：修复后页面短暂空白——排查发现是**两个 serve 实例抢占 8080 端口**（Windows SO_REUSEADDR 允许双绑定），请求随机命中新旧进程；杀掉重复实例后一切正常。数据接口逐一验证（/api/system,runs,configs,suites,agents 全 200 且 JSON 有效）。
+- 回归：143 测试 OK；界面截图验证修复生效。
