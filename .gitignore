@@ -55,3 +55,6 @@ _codex_threads/
 
 # Host-local one-off diagnostics (not product source)
 enable-vmnet-diagnostics.ps1
+
+# ZCode local session config
+.zcode/
