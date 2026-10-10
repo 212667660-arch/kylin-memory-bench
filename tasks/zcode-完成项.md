@@ -725,3 +725,5 @@ nohup python3 -m kmb.cli official-acceptance --mode installed --agent-a kylinbot
 3. **提交包骨架组装**：`dist/submission/`（2.2MB、134 文件）——作品介绍文档.pdf + release8 .deb + sample-evidence（真实双 Agent 批次/100 分评分卡/Hermes 对比/deb 生命周期）+ README-提交说明（官网三材料对照、一键复现命令、边界声明）+ 演示脚本。**唯一空位：视频链接（等用户录完上传）**。
 4. **push 仍被网络阻断**：本地累计 4 个提交待推送（GitHub 443 持续拒连，今日多次重试）——提交本身安全，恢复后一次推送。
 - 回归：全量 143 项测试 OK。
+
+- **push 全部完成（2026-10-11，SSH 通道）**：GitHub HTTPS 持续被阻断，诊断发现 SSH 端口可达但本机密钥未注册——用户将 `codex-openkylin-vm` 公钥加入 GitHub 后，`~/.ssh/config` 指定 GitHub 使用该钥匙，`cdca012..61463c3` 全部推送成功，本地与远程一致（0 未提交）。今后 push 走 SSH，不再受 HTTPS 阻断影响。
