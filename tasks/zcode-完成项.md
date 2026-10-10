@@ -727,3 +727,5 @@ nohup python3 -m kmb.cli official-acceptance --mode installed --agent-a kylinbot
 - 回归：全量 143 项测试 OK。
 
 - **push 全部完成（2026-10-11，SSH 通道）**：GitHub HTTPS 持续被阻断，诊断发现 SSH 端口可达但本机密钥未注册——用户将 `codex-openkylin-vm` 公钥加入 GitHub 后，`~/.ssh/config` 指定 GitHub 使用该钥匙，`cdca012..61463c3` 全部推送成功，本地与远程一致（0 未提交）。今后 push 走 SSH，不再受 HTTPS 阻断影响。
+
+- **配置清理（2026-10-11，应用户要求）**：删除 7 个历史云供应商配置（grok×3 / deepseek×3 / doubao）与被 100/100 官方流程取代的旧验证脚本 `openkylin_full_validation.sh`——配置从 20 → 11 个（reference/flawed 基线、kylinbot-process/command、openkylin-token、B 轨四件套、接入模板）；工作台"API/模型"页实测 18 → 11；release8 .deb 重新构建（234KB，仅含必需配置）；143 测试全绿。历史 runs/ 证据（Grok/DeepSeek 对照）不受影响——它们是过去的运行记录，不依赖配置文件存在。
