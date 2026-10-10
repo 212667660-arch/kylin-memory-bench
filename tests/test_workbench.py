@@ -364,5 +364,31 @@ class WorkbenchTests(unittest.TestCase):
             thread.join(timeout=2)
 
 
+    def test_nested_official_repeat_runs_get_friendly_titles(self):
+        """官方批次嵌套目录（验收目录/official-repeat/...）在结果列表中应显示可读标题。"""
+        base = self.root / "runs" / "official-installed-20261004" / "official-repeat"
+        agent_dir = base / "agents" / "kylinbot" / "repeat-01"
+        agent_dir.mkdir(parents=True)
+        (agent_dir / "result.json").write_text(json.dumps({
+            "run_id": "quick-c5dddf589c00-kylinbot", "agent": "kylinbot",
+            "overall": 63.89, "score_valid": True, "cases": 6,
+            "results": [], "started_at": "2026-10-04T08:00:00Z",
+        }), encoding="utf-8")
+        compare_dir = base / "repeat-01" / "quick-compare"
+        compare_dir.mkdir(parents=True)
+        (compare_dir / "comparison.json").write_text(json.dumps({
+            "agents": [
+                {"agent": "kylinbot", "overall": 63.89, "score_valid": True, "started_at": "2026-10-04T08:00:00Z"},
+                {"agent": "openclaw", "overall": 22.22, "score_valid": True, "started_at": "2026-10-04T08:05:00Z"},
+            ],
+        }), encoding="utf-8")
+        entries = {entry["path"]: entry for entry in self.state.list_runs(limit=500)}
+        single = entries.get("runs/official-installed-20261004/official-repeat/agents/kylinbot/repeat-01")
+        self.assertIsNotNone(single)
+        self.assertEqual(single["title"], "official-installed-20261004 · repeat-01 · kylinbot")
+        compare = entries.get("runs/official-installed-20261004/official-repeat/repeat-01/quick-compare")
+        self.assertIsNotNone(compare)
+        self.assertEqual(compare["title"], "official-installed-20261004 · repeat-01 · kylinbot + openclaw")
+
 if __name__ == "__main__":
     unittest.main()

@@ -335,6 +335,27 @@ def _evidence_metrics(path: Optional[Path]) -> Dict[str, Any]:
     return {"events": count, "model_responses": model_responses, "latency_ms": latency}
 
 
+def _friendly_run_title(relative: str, agents: List[str], kind: str) -> str:
+    """Readable title for nested runs: <acceptance dir> · <batch/step> · <agents>.
+    Keeps the flagship real-batch evidence discoverable in the workbench instead
+    of burying it under generic directory names (quick-compare / repeat-01).
+    """
+    parts = [part for part in str(relative).replace("\\", "/").split("/") if part]
+    if not parts or parts[0] != "runs" or len(parts) < 2:
+        return ""
+    noise = {"official-repeat", "quick-compare", "agents", "result.json", "smoke-compare"}
+    noise.update(str(a).strip().lower() for a in agents if a)
+    head = parts[1]
+    tail = [seg for seg in parts[2:] if seg.lower() not in noise]
+    agent_label = " + ".join(a for a in agents if a)
+    pieces = [head]
+    if tail:
+        pieces.append(" / ".join(tail[:2]))
+    if agent_label:
+        pieces.append(agent_label)
+    return " · ".join(pieces)
+
+
 class WorkbenchState:
     def __init__(self, root: Optional[str] = None):
         self.root = Path(root or Path.cwd()).resolve()
@@ -646,15 +667,17 @@ class WorkbenchState:
                     score_validities.append(valid)
                     overalls.append(item.get("overall") if valid else None)
                     modes.append(_mode_for_result(item))
+            entry_agents = [str(item.get("agent", "")) for item in agents if isinstance(item, dict)]
             entries.append({
                 "id": path.parent.name,
                 "run_id": path.parent.name,
                 "path": relative,
+                "title": _friendly_run_title(relative, entry_agents, "comparison"),
                 "result_path": _relative(path, self.root),
                 "kind": "comparison",
                 "status": "failed" if score_validities and not all(score_validities) else "completed" if agents else "unknown",
                 "started_at": max((item.get("started_at") for item in agents if isinstance(item, dict) and item.get("started_at")), default=None),
-                "agents": [str(item.get("agent", "")) for item in agents if isinstance(item, dict)],
+                "agents": entry_agents,
                 "overall": overalls,
                 "mode": "mixed" if len(set(modes)) > 1 else (modes[0] if modes else "unknown"),
                 "comparison": True,
@@ -666,6 +689,9 @@ class WorkbenchState:
             entry = self._single_entry(path)
             if entry:
                 entry["_mtime"] = path.stat().st_mtime
+                title = _friendly_run_title(_relative(path.parent, self.root), [str(entry.get("agent", ""))], "single")
+                if title:
+                    entry["title"] = title
                 entries.append(entry)
         entries.sort(key=lambda item: (float(item.get("_mtime", 0)), str(item.get("path"))), reverse=True)
         for entry in entries:

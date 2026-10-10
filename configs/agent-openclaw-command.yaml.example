@@ -7,6 +7,9 @@ name: openclaw-command
 type: command
 version: "exporter-pending"
 # 占位：实现后替换为 scripts/export_openclaw_evidence.py
+# 真实使用方式（openKylin 3.0 VM）：官方批次经智能体发现（adapter_for_profile）
+# 直接驱动 openclaw CLI，证据见 runs/quick-compare-hermes-20261004 与
+# runs/official-installed-20261004；本文件是无头包装骨架，待 export 脚本落地。
 command: ["python3", "scripts/export_openclaw_evidence.py"]
 working_dir: "."
 timeout_seconds: 120
