@@ -741,3 +741,9 @@ nohup python3 -m kmb.cli official-acceptance --mode installed --agent-a kylinbot
 - **P1 凭据横幅文案**：泄漏实现细节（"隐藏输入命令/VM 凭据不同步 Windows"）→ 改为动作导向。
 - 过程中插曲：修复后页面短暂空白——排查发现是**两个 serve 实例抢占 8080 端口**（Windows SO_REUSEADDR 允许双绑定），请求随机命中新旧进程；杀掉重复实例后一切正常。数据接口逐一验证（/api/system,runs,configs,suites,agents 全 200 且 JSON 有效）。
 - 回归：143 测试 OK；界面截图验证修复生效。
+
+## 逻辑复审 + 真实证据直通（2026-10-11，应用户"审查逻辑/配置按真实使用/结果直接列证据"）
+
+1. **逻辑复审**：前端修复后数据链逐接口验证（system/runs/configs/suites/agents 全 200 + JSON 有效）；平均分只计有效批次、口径明示；新增评测默认 reference vs flawed。
+2. **配置按真实使用补正**：openclaw 命令模板说明更正——VM 真实批次经智能体发现驱动（非包装器），占位骨架如实标注"待 export 脚本"；清理后的 11 个配置即真实使用集合。
+3. **结果中心直通真实证据（核心改进）**：`list_runs` 为嵌套官方批次生成可读标题（`验收目录 · 批次 · 智能体`），前端所有视图（总览/趋势/最近评测/历史表）优先显示 `run.title`——**100/100 条运行全部带标题**（实测 API），如 "official-installed-20261004 · repeat-01 · kylinbot + openclaw"。评委/用户在工作台里可直接搜到并打开真实批次的证据与雷达图，不再被 120 条历史里 89 个"quick-compare/repeat-01"目录名淹没。TDD：`test_nested_official_repeat_runs_get_friendly_titles`（144 测试全绿）。
