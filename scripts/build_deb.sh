@@ -24,7 +24,7 @@ mkdir -p "$PACKAGE_ROOT/DEBIAN" "$PACKAGE_ROOT/usr/bin" "$PAYLOAD" "$DOCROOT"
 
 sed "s/@VERSION@/$VERSION/g" "$ROOT/packaging/deb/control.in" > "$PACKAGE_ROOT/DEBIAN/control"
 install -m 0755 "$ROOT/packaging/deb/kmb-launcher" "$PACKAGE_ROOT/usr/bin/kmb"
-install -m 0644 "$ROOT/README.md" "$ROOT/CHANGELOG.md" "$ROOT/NOTICE" "$ROOT/THIRD_PARTY_NOTICES.md" "$ROOT/LICENSE-MIT-CANDIDATE.txt" "$DOCROOT/"
+install -m 0644 "$ROOT/README.md" "$ROOT/CHANGELOG.md" "$ROOT/NOTICE" "$ROOT/THIRD_PARTY_NOTICES.md" "$ROOT/LICENSE" "$DOCROOT/"
 install -m 0644 "$ROOT/packaging/deb/copyright" "$DOCROOT/copyright"
 
 for path in kmb configs suites docs pyproject.toml setup.py; do
