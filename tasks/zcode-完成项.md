@@ -747,3 +747,6 @@ nohup python3 -m kmb.cli official-acceptance --mode installed --agent-a kylinbot
 1. **逻辑复审**：前端修复后数据链逐接口验证（system/runs/configs/suites/agents 全 200 + JSON 有效）；平均分只计有效批次、口径明示；新增评测默认 reference vs flawed。
 2. **配置按真实使用补正**：openclaw 命令模板说明更正——VM 真实批次经智能体发现驱动（非包装器），占位骨架如实标注"待 export 脚本"；清理后的 11 个配置即真实使用集合。
 3. **结果中心直通真实证据（核心改进）**：`list_runs` 为嵌套官方批次生成可读标题（`验收目录 · 批次 · 智能体`），前端所有视图（总览/趋势/最近评测/历史表）优先显示 `run.title`——**100/100 条运行全部带标题**（实测 API），如 "official-installed-20261004 · repeat-01 · kylinbot + openclaw"。评委/用户在工作台里可直接搜到并打开真实批次的证据与雷达图，不再被 120 条历史里 89 个"quick-compare/repeat-01"目录名淹没。TDD：`test_nested_official_repeat_runs_get_friendly_titles`（144 测试全绿）。
+
+- **重要更正**：先前两次"页面空白"截图是**截图时机抓在淡入动画透明帧**上的假象——DOM 检查证实主区内容完整（4 个子节点、computed opacity=1）；工作台从未被补丁破坏。真实存在的问题只有 8080 端口双实例（已修）。自审发现的其他问题（平均分污染/命名/默认值/横幅）均为真实缺陷且已修复生效——本次截图可见：**KylinBot 52.78（45 次·24 有效）**、可读标题已上线（评测趋势/最近运行显示 "official-final-20261004 · re…"、"deb-lifecycle-3.0vm-20261…" 等真实批次标题）。
+- **结论**：工作台可直接用于录屏与评委演示；无需再改。
