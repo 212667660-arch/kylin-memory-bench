@@ -1235,7 +1235,7 @@
     const primary = $("#primary-agent"), comparison = $("#comparison-agent"), suite = $("#suite");
     if (primary) primary.addEventListener("change", (event) => { state.formPrimary = event.target.value; render(); });
     if (comparison) comparison.addEventListener("change", (event) => { state.formComparison = event.target.value; render(); });
-    if (suite) suite.addEventListener("change", (event) => { state.formSuite = event.target.value; });
+    if (suite) suite.addEventListener("change", (event) => { state.formSuite = event.target.value; render(); });
     ["seed", "retries", "timeout", "scorer-version"].forEach((id) => { const input = $("#" + id); if (input) input.addEventListener("change", () => { updateParamsFromForm(); render(); }); });
     document.querySelectorAll("[data-health]").forEach((button) => button.addEventListener("click", () => healthCheck(button.dataset.health)));
     document.querySelectorAll("[data-health-config]").forEach((button) => button.addEventListener("click", () => healthConfig(button.dataset.healthConfig)));
