@@ -750,3 +750,28 @@ nohup python3 -m kmb.cli official-acceptance --mode installed --agent-a kylinbot
 
 - **重要更正**：先前两次"页面空白"截图是**截图时机抓在淡入动画透明帧**上的假象——DOM 检查证实主区内容完整（4 个子节点、computed opacity=1）；工作台从未被补丁破坏。真实存在的问题只有 8080 端口双实例（已修）。自审发现的其他问题（平均分污染/命名/默认值/横幅）均为真实缺陷且已修复生效——本次截图可见：**KylinBot 52.78（45 次·24 有效）**、可读标题已上线（评测趋势/最近运行显示 "official-final-20261004 · re…"、"deb-lifecycle-3.0vm-20261…" 等真实批次标题）。
 - **结论**：工作台可直接用于录屏与评委演示；无需再改。
+
+## 工作台重构：API 档案全局池 + 轨道化评测（2026-10-11，完成；按要求未提交）
+
+**架构变化**：API 设置从智能体 YAML 内嵌 → 全局档案池 `configs/api-profiles.yaml`（单一事实来源）；新建评测显式三轨道（A 生态 / B 记忆层 / 对照）；每智能体可临时改选池内 API（运行时快照固化，不回写）。
+
+**逐条完成标准核验**：
+1. ✅ API 页新增档案 → 立即出现在所有 LLM 智能体的「API 模型」列表；无智能体文件被新增（`test_create_api_profile_writes_pool_entry_without_agent_files`）。
+2. ✅ 修改档案模型 → 所有引用按新配置解析（`test_update_api_profile_changes_resolved_model_without_touching_agent_files`；智能体 YAML 未回写断言）。
+3. ✅ 智能体下拉只列智能体（API 页表单不再生成 agent-*.yaml；list_configs 跳过池文件）。
+4. ✅ 三轨道可选且过滤正确（对照=reference/flawed/replay/http 文本轨；B=b-memory 四件套；A=command/生态）；track 与 api_profiles 写入 job + `workbench-meta.json`；对照轨离线可完整跑通（`test_start_run_records_track_and_materializes_api_override`）。
+5. ✅ 每智能体临时 API 只影响本次（运行时快照固化到 `<job>/.runtime/`，默认引用不变，测试断言 YAML 原样）。
+6. ✅ 迁移完成：agent-b-memory-*real 的 backend 段 → 池档案 openkylin-gateway；agent-openkylin-token 拆为「池档案 + http 文本轨智能体」；全部 153 测试 OK；无凭据离线 demo 7/7 步骤通过。
+7. ✅ 密钥扫描干净；git status 12 条变更可见、**无新 commit**（按任务要求留待审阅）。
+
+**实现要点**：`kmb/agents.py` 新增 `load_api_profiles/resolve_api_profile/_apply_api_profile`（就近优先：智能体同目录 > 工作区 > 仓库级；memory_tool 自动构造 backend 段；内联 backend 仍兼容）；`kmb/workbench.py` 的 create_config 替换为 `create_api_profile/update_api_profile`（原子写、id 唯一、无私钥字段），`start_run` 增加 track/api_profiles 校验与运行时快照物化，`list_runs` 附 track；前端 API 页=池管理（增/改）、新建评测=轨道选择+按轨道过滤+每智能体 API 选择、智能体页加轨道徽章。
+
+**过程中修复**：工作台类结构被补丁插入切坏（artifact_path/suite_path 误删，已从 git 恢复）；`runs/test-retry` 的 run_id 字面 "fixed-run" 被机械翻译（改原文显示）；`Number(null)=0` 污染平均分（三处统计加空值守卫）；list_configs 把池文件当智能体解析（跳过）。
+
+**遗留提醒**：KylinAgent 完整批次仍等 openKylin 网关修复；产品级后续可考虑给 API 池增加删除/引用计数（本次未做，避免误删被引用档案）。
+
+## 工作台实战问题修复（2026-10-11，应用户实测反馈：不能下滑/开始评测不运行）
+
+1. **不能下滑**：`.main-area` 无 `overflow-y:auto`（外层 100vh+hidden 截断）+ topbar 吸顶。已修。
+2. **开始评测不运行**：根因链 = ①用户标签页在服务重启期间启动、数据未加载导致按钮禁用（startRun 现在自动重取一次数据并明确报错）；②凭据链路三处补全（Windows 下 0600 检查改为 POSIX-only、档案池的 api_key_env 纳入凭据收集、credentials.env 建立）。**端到端实证**：工作台发起 B 轨评测 → job 完成 2/2 → 深挖发现网关 deepseek-v4-flash 上游故障（"Model not exist"，直接最小调用复现=网关侧问题）→ **改池档案一处（deepseek-v4-pro）→ 重跑获得真实分数**（KV 50.0 valid / similar 25.0 valid，证据 model=deepseek-v4-pro）——全局档案池"一处修改全局生效"的设计价值实战验证。
+3. 回归：153 测试 OK。全程无密钥入库（credentials.env 为系统设计的 600/本机凭据机制）。
