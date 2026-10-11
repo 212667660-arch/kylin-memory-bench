@@ -775,3 +775,5 @@ nohup python3 -m kmb.cli official-acceptance --mode installed --agent-a kylinbot
 1. **不能下滑**：`.main-area` 无 `overflow-y:auto`（外层 100vh+hidden 截断）+ topbar 吸顶。已修。
 2. **开始评测不运行**：根因链 = ①用户标签页在服务重启期间启动、数据未加载导致按钮禁用（startRun 现在自动重取一次数据并明确报错）；②凭据链路三处补全（Windows 下 0600 检查改为 POSIX-only、档案池的 api_key_env 纳入凭据收集、credentials.env 建立）。**端到端实证**：工作台发起 B 轨评测 → job 完成 2/2 → 深挖发现网关 deepseek-v4-flash 上游故障（"Model not exist"，直接最小调用复现=网关侧问题）→ **改池档案一处（deepseek-v4-pro）→ 重跑获得真实分数**（KV 50.0 valid / similar 25.0 valid，证据 model=deepseek-v4-pro）——全局档案池"一处修改全局生效"的设计价值实战验证。
 3. 回归：153 测试 OK。全程无密钥入库（credentials.env 为系统设计的 600/本机凭据机制）。
+
+- **滚动根因最终修复（2026-10-11，应用户"对比框太小/不能下滑"反馈）**：`.view-root`（grid 滚动容器）的隐式行被等分压缩（36/99.5/144.5/144.5px），各区块内容被自身 overflow:hidden 裁掉且永不产生滚动。修复：`grid-auto-rows: max-content`——区块恢复自然高度（对比框 144→279px）、页面正常滚动（923>657）、底部"评测参数/运行前校验/开始评测"全部可见。此修复同时让总览仪表盘各面板恢复自然高度。前端轨道/API 选择/档案池已浏览器实测（对照轨过滤、B 轨四件套、池下拉默认选中、校验清单含轨道与 API 项）。
