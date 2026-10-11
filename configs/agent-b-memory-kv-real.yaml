@@ -1,12 +1,9 @@
 name: b-memory-kv-real
 type: memory_tool
 memory_impl: kv
+api_profile: openkylin-gateway
 action_root: runs/b-track-actions/kv-real
 description: >-
-  B-track memory 甲（真实 LLM 工具调用）：KV 记忆层由 openKylin Token 网关的
-  deepseek-v4-flash 通过标准 tool-calling 驱动；密钥仅经环境变量注入。
-backend:
-  base_url: https://llm-gateway.openkylin.top/v1
-  model: deepseek-v4-flash
-  api_key_env: OPENKYLIN_TOKEN_API_KEY
-  timeout_seconds: 90
+  B 轨记忆机制甲（真实 LLM 工具调用）：KV 记忆层由 openKylin Token 网关的
+  deepseek-v4-flash 驱动；API 档案在 configs/api-profiles.yaml（openkylin-gateway），
+  Key 仅经环境变量注入。

@@ -1140,6 +1140,7 @@ def load_agent_config(path: str) -> Dict[str, Any]:
         raise ValueError("agent config requires name")
     if agent_type not in {"deterministic", "replay", "command", "external", "http", "openai", "openai_compatible", "memory_controller", "memory_disabled", "memory_tool"}:
         raise ValueError("unsupported agent type '%s'" % agent_type)
+    raw = _apply_api_profile(raw, config_path)
     if agent_type == "replay" and not raw.get("evidence") and not raw.get("evidence_path"):
         raise ValueError("replay agent config requires evidence")
     if agent_type == "command" and not raw.get("command"):
@@ -1159,6 +1160,76 @@ def load_agent_config(path: str) -> Dict[str, Any]:
             if not raw.get(field):
                 raise ValueError("http agent config requires %s" % field)
     return raw
+
+
+def load_api_profiles(config_path: "str | Path") -> Dict[str, Dict[str, Any]]:
+    """Global API profile pool visible to an agent config.
+
+    Search order (later files override earlier ones by profile id):
+    1. packaged/repo defaults: <repo>/configs/api-profiles.yaml
+    2. workspace: <cwd>/configs/api-profiles.yaml
+    3. beside the agent config: <config dir>/api-profiles.yaml
+    Only non-secret metadata lives here; API keys stay in environment variables.
+    """
+    path = Path(config_path)
+    candidates = [
+        Path(__file__).resolve().parents[1] / "configs" / "api-profiles.yaml",
+        Path.cwd() / "configs" / "api-profiles.yaml",
+        path.parent / "api-profiles.yaml",
+    ]
+    merged: Dict[str, Dict[str, Any]] = {}
+    seen: set = set()
+    for candidate in candidates:
+        key = str(candidate.resolve()) if candidate.exists() else str(candidate)
+        if key in seen:
+            continue
+        seen.add(key)
+        if not candidate.is_file():
+            continue
+        data = yaml.safe_load(candidate.read_text(encoding="utf-8")) or {}
+        for profile in (data.get("profiles") or []):
+            if isinstance(profile, dict) and profile.get("id"):
+                merged[str(profile["id"])] = profile
+    return merged
+
+
+def resolve_api_profile(profile_id: str, config_path: "str | Path") -> Dict[str, Any]:
+    profiles = load_api_profiles(config_path)
+    profile = profiles.get(str(profile_id))
+    if not profile:
+        known = ", ".join(sorted(profiles)) or "none"
+        raise ValueError("API profile '%s' not found (available: %s)" % (profile_id, known))
+    return profile
+
+
+def _apply_api_profile(raw: Dict[str, Any], config_path: Path) -> Dict[str, Any]:
+    """Fill API fields from the referenced global profile (profile wins over inline)."""
+    profile_id = str(raw.get("api_profile") or "").strip()
+    if not profile_id:
+        return raw
+    profile = resolve_api_profile(profile_id, config_path)
+    merged = dict(raw)
+    merged["base_url"] = str(profile.get("base_url") or "")
+    merged["endpoint"] = str(profile.get("endpoint") or "/chat/completions")
+    merged["model"] = str(profile.get("model") or "")
+    merged["api_key_env"] = str(profile.get("api_key_env") or "")
+    if profile.get("timeout_seconds") is not None:
+        merged["timeout_seconds"] = profile["timeout_seconds"]
+    if "temperature" in profile:
+        options = dict(merged.get("request_options") or {})
+        options.setdefault("temperature", profile["temperature"])
+        merged["request_options"] = options
+    merged["api_profile_resolved"] = str(profile.get("id") or profile_id)
+    if str(merged.get("type")) == "memory_tool":
+        merged["backend"] = {
+            "base_url": merged["base_url"],
+            "endpoint": merged["endpoint"],
+            "model": merged["model"],
+            "api_key_env": merged["api_key_env"],
+            "timeout_seconds": merged.get("timeout_seconds", 90),
+            "request_options": merged.get("request_options") or {},
+        }
+    return merged
 
 
 def build_agent_from_config(path: str) -> AgentAdapter:

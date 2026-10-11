@@ -11,16 +11,23 @@ CONFIGS = ROOT / "configs"
 
 class TokenCenterAndEcosystemConfigTests(unittest.TestCase):
     def test_openkylin_token_http_template(self):
+        """文本轨智能体只保留 api_profile 引用；API 设置在全局档案池中。"""
         path = CONFIGS / "agent-openkylin-token.yaml"
         self.assertTrue(path.is_file())
         raw = yaml.safe_load(path.read_text(encoding="utf-8"))
         self.assertEqual(raw.get("type"), "http")
-        self.assertEqual(raw.get("base_url"), "https://llm-gateway.openkylin.top/v1")
-        self.assertEqual(raw.get("endpoint"), "/chat/completions")
-        self.assertEqual(raw.get("api_key_env"), "OPENKYLIN_TOKEN_API_KEY")
+        self.assertEqual(raw.get("api_profile"), "openkylin-token")
+        self.assertNotIn("base_url", raw)
+        self.assertNotIn("api_key_env", raw)
+        pool = yaml.safe_load((CONFIGS / "api-profiles.yaml").read_text(encoding="utf-8"))
+        profiles = {p["id"]: p for p in pool.get("profiles", [])}
+        profile = profiles["openkylin-token"]
+        self.assertEqual(profile.get("base_url"), "https://llm-gateway.openkylin.top/v1")
+        self.assertEqual(profile.get("endpoint"), "/chat/completions")
+        self.assertEqual(profile.get("api_key_env"), "OPENKYLIN_TOKEN_API_KEY")
         text = path.read_text(encoding="utf-8")
         self.assertNotIn("sk-", text)
-        self.assertNotIn("api_key:", text.lower().replace("api_key_env", ""))
+        self.assertNotIn("api_key:", text.lower().replace("api_key_env", "").replace("api_profile", ""))
 
     def test_ecosystem_command_examples_parse_without_secrets(self):
         for name in ("agent-kylinbot-command.yaml.example", "agent-openclaw-command.yaml.example"):

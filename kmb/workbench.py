@@ -31,7 +31,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 import yaml
 
 from .agent_registry import discover_agents, profiles_to_dicts
-from .agents import build_agent_from_config, load_agent_config
+from .agents import build_agent_from_config, load_agent_config, resolve_api_profile
 from .report import radar_svg, write_compare, write_html_report, write_markdown
 from .runner import load_suite, run_suite, validate_cases
 
@@ -94,7 +94,10 @@ def _credential_file_status() -> Dict[str, Any]:
         mode = stat.S_IMODE(path.stat().st_mode)
     except OSError as exc:
         return {"status": "unreadable", "path": display_path, "loaded_names": [], "error": type(exc).__name__}
-    if mode & 0o077:
+    if os.name == "posix" and mode & 0o077:
+        # POSIX: enforce the 0600 rule. Windows/NTFS uses ACLs instead of these
+        # bits (stat always reports broad modes), so the strict check would
+        # reject every file and make credentials unusable on Windows hosts.
         return {"status": "insecure", "path": display_path, "mode": format(mode, "04o"), "loaded_names": []}
     return {"status": "secure", "path": display_path, "mode": format(mode, "04o"), "loaded_names": []}
 
@@ -117,6 +120,13 @@ def _configured_credential_names(root: Optional[Path] = None) -> set[str]:
         env_name = str(raw.get("api_key_env", "")).strip()
         if _is_credential_name(env_name):
             names.add(env_name)
+        if path.name == "api-profiles.yaml":
+            # 全局 API 档案池：收集 profiles[].api_key_env（单一事实来源）
+            for profile in (raw.get("profiles") or []):
+                if isinstance(profile, dict):
+                    pool_env = str(profile.get("api_key_env", "")).strip()
+                    if _is_credential_name(pool_env):
+                        names.add(pool_env)
     return names
 
 
@@ -335,6 +345,19 @@ def _evidence_metrics(path: Optional[Path]) -> Dict[str, Any]:
     return {"events": count, "model_responses": model_responses, "latency_ms": latency}
 
 
+def _track_for_config(config: Dict[str, Any]) -> str:
+    """UI classification only: A=ecosystem agents, B=memory-layer agents, control=offline baselines.
+
+    Track labels never change evidence semantics.
+    """
+    agent_type = str(config.get("type", ""))
+    if agent_type == "memory_tool":
+        return "B"
+    if agent_type in {"deterministic", "replay", "memory_disabled", "http"}:
+        return "control"
+    return "A"
+
+
 def _friendly_run_title(relative: str, agents: List[str], kind: str) -> str:
     """Readable title for nested runs: <acceptance dir> · <batch/step> · <agents>.
     Keeps the flagship real-batch evidence discoverable in the workbench instead
@@ -382,8 +405,8 @@ class WorkbenchState:
             item["fix_hint"] = _fix_hint(profile)
         return payload
 
-    def create_config(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Create a non-secret OpenAI-compatible HTTP profile atomically."""
+    def _validate_api_payload(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate a non-secret API profile payload (shared by create/update)."""
         if not isinstance(payload, dict):
             raise ValueError("配置请求必须是对象")
         forbidden = {
@@ -435,111 +458,102 @@ class WorkbenchState:
         description = str(payload.get("description") or "").strip()
         if len(description) > 500:
             raise ValueError("description 最多 500 个字符")
-        path = self.config_root / ("agent-" + profile_id + ".yaml")
-        memory_path = self.config_root / ("agent-" + profile_id + "-memory.yaml")
-        no_memory_path = self.config_root / ("agent-" + profile_id + "-no-memory.yaml")
-        for existing in (path, memory_path, no_memory_path):
-            if existing.exists() or existing.is_symlink():
-                raise FileExistsError("配置档案已存在：%s" % existing.name)
         timeout_value = int(timeout_seconds) if float(timeout_seconds).is_integer() else timeout_seconds
         temperature_value = int(temperature) if float(temperature).is_integer() else temperature
-        base_fields = {
-            "version": str(payload.get("version") or "用户配置")[:64],
-            "base_url": base_url,
-            "endpoint": endpoint,
-            "model": model,
-            "api_key_env": api_key_env,
-            "request_options": {"temperature": temperature_value},
-        }
-        if provider:
-            base_fields["provider"] = provider
-        http_config = {
-            "name": name,
-            "type": "http",
-            **base_fields,
-            "timeout_seconds": timeout_value,
-            "description": description or (
-                "OpenAI-compatible HTTP agent (%s / %s). Only model text is observable; "
-                "prefer the memory_controller pack for long-term-memory scoring." % (name, model)
-            ),
-        }
-        memory_config = {
-            "name": profile_id + "-memory",
-            "type": "memory_controller",
-            **base_fields,
-            "api_timeout_seconds": timeout_value,
-            "action_root": "../runs/controller-actions",
-            "description": (
-                "Transparent memory/action controller over %s (%s). "
-                "Memory/file events are source=wrapper (system-level); "
-                "model replies are source=model. Does not claim native model memory."
-                % (name, model)
-            ),
-        }
-        no_memory_config = {
-            "name": profile_id + "-no-memory",
-            "type": "memory_disabled",
-            **base_fields,
-            "api_timeout_seconds": timeout_value,
-            "description": (
-                "Same backend as %s with external memory/actions disabled "
-                "(no_memory_baseline). Contrast for controller on/off."
-                % profile_id
-            ),
-        }
-        self.config_root.mkdir(parents=True, exist_ok=True)
-
-        def _atomic_write(target: Path, config: Dict[str, Any]) -> None:
-            serialized = yaml.safe_dump(config, allow_unicode=True, sort_keys=False)
-            fd, temporary = tempfile.mkstemp(prefix=".agent-", suffix=".yaml.tmp", dir=str(self.config_root))
-            try:
-                with os.fdopen(fd, "w", encoding="utf-8") as handle:
-                    handle.write(serialized)
-                    handle.flush()
-                    os.fsync(handle.fileno())
-                os.replace(temporary, target)
-            except Exception:
-                try:
-                    os.unlink(temporary)
-                except OSError:
-                    pass
-                raise
-
-        # Write all three only after every target was confirmed missing above.
-        _atomic_write(path, http_config)
-        try:
-            _atomic_write(memory_path, memory_config)
-            _atomic_write(no_memory_path, no_memory_config)
-        except Exception:
-            for leftover in (path, memory_path, no_memory_path):
-                try:
-                    if leftover.exists():
-                        leftover.unlink()
-                except OSError:
-                    pass
-            raise
-        load_credentials_file(self.root)
-        configs = self.list_configs()
-        metadata = next((item for item in configs if item.get("path") == _relative(path, self.root)), None)
-        memory_meta = next((item for item in configs if item.get("path") == _relative(memory_path, self.root)), None)
-        no_memory_meta = next((item for item in configs if item.get("path") == _relative(no_memory_path, self.root)), None)
-        if not metadata or not memory_meta or not no_memory_meta:
-            raise RuntimeError("配置已写入但无法重新读取")
         return {
-            "config": metadata,
-            "configs": [metadata, memory_meta, no_memory_meta],
-            "generated": [
-                {"path": memory_meta.get("path"), "name": memory_meta.get("name"), "type": "memory_controller"},
-                {"path": no_memory_meta.get("path"), "name": no_memory_meta.get("name"), "type": "memory_disabled"},
-                {"path": metadata.get("path"), "name": metadata.get("name"), "type": "http"},
-            ],
-            "credential_env": api_key_env,
-            "credential_file": _credential_file_status(),
-            "note": (
-                "已生成三件套：http 仅连通；memory_controller / no-memory 为包装轨"
-                "（系统级可观测证据，非模型原生长期记忆）。"
-            ),
+            "profile_id": profile_id, "name": name, "provider": provider,
+            "base_url": base_url, "endpoint": endpoint, "model": model,
+            "api_key_env": api_key_env, "timeout_seconds": timeout_value,
+            "temperature": temperature_value, "description": description,
         }
+
+    def _api_profiles_path(self) -> Path:
+        return self.config_root / "api-profiles.yaml"
+
+    def _read_api_profiles(self) -> List[Dict[str, Any]]:
+        path = self._api_profiles_path()
+        if not path.is_file():
+            return []
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        return [item for item in (data.get("profiles") or []) if isinstance(item, dict) and item.get("id")]
+
+    def _write_api_profiles(self, profiles: List[Dict[str, Any]]) -> None:
+        self.config_root.mkdir(parents=True, exist_ok=True)
+        payload = {"version": 1, "profiles": profiles}
+        serialized = yaml.safe_dump(payload, allow_unicode=True, sort_keys=False)
+        fd, temporary = tempfile.mkstemp(prefix=".api-profiles-", suffix=".yaml.tmp", dir=str(self.config_root))
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                handle.write(serialized)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, self._api_profiles_path())
+        except Exception:
+            try:
+                os.unlink(temporary)
+            except OSError:
+                pass
+            raise
+
+    def list_api_profiles(self) -> List[Dict[str, Any]]:
+        output = []
+        for profile in self._read_api_profiles():
+            env_name = str(profile.get("api_key_env", ""))
+            output.append({
+                "id": str(profile.get("id")),
+                "name": str(profile.get("display_name") or profile.get("id")),
+                "provider": str(profile.get("provider") or ""),
+                "base_url": str(profile.get("base_url") or ""),
+                "endpoint": str(profile.get("endpoint") or "/chat/completions"),
+                "model": str(profile.get("model") or ""),
+                "api_key_env": env_name,
+                "timeout_seconds": profile.get("timeout_seconds"),
+                "temperature": profile.get("temperature"),
+                "description": str(profile.get("description") or ""),
+                "credential": "configured" if env_name and os.environ.get(env_name) else "not_detected",
+            })
+        return output
+
+    def create_api_profile(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Create one global API profile; never creates or rewrites agent files."""
+        fields = self._validate_api_payload(payload)
+        profiles = self._read_api_profiles()
+        if any(item["id"] == fields["profile_id"] for item in profiles):
+            raise FileExistsError("API 档案已存在：%s" % fields["profile_id"])
+        profiles.append({
+            "id": fields["profile_id"],
+            "provider": fields["provider"],
+            "display_name": fields["name"],
+            "base_url": fields["base_url"],
+            "endpoint": fields["endpoint"],
+            "model": fields["model"],
+            "api_key_env": fields["api_key_env"],
+            "timeout_seconds": fields["timeout_seconds"],
+            "temperature": fields["temperature"],
+            "description": fields["description"],
+        })
+        self._write_api_profiles(profiles)
+        return {"status": "created", "id": fields["profile_id"], "profile_count": len(profiles)}
+
+    def update_api_profile(self, profile_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        fields = self._validate_api_payload(payload)
+        profiles = self._read_api_profiles()
+        target = None
+        for item in profiles:
+            if item["id"] == profile_id:
+                target = item
+                break
+        if target is None:
+            raise FileNotFoundError("API 档案不存在：%s" % profile_id)
+        target.update({
+            "provider": fields["provider"], "display_name": fields["name"],
+            "base_url": fields["base_url"], "endpoint": fields["endpoint"],
+            "model": fields["model"], "api_key_env": fields["api_key_env"],
+            "timeout_seconds": fields["timeout_seconds"], "temperature": fields["temperature"],
+            "description": fields["description"],
+        })
+        self._write_api_profiles(profiles)
+        return {"status": "updated", "id": profile_id}
 
     def suite_path(self, raw: Any) -> Path:
         return _resolve_workspace_path(self.root, raw, (self.suite_root,))
@@ -555,6 +569,8 @@ class WorkbenchState:
         for path in sorted(self.config_root.rglob("*.y*ml")):
             if not path.is_file() or path.is_symlink():
                 continue
+            if path.name == "api-profiles.yaml":
+                continue  # 全局 API 档案池不是智能体配置
             relative = _relative(path, self.root)
             try:
                 config = load_agent_config(str(path))
@@ -573,6 +589,8 @@ class WorkbenchState:
                     "version": str(config.get("version", "")),
                     "description": str(config.get("description", "")),
                     "credential": "configured" if configured else ("not_required" if agent_type == "deterministic" else "not_detected"),
+                    "api_profile": str(config.get("api_profile", "")) or None,
+                    "track": _track_for_config(config),
                     "source": "workspace config",
                 })
             except Exception as exc:
@@ -693,6 +711,15 @@ class WorkbenchState:
                 if title:
                     entry["title"] = title
                 entries.append(entry)
+        for entry in entries:
+            parts = [seg for seg in str(entry.get("path", "")).replace("\\", "/").split("/") if seg]
+            if len(parts) >= 3 and parts[0] == "runs" and parts[1] == "workbench":
+                meta_path = self.runs_root / "workbench" / parts[2] / "workbench-meta.json"
+                if meta_path.is_file():
+                    try:
+                        entry["track"] = _read_json(meta_path).get("track")
+                    except Exception:
+                        pass
         entries.sort(key=lambda item: (float(item.get("_mtime", 0)), str(item.get("path"))), reverse=True)
         for entry in entries:
             entry.pop("_mtime", None)
@@ -860,22 +887,70 @@ class WorkbenchState:
             raise ValueError("超时时间必须在 1 到 900 秒之间")
         if not re.match(r"^[A-Za-z0-9._+:-]{1,64}$", scorer_version):
             raise ValueError("评分器版本格式无效")
+        track = str(payload.get("track") or "control")
+        if track not in {"A", "B", "control"}:
+            raise ValueError("track 必须是 A（生态智能体）/ B（记忆层）/ control（对照基线）")
+        api_profiles = payload.get("api_profiles") or {}
+        if not isinstance(api_profiles, dict):
+            raise ValueError("api_profiles 必须是 {配置路径: API 档案 id} 映射")
+        available = {item["id"] for item in self.list_api_profiles()}
+        for key, profile_id in api_profiles.items():
+            if profile_id not in available:
+                raise ValueError("API 档案不存在：%s" % profile_id)
         job_id = "wb-" + datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8]
         output = self.runs_root / "workbench" / job_id
         output.mkdir(parents=True, exist_ok=False)
+        runtime_specs = {}
+        for key, profile_id in api_profiles.items():
+            source = self.config_path(key)
+            materialized = self._materialize_api_override(source, profile_id, output)
+            runtime_specs[_relative(source, self.root)] = {
+                "profile_id": profile_id,
+                "path": _relative(materialized, self.root),
+            }
         job = {
             "id": job_id, "status": "queued", "created_at": _utc_now(), "updated_at": _utc_now(),
+            "track": track,
             "progress": {"completed": 0, "total": 2, "phase": "排队中", "current_agent": None},
             "params": {"seed": seed, "retries": retries, "timeout": timeout, "scorer_version": scorer_version, "suite": _relative(suite, self.root), "suite_sha256": _sha256(suite)},
             "agents": [_relative(primary, self.root), _relative(comparison, self.root)],
+            "api_profiles": runtime_specs,
             "output": _relative(output, self.root), "error": None,
         }
+        (output / "workbench-meta.json").write_text(json.dumps({
+            "track": track, "api_profiles": runtime_specs, "created_at": _utc_now(),
+        }, ensure_ascii=False, indent=2), encoding="utf-8")
         with self.lock:
             self.jobs[job_id] = job
             self.cancel_events[job_id] = threading.Event()
         self._write_job(job)
-        self.executor.submit(self._run_job, job_id, [primary, comparison], cases, output, seed, retries, timeout, scorer_version)
+        self.executor.submit(self._run_job, job_id, [primary, comparison], cases, output, seed, retries, timeout, scorer_version, runtime_specs)
         return self._public_job(job)
+
+    def _materialize_api_override(self, source: Path, profile_id: str, output_dir: Path) -> Path:
+        """Materialize a per-run agent config whose API is pinned to the chosen profile.
+
+        The runtime snapshot records exactly what this evaluation used; the agent's
+        own YAML (default API reference) is never rewritten.
+        """
+        raw = load_agent_config(str(source))
+        profile = resolve_api_profile(profile_id, source)
+        raw["base_url"] = str(profile.get("base_url") or "")
+        raw["endpoint"] = str(profile.get("endpoint") or "/chat/completions")
+        raw["model"] = str(profile.get("model") or "")
+        raw["api_key_env"] = str(profile.get("api_key_env") or "")
+        if profile.get("timeout_seconds") is not None:
+            raw["timeout_seconds"] = profile["timeout_seconds"]
+        if "temperature" in profile:
+            options = dict(raw.get("request_options") or {})
+            options.setdefault("temperature", profile["temperature"])
+            raw["request_options"] = options
+        raw.pop("api_profile", None)  # 快照固化本次评测实际使用的 API，不随池后续变化
+        runtime_dir = output_dir / ".runtime"
+        runtime_dir.mkdir(parents=True, exist_ok=True)
+        target = runtime_dir / (Path(source).stem + "-" + str(profile_id) + ".yaml")
+        target.write_text(yaml.safe_dump(raw, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        return target
 
     def start_quick_compare(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         from .quick_compare import DEFAULT_RETRIES, DEFAULT_SEED, DEFAULT_TIMEOUT, _select_profiles
@@ -932,7 +1007,8 @@ class WorkbenchState:
             snapshot = self._public_job(job)
         self._write_job(snapshot)
 
-    def _run_job(self, job_id: str, config_paths: List[Path], cases: List[Any], output: Path, seed: Optional[int], retries: int, timeout: float, scorer_version: str) -> None:
+    def _run_job(self, job_id: str, config_paths: List[Path], cases: List[Any], output: Path, seed: Optional[int], retries: int, timeout: float, scorer_version: str, runtime_specs: Optional[Dict[str, Dict[str, str]]] = None) -> None:
+        runtime_specs = runtime_specs or {}
         summaries = []
         cancel_event = self.cancel_events.get(job_id)
         try:
@@ -945,12 +1021,19 @@ class WorkbenchState:
                 agent_name = str(config.get("name", config_path.stem))
                 agent_dir = output / _safe_component(agent_name)
                 self._update_job(job_id, progress={"completed": index, "total": len(config_paths), "phase": "运行 %s" % agent_name, "current_agent": agent_name})
-                agent = build_agent_from_config(str(config_path))
+                spec = runtime_specs.get(_relative(config_path, self.root)) or {}
+                build_path = (self.root / spec["path"]) if spec.get("path") else config_path
+                agent = build_agent_from_config(str(build_path))
                 summary = run_suite(agent, cases, str(agent_dir), timeout_seconds=timeout, retries=retries, run_id=job_id + "-" + _safe_component(agent_name), seed=seed)
                 if cancel_event and cancel_event.is_set():
                     self._update_job(job_id, status="stopped", progress=self.jobs.get(job_id, {}).get("progress", {}), error="用户请求停止评测")
                     return
-                summary["workbench"] = {"scorer_version": scorer_version, "config": _relative(config_path, self.root), "suite": self.jobs.get(job_id, {}).get("params", {}).get("suite")}
+                summary["workbench"] = {
+                    "scorer_version": scorer_version, "config": _relative(config_path, self.root),
+                    "suite": self.jobs.get(job_id, {}).get("params", {}).get("suite"),
+                    "track": self.jobs.get(job_id, {}).get("track"),
+                    "api_profile": (spec or {}).get("profile_id"),
+                }
                 write_markdown(summary, str(agent_dir / "result.md"))
                 (agent_dir / "radar.svg").write_text(radar_svg(summary.get("dimensions", {}), score_valid=summary.get("score_valid", True)), encoding="utf-8")
                 write_html_report([summary], str(agent_dir / "result.html"))
@@ -1061,7 +1144,9 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         path = unquote(parsed.path)
         query = parse_qs(parsed.query)
         try:
-            if path == "/api/configs":
+            if path == "/api/profiles":
+                self._send_json({"profiles": self.state.list_api_profiles()})
+            elif path == "/api/configs":
                 self._send_json({"configs": self.state.list_configs()})
             elif path == "/api/agents":
                 self._send_json({"agents": self.state.list_agents()})
@@ -1109,8 +1194,11 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         try:
             payload = self._body_json()
-            if parsed.path == "/api/configs":
-                self._send_json(self.state.create_config(payload), HTTPStatus.CREATED)
+            if parsed.path == "/api/profiles":
+                self._send_json(self.state.create_api_profile(payload), HTTPStatus.CREATED)
+            elif parsed.path.startswith("/api/profiles/") and parsed.path.endswith("/update"):
+                profile_id = parsed.path[len("/api/profiles/"):-len("/update")].strip("/")
+                self._send_json(self.state.update_api_profile(profile_id, payload))
             elif parsed.path == "/api/health":
                 self._send_json(self.state.health(str(payload.get("config", ""))))
             elif parsed.path == "/api/runs":

@@ -1,0 +1,23 @@
+version: 1
+profiles:
+- id: openkylin-token
+  provider: openKylin Token Center
+  display_name: openKylin Token 中心 · deepseek-v4-flash
+  base_url: https://llm-gateway.openkylin.top/v1
+  endpoint: /chat/completions
+  model: deepseek-v4-flash
+  api_key_env: OPENKYLIN_TOKEN_API_KEY
+  timeout_seconds: 180
+  temperature: 0
+  description: openKylin Token Center 网关档案（文本可观测轨默认 API）。 Key 由系统预装「Token 中心」客户端申领，仅写入环境变量。
+- id: openkylin-gateway
+  provider: openKylin Token Center
+  display_name: openKylin 网关 · deepseek-v4-pro（B 轨真实调用）
+  base_url: https://llm-gateway.openkylin.top/v1
+  endpoint: /chat/completions
+  model: deepseek-v4-pro
+  api_key_env: OPENKYLIN_TOKEN_API_KEY
+  timeout_seconds: 120
+  temperature: 0
+  description: B 轨记忆层真实调用档案。2026-10-11 起 deepseek-v4-flash 网关上游故障（Model not exist，证据
+    runs/workbench/wb-20261011-172043/），临时切换 deepseek-v4-pro；恢复后改回一处即可。

@@ -26,6 +26,7 @@
     loading: false,
     lastRefreshAt: null,
     configSaving: false,
+    profiles: [], formTrack: "control", formApiPrimary: "", formApiComparison: "", editingProfileId: null,
     configNotice: null,
     railCollapsed: false,
     resultTab: "result",
@@ -282,8 +283,8 @@
       } catch (error) { /* ignore malformed local-only draft */ }
     }
     const failures = [];
-    const results = await Promise.allSettled([api("/api/configs"), api("/api/agents"), api("/api/suites"), api("/api/runs?limit=120"), api("/api/system")]);
-    ["configs", "agents", "suites", "runs", "system"].forEach((key, index) => {
+    const results = await Promise.allSettled([api("/api/configs"), api("/api/agents"), api("/api/suites"), api("/api/runs?limit=120"), api("/api/system"), api("/api/profiles")]);
+    ["configs", "agents", "suites", "runs", "system", "profiles"].forEach((key, index) => {
       const result = results[index];
       if (result.status === "fulfilled") state[key] = key === "system" ? result.value : (result.value[key] || result.value);
       else failures.push(result.reason.message);
@@ -532,22 +533,46 @@
   const providerOrder = ["Grok", "DeepSeek"];
   const profileMode = (config) => displayProfileMode((config && config.profile_mode) || (config && config.type) || "未分类");
   const providerLabel = (config) => (config && config.provider) || "其他";
+  const TRACK_LABELS = { A: "A 轨", B: "B 轨", control: "对照基线" };
+  function trackForConfig(config) {
+    const type = String((config && config.type) || "");
+    if (type === "memory_tool") return "B";
+    if (["deterministic", "replay", "memory_disabled", "http"].includes(type)) return "control";
+    return "A";
+  }
+  function needsLlm(config) { return Boolean(config && ["memory_tool", "http"].includes(String(config.type))); }
   const credentialLabel = (config) => !config ? "未检测到凭据" : config.credential === "configured" ? "凭据已加载" : config.credential === "not_required" ? "无需凭据" : "未检测到凭据";
-  function defaultConfigPaths() {
-    const usable = state.configs.filter((config) => config.status !== "error");
+  function defaultConfigPaths(track) {
+    const wanted = track || state.formTrack || "control";
+    const usable = state.configs.filter((config) => config.status !== "error" && trackForConfig(config) === wanted);
     const byPattern = (pattern) => usable.find((config) => pattern.test(config.name) || pattern.test(config.path || ""));
-    const primary = byPattern(/agent-reference/) || byPattern(/reference/i) || usable[0];
-    const comparison = byPattern(/agent-flawed/) || byPattern(/flawed/i) || usable.find((config) => primary && config.path !== primary.path);
+    let primary, comparison;
+    if (wanted === "control") {
+      primary = byPattern(/agent-reference/) || byPattern(/reference/i) || usable[0];
+      comparison = byPattern(/agent-flawed/) || byPattern(/flawed/i) || usable.find((config) => primary && config.path !== primary.path);
+    } else if (wanted === "B") {
+      primary = byPattern(/b-memory-kv-real/) || usable[0];
+      comparison = byPattern(/b-memory-similar-real/) || usable.find((config) => primary && config.path !== primary.path);
+    } else {
+      primary = byPattern(/kylinbot/) || usable[0];
+      comparison = byPattern(/openclaw|hermes/) || usable.find((config) => primary && config.path !== primary.path);
+    }
     return [primary ? primary.path : "", comparison ? comparison.path : ""];
   }
   function suiteOptions(selected) {
     return state.suites.map((suite) => '<option value="' + escapeHtml(suite.path) + '"' + (suite.path === selected ? " selected" : "") + ' title="' + escapeHtml(suite.name || suite.path) + '">' + escapeHtml(displaySuiteName(suite)) + " · " + suite.cases + " 个案例" + (suite.status !== "valid" ? " · 无效" : "") + "</option>").join("");
   }
-  function configOptions(selected) {
-    const groups = providerOrder.map((provider) => ({ label: provider, items: state.configs.filter((config) => providerLabel(config) === provider) })).filter((group) => group.items.length);
-    const other = state.configs.filter((config) => !providerOrder.includes(providerLabel(config)));
-    if (other.length) groups.push({ label: "其他 API / 本地配置", items: other });
-    return groups.map((group) => '<optgroup label="' + escapeHtml(group.label) + '">' + group.items.map((config) => '<option value="' + escapeHtml(config.path) + '"' + (config.path === selected ? " selected" : "") + '>' + escapeHtml(config.name) + '</option>').join("") + '</optgroup>').join("");
+  function configOptions(selected, track) {
+    const usable = state.configs.filter((config) => trackForConfig(config) === (track || state.formTrack || "control"));
+    return usable.map((config) => '<option value="' + escapeHtml(config.path) + '"' + (config.path === selected ? " selected" : "") + '>' + escapeHtml(config.name) + '</option>').join("");
+  }
+  function apiSelectHtml(pane, config, selected) {
+    if (!needsLlm(config)) return '<div class="field"><label>API 模型</label><span class="muted-line">不适用（该智能体无 LLM 后端）</span></div>';
+    const profiles = state.profiles || [];
+    const current = selected || (config && config.api_profile) || "";
+    if (!profiles.length) return '<div class="field"><label>API 模型</label><span class="muted-line">尚无 API 档案——请先在 API / 模型页新增</span></div>';
+    const options = profiles.map((profile) => '<option value="' + escapeHtml(profile.id) + '"' + (profile.id === current ? " selected" : "") + '>' + escapeHtml(profile.name + " · " + profile.model) + '</option>').join("");
+    return '<div class="field"><label for="api-' + pane + '">API 模型（本次评测）</label><select id="api-' + pane + '" data-api-pane="' + pane + '">' + options + '</select><span class="field-help">默认预选该智能体的默认档案；本次评测可临时改选，不回写智能体配置。</span></div>';
   }
   function agentMetaHtml(config) {
     if (!config) return '<div class="agent-meta"><span>尚未选择配置</span></div>';
@@ -673,7 +698,7 @@
   }
 
   function renderNew() {
-    const defaults = defaultConfigPaths();
+    const defaults = defaultConfigPaths(state.formTrack);
     const primary = state.formPrimary || defaults[0] || "";
     const comparison = state.formComparison || defaults[1] || "";
     const suite = state.formSuite || (state.suites.find((item) => /innovation/i.test(item.path) && item.status === "valid") || state.suites.find((item) => item.status === "valid") || {}).path || "";
@@ -683,11 +708,14 @@
     const changed = JSON.stringify(state.params) !== JSON.stringify(state.baselineParams);
     const job = state.job;
     const progress = job && job.progress ? Math.round((Number(job.progress.completed || 0) / Math.max(1, Number(job.progress.total || 2))) * 100) : 0;
+    const trackOptions = [["A", "A 轨 · 生态智能体"], ["B", "B 轨 · 记忆层智能体"], ["control", "对照基线 · 离线/回放"]];
+    const trackSelector = '<section class="workspace-surface track-workspace"><div class="surface-toolbar"><div><h3>评测轨道</h3></div><span class="track-note">轨道只做归类与过滤，不改变证据语义：A 轨 = 系统级行为，B 轨 = 记忆层行为，对照 = 模拟/回放。</span></div><div class="track-selector">' + trackOptions.map((item) => '<button class="track-option' + (state.formTrack === item[0] ? " active" : "") + '" data-track="' + item[0] + '" type="button">' + item[1] + '</button>').join("") + '</div></section>';
     return '<div class="workspace-intro compact-intro"><div><p>使用相同参数运行两个 Agent。</p></div><div class="section-actions"><button class="button" data-action="reload" type="button">刷新配置</button><button class="button" data-toolbar="copy" type="button">复制配置</button></div></div>'
+      + trackSelector
       + '<section class="workspace-surface compare-workspace"><div class="surface-toolbar"><div><h3>Agent 对比</h3></div><span class="compare-lock">参数锁定</span></div><div class="agent-compare-grid">'
-      + '<div class="agent-pane blue"><div class="agent-pane-head"><div><h3>主智能体</h3></div></div><div class="field"><label for="primary-agent">配置档案</label><select id="primary-agent">' + configOptions(primary) + '</select></div>' + agentMetaHtml(primaryConfig) + '<div class="agent-pane-footer"><span id="health-primary">' + healthStateMarkup(primary, "尚未检查连接") + '</span><button class="button small" data-health="primary" type="button">连接检查</button></div></div>'
+      + '<div class="agent-pane blue"><div class="agent-pane-head"><div><h3>主智能体</h3></div></div><div class="field"><label for="primary-agent">配置档案</label><select id="primary-agent">' + configOptions(primary, state.formTrack) + '</select></div>' + agentMetaHtml(primaryConfig) + apiSelectHtml("primary", primaryConfig, state.formApiPrimary) + '<div class="agent-pane-footer"><span id="health-primary">' + healthStateMarkup(primary, "尚未检查连接") + '</span><button class="button small" data-health="primary" type="button">连接检查</button></div></div>'
       + '<div class="compare-divider" aria-hidden="true">对比</div>'
-      + '<div class="agent-pane orange"><div class="agent-pane-head"><div><h3>对比智能体</h3></div></div><div class="field"><label for="comparison-agent">配置档案</label><select id="comparison-agent">' + configOptions(comparison) + '</select></div>' + agentMetaHtml(comparisonConfig) + '<div class="agent-pane-footer"><span id="health-comparison">' + healthStateMarkup(comparison, "尚未检查连接") + '</span><button class="button small" data-health="comparison" type="button">连接检查</button></div></div>'
+      + '<div class="agent-pane orange"><div class="agent-pane-head"><div><h3>对比智能体</h3></div></div><div class="field"><label for="comparison-agent">配置档案</label><select id="comparison-agent">' + configOptions(comparison, state.formTrack) + '</select></div>' + agentMetaHtml(comparisonConfig) + apiSelectHtml("comparison", comparisonConfig, state.formApiComparison) + '<div class="agent-pane-footer"><span id="health-comparison">' + healthStateMarkup(comparison, "尚未检查连接") + '</span><button class="button small" data-health="comparison" type="button">连接检查</button></div></div>'
       + '</div></section>'
       + '<section class="workspace-surface run-config"><div class="surface-toolbar"><div><h3>评测参数</h3></div>' + (changed ? '<span class="change-badge">参数已变化</span>' : '<span class="lock-badge">▣ 已锁定</span>') + '</div><div class="run-config-grid"><div class="field suite-field"><label for="suite">测试套件</label><select id="suite">' + suiteOptions(suite) + '</select>' + suiteInsightHtml(suite) + '</div><div class="field"><label for="seed">Seed</label><input id="seed" type="number" value="' + escapeHtml(state.params.seed) + '"></div><div class="field"><label for="retries">重试次数</label><input id="retries" min="0" max="5" type="number" value="' + escapeHtml(state.params.retries) + '"></div><div class="field"><label for="timeout">单案例超时（秒）</label><input id="timeout" min="1" max="900" type="number" value="' + escapeHtml(state.params.timeout) + '"></div><div class="field"><label for="scorer-version">评分器版本</label><input id="scorer-version" type="text" value="' + escapeHtml(state.params.scorer_version) + '"></div></div>' + (changed ? '<div class="change-warning"><strong>比较参数已变化。</strong> 本次运行将使用新的条件，不能与旧运行直接当作同一实验。</div>' : '') + '</section>'
       + '<section class="workspace-surface validation-workspace"><div class="surface-toolbar"><div><h3>运行前校验</h3></div><button id="start-run" class="button primary" type="button"' + ((!primary || !comparison || !suite || primary === comparison) ? " disabled" : "") + '>▶ 开始评测</button></div><div class="validation-inline"><ul class="validation-list">'
@@ -695,6 +723,9 @@
       + validationItem(Boolean(comparison), comparison ? "对比 Agent 配置已选择" : "请选择对比 Agent")
       + validationItem(Boolean(primary && comparison && primary !== comparison), primary === comparison ? "两个 Agent 必须使用不同配置" : "两个 Agent 配置不同")
       + validationItem(Boolean(state.suites.find((item) => item.path === suite && item.status === "valid")), "套件通过结构校验")
+      + validationItem(Boolean(state.formTrack), "评测轨道已选择（" + (TRACK_LABELS[state.formTrack] || state.formTrack) + "）")
+      + validationItem(primaryConfig && needsLlm(primaryConfig) ? Boolean(state.formApiPrimary || (primaryConfig.api_profile)) : true, "主智能体 API 模型已确定")
+      + validationItem(comparisonConfig && needsLlm(comparisonConfig) ? Boolean(state.formApiComparison || (comparisonConfig.api_profile)) : true, "对比智能体 API 模型已确定")
       + validationItem(!changed, changed ? "比较参数已变化，结果将被标记为新条件" : "比较参数保持一致")
       + '</ul>' + fairnessSummaryHtml() + (job ? '<div class="job-status" role="status" aria-live="polite"><div class="job-meta"><strong>' + escapeHtml(job.status === "error" ? "运行失败" : runStateLabel(runState(job, null))) + '</strong><span>' + progress + '%</span></div><div class="progress-track"><div class="progress-value" style="width:' + progress + '%"></div></div><div class="job-meta"><span>运行 ID ' + escapeHtml(job.id) + '</span><span>结果目录 ' + escapeHtml(job.output || job.result_path || "待生成") + '</span></div>' + (job.error ? '<div class="job-error">' + escapeHtml(job.error) + '</div>' : '') + (job.result_path ? '<div style="margin-top:10px"><button class="link-button" data-open-run="' + escapeHtml(job.result_path) + '" type="button">打开这次结果</button></div>' : '') + '</div>' : '') + '</div></section>';
   }
@@ -866,7 +897,37 @@
         + '</div>').join("") + '</div>'
       + '</article>';
   }
-    function renderConfigs() { const credentials = (state.system || {}).credentials || {}; const notice = credentials.status === "secure" ? '<div class="credential-notice ok"><strong>安全配置已加载</strong><span>当前服务已从同一运行环境的 <code>~/.config/kmb/credentials.env</code> 读取连接信息；页面只展示状态，不显示密钥。</span></div>' : '<div class="credential-notice warn"><strong>云端连接未就绪</strong><span>' + escapeHtml(credentials.status === "insecure" ? "凭据文件权限不安全，服务拒绝加载。请将 ~/.config/kmb/credentials.env 权限设为 600。" : "本机未检测到凭据文件（~/.config/kmb/credentials.env）。配置 API Key 环境变量并刷新后即可连接云端；不填写凭据也能运行离线基线评测。") + '</span></div>'; const groups = providerOrder.map((provider) => ({ provider, configs: state.configs.filter((config) => providerLabel(config) === provider) })).filter((group) => group.configs.length); const other = state.configs.filter((config) => !providerOrder.includes(providerLabel(config))); const detail = configByPath(state.providerDetail); return '<section class="panel"><div class="panel-header"><div><h3>供应商列表</h3><p>' + state.configs.length + ' 个供应商配置；点条目进入详情</p></div></div><div class="panel-body">' + notice + (groups.length ? '<div class="provider-grid">' + groups.map((group) => providerCard(group.provider, group.configs)).join("") + '</div>' : '<div class="empty-state"><strong>尚无云端供应商配置</strong><p>可以直接在下方新增第三方 API 档案；网页不会导入明文密钥。</p></div>') + '</div></section>' + (detail ? '<section class="workspace-surface provider-detail-panel"><div class="surface-toolbar"><div><h3>' + escapeHtml(providerLabel(detail)) + '</h3><span>详细配置仅展示非敏感元数据。</span></div><button class="button small" data-health-config="' + escapeHtml(detail.path) + '" type="button">连接测试</button></div><div class="provider-detail-grid"><div><span>Endpoint</span><strong>' + escapeHtml(detail.base_url || detail.endpoint || '未记录') + '</strong></div><div><span>Model</span><strong>' + escapeHtml(detail.model || '待运行时解析') + '</strong></div><div><span>API Key</span><strong>安全凭据引用 · 不显示值</strong></div><div><span>Environment</span><strong>' + escapeHtml(detail.api_key_env || '未记录') + '</strong></div><div><span>来源</span><strong>' + escapeHtml(detail.path || '工作区配置') + '</strong></div><div><span>连接状态</span><strong id="config-health-' + escapeHtml(detail.path.replace(/[^A-Za-z0-9]/g, '-')) + '">' + healthStateMarkup(detail.path, credentialLabel(detail)) + '</strong></div></div></section>' : '') + (other.length ? '<details class="secondary-profiles"><summary>其他 API、本地基线与接入模板（' + other.length + '）</summary><div class="grid three">' + other.map(configCard).join("" ) + '</div></details>' : ''); }
+    function renderConfigs() {
+    const credentials = (state.system || {}).credentials || {};
+    const notice = credentials.status === "secure"
+      ? '<div class="credential-notice ok"><strong>安全配置已加载</strong><span>当前服务已从同一运行环境的 <code>~/.config/kmb/credentials.env</code> 读取连接信息；页面只展示状态，不显示密钥。</span></div>'
+      : '<div class="credential-notice warn"><strong>' + (credentials.status === "insecure" ? "凭据文件权限不安全" : "云端连接未就绪") + '</strong><span>' + escapeHtml(credentials.status === "insecure" ? "凭据文件权限不安全，服务拒绝加载。请将 ~/.config/kmb/credentials.env 权限设为 600。" : "本机未检测到凭据文件（~/.config/kmb/credentials.env）。配置 API Key 环境变量并刷新后即可连接云端；不填写凭据也能运行离线基线评测。") + '</span></div>';
+    const profiles = state.profiles || [];
+    const groups = [];
+    profiles.forEach((profile) => {
+      const provider = profile.provider || "其他";
+      let group = groups.find((item) => item.provider === provider);
+      if (!group) { group = { provider, items: [] }; groups.push(group); }
+      group.items.push(profile);
+    });
+    const editing = state.editingProfileId;
+    const poolCards = groups.length
+      ? groups.map((group) => '<div class="provider-group"><div class="provider-name">' + escapeHtml(group.provider) + '</div>' + group.items.map(profileCard).join("") + '</div>').join("")
+      : '<div class="empty-state"><strong>尚无 API 档案</strong><p>使用下方表单新增；新增后所有需要 LLM 的智能体立即可选用。</p></div>';
+        if (editing) {
+      const profile = (state.profiles || []).find((item) => item.id === editing) || {};
+      state.configDraft = {
+        profile_id: profile.id || "", provider: profile.provider || "", name: profile.name || "",
+        base_url: profile.base_url || "", endpoint: profile.endpoint || "", model: profile.model || "",
+        api_key_env: profile.api_key_env || "", timeout_seconds: profile.timeout_seconds || 60,
+        temperature: profile.temperature || 0, description: profile.description || "",
+      };
+    }
+    return '<section class="panel"><div class="panel-header"><div><h3>API 档案池（全局）</h3><p>' + profiles.length + ' 个 API 档案；一处定义，所有需要 LLM 的智能体共用。修改后对所有引用它的评测立即生效。</p></div></div><div class="panel-body">' + notice + poolCards + '</div></section>' + configWizardMarkup() + (editing ? '<div class="edit-banner"><button class="link-button" data-cancel-edit type="button">取消编辑，返回新增</button></div>' : '');
+  }
+  function profileCard(profile) {
+    return '<article class="agent-registry-row profile-row"><span class="legend-dot blue"></span><div class="agent-registry-main"><strong>' + escapeHtml(profile.name) + '</strong><span>' + escapeHtml(profile.provider || "未分组") + ' · ' + escapeHtml(profile.model) + ' · ' + escapeHtml((profile.base_url || "") + (profile.endpoint || "")) + '</span></div><span class="mode-pill">API 档案</span><span class="' + (profile.credential === "configured" ? "credential-safe" : "credential-missing") + '">' + escapeHtml(profile.credential === "configured" ? "凭据已配置" : "未检测到凭据") + '</span><button class="button small" data-edit-profile="' + escapeHtml(profile.id) + '" type="button">编辑</button></article>';
+  }
   function renderSettings() { const system = state.system || {}; const env = system.openkylin || {}; const capabilities = system.system_scenarios || {}; return '<div class="section-head"><div><p>环境和复现信息只读展示，敏感凭据不会从后端返回。</p></div></div><div class="grid two"><section class="panel"><div class="panel-header"><div><h3>运行环境</h3><p>来源：本地服务环境探针。</p></div></div><div class="panel-body"><div class="setting-list">' + settingLine("openKylin", env.detected ? "已检测：" + (env.distribution || "openKylin") : "未检测到 openKylin") + settingLine("平台", system.platform) + settingLine("机器架构", system.machine) + settingLine("Python", system.python) + settingLine("PyYAML", system.pyyaml) + settingLine("CLI 版本", system.cli_version) + settingLine("结果目录", system.results_directory) + settingLine("套件目录", system.suite_directory) + '</div></div></section><section class="panel"><div class="panel-header"><div><h3>系统级场景能力</h3><p>未执行的系统边界不会被 UI 显示为通过。</p></div></div><div class="panel-body"><div class="capability-list">' + Object.keys(capabilities).map((key) => '<div class="capability-line"><span>' + escapeHtml(key) + '</span><span class="mode-pill">' + escapeHtml(scenarioStatusLabel(capabilities[key].status)) + '</span></div>').join("") + '</div></div></section></div>'; }
   function settingLine(label, value) { return '<div class="setting-line"><span class="setting-label">' + escapeHtml(label) + '</span><span class="setting-value">' + escapeHtml(fmt(value)) + '</span></div>'; }
   function emptyState(title, description, view) { return '<section class="panel"><div class="empty-state"><div class="empty-mark">□</div><strong>' + escapeHtml(title) + '</strong><p>' + escapeHtml(description) + '</p>' + (view ? '<div style="margin-top:16px"><button class="button" data-view="' + escapeHtml(view) + '" type="button">前往新建评测</button></div>' : '') + '</div></section>'; }
@@ -1189,7 +1250,15 @@
      document.querySelectorAll("[data-result-tab]").forEach((button) => button.addEventListener("click", () => { const tab = button.dataset.resultTab; state.resultTab = tab; state.view = "results"; render(); }));
     document.querySelectorAll("[data-select-case]").forEach((button) => button.addEventListener("click", () => { state.selectedCase = button.dataset.selectCase; state.resultTab = "cases"; render(); }));
     document.querySelectorAll("[data-open-case-evidence]").forEach((button) => button.addEventListener("click", () => { const caseId = button.dataset.openCaseEvidence; const agents = normalizeAgents(state.selectedRun); const failed = filterFailures(collectFailures(agents)).find((item) => item.result.case_id === caseId); if (failed) return openFailure(failed); const summary = agents.find((agent) => (agent.results || []).some((result) => result.case_id === caseId)); const result = summary && (summary.results || []).find((item) => item.case_id === caseId); if (summary && result) return openFailure({ agent: summary.agent, result, failure: { type: result.status === "pass" ? "verified" : "invalid_behavior", reason: result.status === "pass" ? "该 Case 已通过确定性规则检查，继续查看 EvidenceEvent 记录。" : "该 Case 未通过，但未提供结构化失败原因。" }, agentSummary: summary }); showGlobalError("该 Case 没有可读取的证据事件"); }));
-    document.querySelectorAll("[data-select-agent]").forEach((button) => button.addEventListener("click", () => { const path = button.dataset.selectAgent; if (!state.formPrimary) state.formPrimary = path; else state.formComparison = path; setView("new"); }));
+    document.querySelectorAll("[data-select-agent]").forEach((button) => button.addEventListener("click", () => { const path = button.dataset.selectAgent; if (!state.formPrimary) { state.formPrimary = path; state.formApiPrimary = (configByPath(path) || {}).api_profile || ""; } else { state.formComparison = path; state.formApiComparison = (configByPath(path) || {}).api_profile || ""; } setView("new"); }));
+    document.querySelectorAll("[data-track]").forEach((button) => button.addEventListener("click", () => { state.formTrack = button.dataset.track; state.formPrimary = ""; state.formComparison = ""; state.formApiPrimary = ""; state.formApiComparison = ""; const defaults = defaultConfigPaths(state.formTrack); state.formPrimary = defaults[0] || ""; state.formComparison = defaults[1] || ""; state.formApiPrimary = (configByPath(state.formPrimary) || {}).api_profile || ""; state.formApiComparison = (configByPath(state.formComparison) || {}).api_profile || ""; setView("new"); render(); }));
+    document.addEventListener("change", (event) => {
+      const pane = event.target && event.target.getAttribute && event.target.getAttribute("data-api-pane");
+      if (pane === "primary") state.formApiPrimary = event.target.value;
+      if (pane === "comparison") state.formApiComparison = event.target.value;
+    });
+    document.querySelectorAll("[data-edit-profile]").forEach((button) => button.addEventListener("click", () => { state.editingProfileId = button.dataset.editProfile; setView("configs"); render(); }));
+    document.querySelectorAll("[data-cancel-edit]").forEach((button) => button.addEventListener("click", () => { state.editingProfileId = null; setView("configs"); render(); }));
     document.querySelectorAll("[data-quick-agent]").forEach((input) => input.addEventListener("change", (event) => {
       const checked = Array.from(document.querySelectorAll("[data-quick-agent]:checked")).map((item) => item.value);
       if (checked.length > 2) {
@@ -1215,7 +1284,25 @@
 
   async function healthCheck(which) { const config = which === "primary" ? $("#primary-agent")?.value : $("#comparison-agent")?.value; if (!config) return; const target = $("#health-" + which); if (target) { target.textContent = "检查中…"; target.className = "health-state"; } try { const result = await api("/api/health", { method: "POST", body: JSON.stringify({ config }) }); state.health[config] = result; if (target) { target.innerHTML = healthStateMarkup(config, "尚未检查连接"); } } catch (error) { state.health[config] = { status: "error", error: error.message, checked_at: new Date().toISOString() }; if (target) { target.innerHTML = healthStateMarkup(config, "尚未检查连接"); } } }
   async function healthConfig(config) { const id = "#config-health-" + config.replace(/[^A-Za-z0-9]/g, "-"); const targets = [$(id), $("#provider-detail-health")].filter(Boolean); targets.forEach((target) => { target.textContent = "检查中…"; }); try { const result = await api("/api/health", { method: "POST", body: JSON.stringify({ config }) }); state.health[config] = result; targets.forEach((target) => { target.innerHTML = healthStateMarkup(config, credentialLabel(configByPath(config))); }); } catch (error) { state.health[config] = { status: "error", error: error.message, checked_at: new Date().toISOString() }; targets.forEach((target) => { target.innerHTML = healthStateMarkup(config, credentialLabel(configByPath(config))); }); } }
-  async function startRun() { updateParamsFromForm(); const primary = $("#primary-agent")?.value, comparison = $("#comparison-agent")?.value, suite = $("#suite")?.value; const payload = { primary_agent: primary, comparison_agent: comparison, suite, seed: state.params.seed === "" ? null : Number(state.params.seed), retries: Number(state.params.retries), timeout: Number(state.params.timeout), scorer_version: state.params.scorer_version }; const button = $("#start-run"); if (button) button.disabled = true; try { state.job = await api("/api/runs", { method: "POST", body: JSON.stringify(payload) }); pollJob(state.job.id); render(); } catch (error) { showGlobalError(error.message); if (button) button.disabled = false; } }
+  async function startRun() {
+    updateParamsFromForm();
+    let primary = $("#primary-agent")?.value, comparison = $("#comparison-agent")?.value, suite = $("#suite")?.value;
+    // 标签页可能是在服务重启期间启动的（数据未加载）——启动前自动重取一次
+    if (!primary || !comparison || !suite || !(state.configs || []).length) {
+      await loadData();
+      primary = $("#primary-agent")?.value || primary;
+      comparison = $("#comparison-agent")?.value || comparison;
+      suite = $("#suite")?.value || suite;
+    }
+    if (!primary || !comparison || !suite) {
+      showGlobalError("评测数据尚未加载（配置/套件为空）。请点击刷新配置或重新打开工作台后重试。");
+      return;
+    }
+    const primaryConfig = configByPath(primary), comparisonConfig = configByPath(comparison);
+    const apiProfiles = {};
+    if (needsLlm(primaryConfig) && state.formApiPrimary) apiProfiles[primary] = state.formApiPrimary;
+    if (needsLlm(comparisonConfig) && state.formApiComparison) apiProfiles[comparison] = state.formApiComparison;
+    const payload = { primary_agent: primary, comparison_agent: comparison, suite, track: state.formTrack || "control", api_profiles: apiProfiles, seed: state.params.seed === "" ? null : Number(state.params.seed), retries: Number(state.params.retries), timeout: Number(state.params.timeout), scorer_version: state.params.scorer_version }; const button = $("#start-run"); if (button) button.disabled = true; try { state.job = await api("/api/runs", { method: "POST", body: JSON.stringify(payload) }); pollJob(state.job.id); render(); } catch (error) { showGlobalError(error.message); if (button) button.disabled = false; } }
   async function startQuickCompare() {
     const selected = (state.quickSelected || []).slice(0, 2);
     if (selected.length !== 2) {
@@ -1268,7 +1355,12 @@
   function configWizardMarkup() {
     const draft = state.configDraft;
     const disabled = state.configSaving ? " disabled" : "";
-    return '<section id="config-create-panel" class="panel config-wizard"><div class="panel-header"><div><div class="eyebrow">ADD PROVIDER PROFILE</div><h3>新增 API 配置档案</h3><p>支持 OpenAI-compatible 的 Chat Completions 接口。只保存非敏感元数据，API Key 由运行环境安全加载。</p></div></div><div class="panel-body"><form id="config-create-form" class="form-grid" autocomplete="off"><div class="field"><label for="config-profile-id">配置标识</label><input id="config-profile-id" name="profile_id" value="' + escapeHtml(draft.profile_id) + '" placeholder="例如 openrouter" pattern="[A-Za-z0-9][A-Za-z0-9_.-]{0,63}" required><span class="field-help">用于生成 configs/agent-*.yaml 文件名，只能使用英文、数字、点、下划线和连字符。</span></div><div class="field"><label for="config-provider">提供商（可选）</label><input id="config-provider" name="provider" value="' + escapeHtml(draft.provider) + '" placeholder="例如 OpenRouter" maxlength="120"><span class="field-help">用于配置列表分组，不会改变协议或请求方式。</span></div><div class="field"><label for="config-name">显示名称</label><input id="config-name" name="name" value="' + escapeHtml(draft.name) + '" placeholder="例如 OpenRouter · GPT-4.1 mini" maxlength="120" required></div><div class="field"><label for="config-base-url">Base URL</label><input id="config-base-url" name="base_url" type="url" value="' + escapeHtml(draft.base_url) + '" placeholder="https://api.example.com/v1" required><span class="field-help">不得在 URL 中写用户名、密码或 API Key。</span></div><div class="field"><label for="config-endpoint">接口路径</label><input id="config-endpoint" name="endpoint" value="' + escapeHtml(draft.endpoint) + '" placeholder="/chat/completions" required></div><div class="field"><label for="config-model">模型 ID</label><input id="config-model" name="model" value="' + escapeHtml(draft.model) + '" placeholder="provider-model-id" required></div><div class="field"><label for="config-api-key-env">API Key 环境变量名</label><input id="config-api-key-env" name="api_key_env" value="' + escapeHtml(draft.api_key_env) + '" placeholder="OPENROUTER_API_KEY" pattern="[A-Z][A-Z0-9_]{1,62}" required><span class="field-help">只填变量名，不填密钥值；建议以 API_KEY、TOKEN 或 SECRET 结尾。</span></div><div class="field"><label for="config-timeout">请求超时（秒）</label><input id="config-timeout" name="timeout_seconds" type="number" min="1" max="900" step="1" value="' + escapeHtml(draft.timeout_seconds) + '" required></div><div class="field"><label for="config-temperature">Temperature</label><input id="config-temperature" name="temperature" type="number" min="0" max="2" step="0.1" value="' + escapeHtml(draft.temperature) + '" required></div><div class="field full"><label for="config-description">说明（可选）</label><input id="config-description" name="description" maxlength="500" value="' + escapeHtml(draft.description) + '" placeholder="例如公司内部 OpenAI-compatible 网关"></div><div class="full wizard-actions"><button class="button primary" id="config-create-submit" type="submit"' + disabled + '>' + (state.configSaving ? "保存中…" : "保存配置档案") + '</button><span class="field-help">保存后可在新建评测中选择该档案，并从配置卡片发起连接检查。</span></div></form>' + configWizardNotice() + '</div></section>';
+    const editingId = state.editingProfileId;
+    const wizardTitle = editingId ? "编辑 API 档案（" + editingId + "）" : "新增 API 配置档案";
+    const wizardHelp = editingId
+      ? "修改会立即对所有引用此档案的智能体与评测生效（单一事实来源）。"
+      : "支持 OpenAI-compatible 的 Chat Completions 接口。只保存非敏感元数据，API Key 由运行环境安全加载；新增后所有需要 LLM 的智能体立即可选用。";
+    return '<section id="config-create-panel" class="panel config-wizard"><div class="panel-header"><div><div class="eyebrow">ADD PROVIDER PROFILE</div><h3>' + escapeHtml(wizardTitle) + '</h3><p>' + escapeHtml(wizardHelp) + '</p></div></div><div class="panel-body"><form id="config-create-form" class="form-grid" autocomplete="off"><div class="field"><label for="config-profile-id">配置标识</label><input id="config-profile-id" name="profile_id" value="' + escapeHtml(draft.profile_id) + '" placeholder="例如 openrouter" pattern="[A-Za-z0-9][A-Za-z0-9_.-]{0,63}" required><span class="field-help">API 档案 id：智能体通过它引用此档案；只能使用英文、数字、点、下划线和连字符。</span></div><div class="field"><label for="config-provider">提供商（可选）</label><input id="config-provider" name="provider" value="' + escapeHtml(draft.provider) + '" placeholder="例如 OpenRouter" maxlength="120"><span class="field-help">用于配置列表分组，不会改变协议或请求方式。</span></div><div class="field"><label for="config-name">显示名称</label><input id="config-name" name="name" value="' + escapeHtml(draft.name) + '" placeholder="例如 OpenRouter · GPT-4.1 mini" maxlength="120" required></div><div class="field"><label for="config-base-url">Base URL</label><input id="config-base-url" name="base_url" type="url" value="' + escapeHtml(draft.base_url) + '" placeholder="https://api.example.com/v1" required><span class="field-help">不得在 URL 中写用户名、密码或 API Key。</span></div><div class="field"><label for="config-endpoint">接口路径</label><input id="config-endpoint" name="endpoint" value="' + escapeHtml(draft.endpoint) + '" placeholder="/chat/completions" required></div><div class="field"><label for="config-model">模型 ID</label><input id="config-model" name="model" value="' + escapeHtml(draft.model) + '" placeholder="provider-model-id" required></div><div class="field"><label for="config-api-key-env">API Key 环境变量名</label><input id="config-api-key-env" name="api_key_env" value="' + escapeHtml(draft.api_key_env) + '" placeholder="OPENROUTER_API_KEY" pattern="[A-Z][A-Z0-9_]{1,62}" required><span class="field-help">只填变量名，不填密钥值；建议以 API_KEY、TOKEN 或 SECRET 结尾。</span></div><div class="field"><label for="config-timeout">请求超时（秒）</label><input id="config-timeout" name="timeout_seconds" type="number" min="1" max="900" step="1" value="' + escapeHtml(draft.timeout_seconds) + '" required></div><div class="field"><label for="config-temperature">Temperature</label><input id="config-temperature" name="temperature" type="number" min="0" max="2" step="0.1" value="' + escapeHtml(draft.temperature) + '" required></div><div class="field full"><label for="config-description">说明（可选）</label><input id="config-description" name="description" maxlength="500" value="' + escapeHtml(draft.description) + '" placeholder="例如公司内部 OpenAI-compatible 网关"></div><div class="full wizard-actions"><button class="button primary" id="config-create-submit" type="submit"' + disabled + '>' + (state.configSaving ? "保存中…" : "保存配置档案") + '</button><span class="field-help">保存后可在新建评测中选择该档案，并从配置卡片发起连接检查。</span></div></form>' + configWizardNotice() + '</div></section>';
   }
   function bindConfigWizard() {
     const form = $("#config-create-form");
@@ -1286,17 +1378,17 @@
       const button = $("#config-create-submit");
       if (button) { button.disabled = true; button.textContent = "保存中…"; }
       try {
-        const result = await api("/api/configs", { method: "POST", body: JSON.stringify(payload) });
-        const generated = (result && result.generated) || [];
-        const names = generated.map((item) => (item.path || item.name || "").split(/[\\/]/).pop()).filter(Boolean);
-        const createdPath = (result.config || {}).path || "配置档案";
+        const editingId = state.editingProfileId;
+        const target = editingId ? "/api/profiles/" + encodeURIComponent(editingId) + "/update" : "/api/profiles";
+        const result = await api(target, { method: "POST", body: JSON.stringify(payload) });
         state.configNotice = {
           kind: "success",
-          env: result.credential_env,
-          message: "已创建可评测 Agent 三件套：" + (names.length ? names.join(" · ") : createdPath) +
-            "。http 仅连通；memory / no-memory 为包装轨（系统级可观测证据，非模型原生长期记忆）。配置文件不包含密钥。",
+          message: editingId
+            ? "API 档案已更新：所有引用它的智能体与评测立即按新配置解析（智能体文件不受影响）。"
+            : "API 档案已保存：所有需要 LLM 的智能体立即可选用此档案（不再生成或改写智能体文件）。",
         };
         state.configDraft = Object.assign({}, state.configDraft, { profile_id: "", provider: "", name: "", model: "", api_key_env: "", description: "" });
+        state.editingProfileId = null;
         state.configSaving = false;
         await loadData();
       } catch (error) {

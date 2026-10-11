@@ -1,6 +1,7 @@
 import json
 import os
 import tempfile
+import time
 import threading
 import unittest
 from http.server import ThreadingHTTPServer
@@ -10,6 +11,7 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from kmb.agent_registry import AgentProfile
+from kmb.agents import build_agent_from_config
 from kmb.workbench import WorkbenchHandler, WorkbenchState, load_credentials_file
 
 
@@ -168,11 +170,11 @@ class WorkbenchTests(unittest.TestCase):
         self.assertEqual(configs["deepseek-memory-controller"]["provider"], "DeepSeek")
         self.assertEqual(configs["deepseek-memory-controller"]["profile_mode"], "记忆开启")
 
-    def test_create_config_writes_non_secret_http_profile(self):
-        result = self.state.create_config({
+    def test_create_api_profile_writes_pool_entry_without_agent_files(self):
+        result = self.state.create_api_profile({
             "profile_id": "openrouter",
             "provider": "OpenRouter",
-            "name": "OpenRouter",
+            "name": "OpenRouter · GPT-4.1 mini",
             "base_url": "https://openrouter.ai/api/v1",
             "endpoint": "/chat/completions",
             "model": "openai/gpt-4.1-mini",
@@ -181,29 +183,20 @@ class WorkbenchTests(unittest.TestCase):
             "temperature": "0.2",
             "description": "shared gateway",
         })
-        path = self.root / "configs" / "agent-openrouter.yaml"
-        memory_path = self.root / "configs" / "agent-openrouter-memory.yaml"
-        no_memory_path = self.root / "configs" / "agent-openrouter-no-memory.yaml"
-        self.assertTrue(path.is_file())
-        self.assertTrue(memory_path.is_file())
-        self.assertTrue(no_memory_path.is_file())
-        text = path.read_text(encoding="utf-8")
-        memory_text = memory_path.read_text(encoding="utf-8")
-        self.assertIn("OPENROUTER_API_KEY", text)
-        self.assertIn("type: http", text)
-        self.assertIn("type: memory_controller", memory_text)
-        self.assertIn("type: memory_disabled", no_memory_path.read_text(encoding="utf-8"))
-        self.assertNotIn("api_key:", text.lower())
-        self.assertNotIn("api_key:", memory_text.lower())
-        self.assertEqual(result["config"]["name"], "OpenRouter")
-        self.assertEqual(result["config"]["provider"], "OpenRouter")
-        self.assertEqual(result["config"]["model"], "openai/gpt-4.1-mini")
-        generated_types = {item.get("type") for item in result.get("generated") or []}
-        self.assertEqual(generated_types, {"http", "memory_controller", "memory_disabled"})
+        self.assertEqual(result["status"], "created")
+        entry = {item["id"]: item for item in self.state.list_api_profiles()}["openrouter"]
+        self.assertEqual(entry["model"], "openai/gpt-4.1-mini")
+        self.assertEqual(entry["credential"], "not_detected")
+        # 不再生成任何智能体文件——API 档案是全局资源池
+        agent_files = [p.name for p in (self.root / "configs").glob("agent-openrouter*")]
+        self.assertEqual(agent_files, [])
+        # 池文件只保存变量名，不保存密钥值
+        blob = (self.root / "configs" / "api-profiles.yaml").read_text(encoding="utf-8")
+        self.assertNotIn("must-not-leak", blob)
 
-    def test_create_config_rejects_secret_payload_and_duplicate(self):
+    def test_create_api_profile_rejects_secret_payload_and_duplicate(self):
         with self.assertRaises(ValueError):
-            self.state.create_config({
+            self.state.create_api_profile({
                 "profile_id": "unsafe",
                 "name": "Unsafe",
                 "base_url": "https://example.test/v1",
@@ -211,7 +204,7 @@ class WorkbenchTests(unittest.TestCase):
                 "api_key_env": "UNSAFE_API_KEY",
                 "api_key": "must-not-be-accepted",
             })
-        self.state.create_config({
+        self.state.create_api_profile({
             "profile_id": "duplicate",
             "name": "Duplicate",
             "base_url": "https://example.test/v1",
@@ -219,13 +212,99 @@ class WorkbenchTests(unittest.TestCase):
             "api_key_env": "DUPLICATE_API_KEY",
         })
         with self.assertRaises(FileExistsError):
-            self.state.create_config({
+            self.state.create_api_profile({
                 "profile_id": "duplicate",
                 "name": "Duplicate again",
                 "base_url": "https://example.test/v1",
                 "model": "demo",
                 "api_key_env": "DUPLICATE_API_KEY",
             })
+
+    def test_update_api_profile_changes_resolved_model_without_touching_agent_files(self):
+        self.state.create_api_profile({
+            "profile_id": "pooled",
+            "name": "Pooled gateway",
+            "base_url": "https://example.test/v1",
+            "model": "model-a",
+            "api_key_env": "POOLED_API_KEY",
+        })
+        agent_path = self.root / "configs" / "agent-memory.yaml"
+        original_yaml = (
+            "name: memory-track\ntype: memory_tool\nmemory_impl: kv\n"
+            "api_profile: pooled\naction_root: actions\n"
+        )
+        agent_path.write_text(original_yaml, encoding="utf-8")
+        before = build_agent_from_config(str(agent_path))
+        self.assertEqual(before.backend.backend.model, "model-a")
+        self.state.update_api_profile("pooled", {
+            "profile_id": "pooled",
+            "name": "Pooled gateway",
+            "base_url": "https://example.test/v1",
+            "model": "model-b",
+            "api_key_env": "POOLED_API_KEY",
+        })
+        after = build_agent_from_config(str(agent_path))
+        self.assertEqual(after.backend.backend.model, "model-b")
+        # 智能体文件未被回写
+        self.assertEqual(agent_path.read_text(encoding="utf-8"), original_yaml)
+
+    def test_list_configs_classifies_tracks(self):
+        (self.root / "configs" / "api-profiles.yaml").write_text(
+            "version: 1\nprofiles:\n  - id: pooled\n    base_url: https://example.test/v1\n    model: model-a\n    api_key_env: POOLED_API_KEY\n",
+            encoding="utf-8",
+        )
+        (self.root / "configs" / "agent-memory.yaml").write_text(
+            "name: memory-track\ntype: memory_tool\nmemory_impl: kv\napi_profile: pooled\n",
+            encoding="utf-8",
+        )
+        (self.root / "configs" / "agent-kylinbot-command.yaml").write_text(
+            "name: kylinbot-command\ntype: command\ncommand: [\"echo\", \"hi\"]\n",
+            encoding="utf-8",
+        )
+        tracks = {item["name"]: item["track"] for item in self.state.list_configs()}
+        self.assertEqual(tracks["reference"], "control")
+        self.assertEqual(tracks["memory-track"], "B")
+        self.assertEqual(tracks["kylinbot-command"], "A")
+
+    def test_start_run_records_track_and_materializes_api_override(self):
+        self.state.create_api_profile({
+            "profile_id": "pooled",
+            "name": "Pooled gateway",
+            "base_url": "https://example.test/v1",
+            "model": "model-a",
+            "api_key_env": "POOLED_API_KEY",
+        })
+        agent_yaml = (
+            "name: memory-track\ntype: memory_tool\nmemory_impl: kv\n"
+            "api_profile: pooled\naction_root: actions\n"
+        )
+        (self.root / "configs" / "agent-memory.yaml").write_text(agent_yaml, encoding="utf-8")
+        (self.root / "configs" / "agent-memory2.yaml").write_text(
+            agent_yaml.replace("memory-track", "memory-track-2"), encoding="utf-8")
+        payload = {
+            "primary_agent": "configs/agent-memory.yaml",
+            "comparison_agent": "configs/agent-memory2.yaml",
+            "suite": "suites/core.yaml",
+            "track": "B",
+            "api_profiles": {"configs/agent-memory.yaml": "pooled"},
+        }
+        job = self.state.start_run(payload)
+        self.assertEqual(job["track"], "B")
+        output = self.root / job["output"]
+        meta = json.loads((output / "workbench-meta.json").read_text(encoding="utf-8"))
+        self.assertEqual(meta["track"], "B")
+        self.assertEqual(meta["api_profiles"]["configs/agent-memory.yaml"]["profile_id"], "pooled")
+        runtime = output / ".runtime"
+        self.assertTrue(any(p.name.startswith("agent-memory-") for p in runtime.glob("*.yaml")))
+        # 智能体默认引用未被回写
+        self.assertEqual((self.root / "configs" / "agent-memory.yaml").read_text(encoding="utf-8"), agent_yaml)
+        # 停止后台评测并等待线程收尾，避免异步写入与临时目录清理竞态
+        self.state.stop_job(job["id"])
+        for _ in range(50):
+            snapshot = self.state.jobs.get(job["id"], {})
+            if snapshot.get("status") in {"stopped", "failed", "completed"}:
+                break
+            time.sleep(0.2)
 
     def test_credentials_file_loads_workspace_referenced_custom_env(self):
         path = self.root / "credentials.env"
@@ -327,24 +406,35 @@ class WorkbenchTests(unittest.TestCase):
             with self.assertRaises(HTTPError) as error:
                 urlopen(base + "/api/artifact?path=" + "../outside.txt", timeout=3)
                 self.assertEqual(error.exception.code, 400)
-            create_request = Request(
-                base + "/api/configs",
+            profile_request = Request(
+                base + "/api/profiles",
                 data=json.dumps({
                     "profile_id": "api-test",
                     "name": "API Test",
+                    "provider": "TestGW",
                     "base_url": "https://example.test/v1",
+                    "endpoint": "/chat/completions",
                     "model": "demo",
                     "api_key_env": "API_TEST_KEY",
+                    "timeout_seconds": "60",
+                    "temperature": "0",
                 }).encode("utf-8"),
                 headers={"Content-Type": "application/json"}, method="POST",
             )
-            with urlopen(create_request, timeout=3) as response:
+            with urlopen(profile_request, timeout=3) as response:
                 self.assertEqual(response.status, 201)
                 created = json.loads(response.read().decode("utf-8"))
-            self.assertEqual(created["config"]["name"], "API Test")
+            self.assertEqual(created["status"], "created")
             self.assertNotIn("secret", json.dumps(created).lower())
+            with urlopen(base + "/api/profiles", timeout=3) as response:
+                profiles = json.loads(response.read().decode("utf-8"))["profiles"]
+            self.assertIn("api-test", [item["id"] for item in profiles])
+            # 旧端点已移除：POST /api/configs 返回 404
+            with self.assertRaises(HTTPError) as removed:
+                urlopen(Request(base + "/api/configs", data=b"{}", headers={"Content-Type": "application/json"}, method="POST"), timeout=3)
+            self.assertEqual(removed.exception.code, 404)
             secret_request = Request(
-                base + "/api/configs",
+                base + "/api/profiles",
                 data=json.dumps({
                     "profile_id": "api-secret",
                     "name": "API Secret",

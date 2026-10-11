@@ -226,9 +226,13 @@ a:hover { text-decoration: underline; }
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  overflow-y: auto;
   background: var(--shell-bg);
 }
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   flex: 0 0 auto;
   display: flex;
   align-items: center;
@@ -284,6 +288,7 @@ a:hover { text-decoration: underline; }
   overflow: auto;
   padding: 16px 20px 24px;
   display: grid;
+  grid-auto-rows: max-content;
   align-content: start;
   gap: 12px;
   scrollbar-gutter: stable;
@@ -1767,3 +1772,17 @@ td strong { color: var(--foreground); font-weight: 600; }
 .compare-workspace {
   overflow: hidden;
 }
+
+/* 轨道选择与 API 档案池 */
+.track-selector{display:flex;gap:10px;flex-wrap:wrap}
+.track-option{border:1px solid var(--line-strong);background:transparent;color:var(--text);padding:10px 16px;border-radius:8px;cursor:pointer;font-size:13px}
+.track-option.active{border-color:#2b6cb0;background:#2b6cb0;color:#fff}
+.track-note{font-size:12px;opacity:.65}
+.track-workspace{margin-bottom:14px}
+.muted-line{opacity:.6;font-size:13px}
+.edit-banner{margin:10px 0}
+.provider-group{margin-bottom:14px}
+.provider-name{font-weight:600;opacity:.75;margin-bottom:6px}
+
+/* 主区子区块禁止 flex 收缩：内容自然撑高，由 main-area 滚动 */
+.main-area > * { flex-shrink: 0; }
