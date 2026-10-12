@@ -1,0 +1,75 @@
+name: Verify benchmark and distributions
+
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-and-wheel:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            python: '3.9'
+          - os: ubuntu-latest
+            python: '3.12'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install .
+      - run: python -m unittest discover -s tests -v
+      - run: python -m compileall -q kmb scripts tests
+      - run: python -m pip wheel . --no-deps --wheel-dir wheelhouse
+      - name: Install and verify wheel outside the source tree
+        shell: python
+        env:
+          KMB_CHECKOUT: ${{ github.workspace }}
+        run: |
+          import os, pathlib, subprocess, tempfile, venv
+          wheel = next((pathlib.Path(os.environ['KMB_CHECKOUT']) / 'wheelhouse').glob('*.whl'))
+          with tempfile.TemporaryDirectory(prefix='kmb-wheel-') as directory:
+              root = pathlib.Path(directory)
+              environment = root / 'venv'
+              venv.EnvBuilder(with_pip=True).create(environment)
+              python = environment / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
+              subprocess.check_call([str(python), '-m', 'pip', 'install', str(wheel)], cwd=root)
+              subprocess.check_call([str(python), '-m', 'kmb.cli', 'official-acceptance', '--mode', 'offline', '--out', str(root / 'evidence')], cwd=root)
+
+  deb-lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Prepare Debian runtime and two test versions
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y python3-yaml
+          KMB_DEB_VERSION=0.2.0+ci1 bash scripts/build_deb.sh "$RUNNER_TEMP/packages"
+          KMB_DEB_VERSION=0.2.0+ci2 bash scripts/build_deb.sh "$RUNNER_TEMP/packages"
+      - name: Install, upgrade, verify, uninstall and check residues
+        run: |
+          cd "$RUNNER_TEMP"
+          sudo bash "$GITHUB_WORKSPACE/scripts/install_deb.sh" "$RUNNER_TEMP/packages/kylin-memory-bench_0.2.0+ci1_all.deb"
+          bash "$GITHUB_WORKSPACE/scripts/verify_deb.sh" "$RUNNER_TEMP/deb-before"
+          sudo bash "$GITHUB_WORKSPACE/scripts/upgrade_deb.sh" "$RUNNER_TEMP/packages/kylin-memory-bench_0.2.0+ci2_all.deb"
+          test "$(dpkg-query -W -f='${Version}' kylin-memory-bench)" = '0.2.0+ci2'
+          bash "$GITHUB_WORKSPACE/scripts/verify_deb.sh" "$RUNNER_TEMP/deb-after"
+          kmb official-acceptance --mode offline --out "$RUNNER_TEMP/deb-acceptance"
+          sudo bash "$GITHUB_WORKSPACE/scripts/uninstall_deb.sh"
+          test ! -e /usr/bin/kmb
+          test ! -e /usr/share/kylin-memory-bench
+          test ! -e /usr/share/doc/kylin-memory-bench

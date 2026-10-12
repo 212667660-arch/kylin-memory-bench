@@ -15,7 +15,7 @@ from typing import Iterable, List, Optional
 
 ROOT = Path(__file__).resolve().parents[1]
 
-INCLUDE_DIRS = ("kmb", "configs", "suites", "docs", "scripts", "tests", "packaging")
+INCLUDE_DIRS = ("kmb", "configs", "suites", "docs", "scripts", "tests", "packaging", ".github")
 INCLUDE_FILES = (
     "README.md", "CHANGELOG.md", "NOTICE", "THIRD_PARTY_NOTICES.md",
     "LICENSE", "pyproject.toml", "setup.py",
