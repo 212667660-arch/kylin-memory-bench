@@ -10,5 +10,4 @@ python -m kmb.cli validate --suite suites/core-zh.yaml
 
 新增案例必须声明六类能力之一，提供可解释 checks，并确保运行证据写入 JSONL。新增 Agent 应实现 `AgentAdapter`，或导出 [`docs/evidence-protocol.md`](docs/evidence-protocol.md) 规定的 JSONL。
 
-许可证和仓库托管策略目前仍待项目负责人确认，确认前请不要在文件头添加未批准的许可证声明。
-`LICENSE-MIT-CANDIDATE.txt` 是非生效候选文本；提交前还应检查 `NOTICE` 和 `THIRD_PARTY_NOTICES.md`，不得把候选文本当作最终授权。
+本项目采用根目录 `LICENSE` 的 MIT 许可证。贡献应遵循同一许可，并保留第三方版权声明；提交前请检查 `NOTICE` 和 `THIRD_PARTY_NOTICES.md`。许可证决定见 `docs/license-decision.md`。

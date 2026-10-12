@@ -1,6 +1,8 @@
 # 忆衡发布冻结清单
 
-状态：**PDF a-d 的代码、样例、可复现材料、CLI/GUI、`.deb` 与 KylinBot/OpenClaw 真实双 Agent 快速对比已在 openKylin 3.0 VM 复核；桌面视频（e）与项目级 LICENSE 仍后置。**
+当前版本的工程复核见 `docs/completion-audit-20261013.md`。本文件中的 release7、旧 SHA-256 和旧自评分为历史冻结记录；2026-10-13 已发现并修复 pip 安装、Debian 离线验收和扩展案例期望序列问题，应使用本轮 release9 及其新 manifest。MIT 已生效，桌面视频仍待完成。
+
+历史状态：PDF a-d 已有 openKylin 验证记录；当前须同时参考上述工程复核。桌面视频（e）待完成，项目级 MIT 许可证已生效。
 
 说明：下文较早 release7 路径为历史归档；最新 openKylin 3.0 VM 复核记录在本轮工作区外的 `/tmp/kmb-verification`，结论摘要见 `docs/requirements-traceability.md`。
 

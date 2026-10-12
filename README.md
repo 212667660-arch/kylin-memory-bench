@@ -4,6 +4,8 @@ KylinMemoryBench 是面向 openKylin 的智能体长期记忆自动化评测 Ben
 
 非视频赛题要求与代码/命令/证据的逐项对应见 [`docs/requirements-traceability.md`](docs/requirements-traceability.md)。
 
+2026-10-13 的当前版本复核与官网/PDF 差异见 [`docs/completion-audit-20261013.md`](docs/completion-audit-20261013.md)。项目自评分不代表赛事官方得分，也不表示全部交付完成；openKylin 桌面双智能体视频及其可访问链接仍须交付。
+
 ## 快速开始
 
 需要 Python 3.9+ 和 PyYAML 6。评审可先用一条命令完成无云凭据验收（说明见 [docs/official-acceptance.md](docs/official-acceptance.md)）：
@@ -220,6 +222,6 @@ python -m kmb.cli run \
 外部 Agent 的 JSONL 证据格式见 [`docs/evidence-protocol.md`](docs/evidence-protocol.md)。
 真实 Agent 信息和待确认字段见 [`docs/agent-candidates.md`](docs/agent-candidates.md)。
 许可证审计见 [`docs/license-audit.md`](docs/license-audit.md)，数据与 Prompt 来源声明见 [`docs/dataset-provenance.md`](docs/dataset-provenance.md)，openKylin 实机执行清单见 [`docs/openkylin-validation-runbook.md`](docs/openkylin-validation-runbook.md)。
-项目级许可证尚待负责人/法务确认，候选方案与落地检查见 [`docs/license-decision.md`](docs/license-decision.md) 和 `LICENSE-MIT-CANDIDATE.txt`；根目录 `NOTICE` 不授予再分发权利，第三方边界见 `THIRD_PARTY_NOTICES.md`。
+项目级许可证已采用根目录 [`LICENSE`](LICENSE) 的 MIT 文本；决策记录见 [`docs/license-decision.md`](docs/license-decision.md)，第三方边界见 `THIRD_PARTY_NOTICES.md`。
 发布版本、哈希、权威运行目录和最终非视频命令见 [`docs/release-freeze.md`](docs/release-freeze.md)。
 历史运行的来源重建命令见 `scripts/enrich_run_provenance.py`；它只读复制证据并生成新报告，不覆盖原始运行目录。
