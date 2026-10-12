@@ -8,6 +8,17 @@ from kmb.models import BenchmarkCase, EvidenceEvent
 
 
 class AgentTests(unittest.TestCase):
+    def test_command_agent_utf8_protocol_does_not_follow_host_encoding(self):
+        import os
+        import sys
+        from unittest.mock import patch
+
+        case = BenchmarkCase.from_dict({"id": "unicode", "capability": "retention", "title": "中文", "turns": [], "checks": []})
+        program = "import json; print(json.dumps({'case_id':'unicode','kind':'assistant_message','data':{'text':'你好'},'step':1},ensure_ascii=False))"
+        with patch.dict(os.environ, {"PYTHONIOENCODING": "cp1252"}):
+            events = CommandAgent("unicode", [sys.executable, "-c", program], env_allowlist=["PYTHONIOENCODING"]).run(case)
+        self.assertEqual(events[0].data["text"], "你好")
+
     def test_reference_agent_emits_memory_and_action_evidence(self):
         case = BenchmarkCase.from_dict({
             "id": "reuse",

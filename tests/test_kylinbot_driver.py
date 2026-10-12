@@ -11,10 +11,20 @@ from scripts.kylinbot_command_agent import (
     diff_memory_rows,
     parse_agent_output,
     run_case,
+    invoke_turn,
 )
 
 
 class KylinBotDriverTests(unittest.TestCase):
+    def test_child_output_is_utf8_under_an_incompatible_host_encoding(self):
+        with tempfile.TemporaryDirectory() as directory:
+            env = dict(os.environ, PYTHONIOENCODING="cp1252")
+            answer = invoke_turn(
+                [sys.executable, "-c", "print('已记住。')"], "ping",
+                Path(directory) / "session.json", 10, env,
+            )
+            self.assertEqual(answer, "已记住。")
+
     def test_script_can_start_when_executed_by_path(self):
         script = Path(__file__).resolve().parents[1] / "scripts" / "kylinbot_command_agent.py"
         completed = subprocess.run(

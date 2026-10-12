@@ -58,15 +58,15 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y python3-yaml
-          KMB_DEB_VERSION=0.2.0+ci1 bash scripts/build_deb.sh "$RUNNER_TEMP/packages"
-          KMB_DEB_VERSION=0.2.0+ci2 bash scripts/build_deb.sh "$RUNNER_TEMP/packages"
+          KMB_DEB_VERSION=0.2.1+ci1 bash scripts/build_deb.sh "$RUNNER_TEMP/packages"
+          KMB_DEB_VERSION=0.2.1+ci2 bash scripts/build_deb.sh "$RUNNER_TEMP/packages"
       - name: Install, upgrade, verify, uninstall and check residues
         run: |
           cd "$RUNNER_TEMP"
-          sudo bash "$GITHUB_WORKSPACE/scripts/install_deb.sh" "$RUNNER_TEMP/packages/kylin-memory-bench_0.2.0+ci1_all.deb"
+          sudo bash "$GITHUB_WORKSPACE/scripts/install_deb.sh" "$RUNNER_TEMP/packages/kylin-memory-bench_0.2.1+ci1_all.deb"
           bash "$GITHUB_WORKSPACE/scripts/verify_deb.sh" "$RUNNER_TEMP/deb-before"
-          sudo bash "$GITHUB_WORKSPACE/scripts/upgrade_deb.sh" "$RUNNER_TEMP/packages/kylin-memory-bench_0.2.0+ci2_all.deb"
-          test "$(dpkg-query -W -f='${Version}' kylin-memory-bench)" = '0.2.0+ci2'
+          sudo bash "$GITHUB_WORKSPACE/scripts/upgrade_deb.sh" "$RUNNER_TEMP/packages/kylin-memory-bench_0.2.1+ci2_all.deb"
+          test "$(dpkg-query -W -f='${Version}' kylin-memory-bench)" = '0.2.1+ci2'
           bash "$GITHUB_WORKSPACE/scripts/verify_deb.sh" "$RUNNER_TEMP/deb-after"
           kmb official-acceptance --mode offline --out "$RUNNER_TEMP/deb-acceptance"
           sudo bash "$GITHUB_WORKSPACE/scripts/uninstall_deb.sh"

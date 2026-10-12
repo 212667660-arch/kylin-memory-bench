@@ -121,6 +121,8 @@ def invoke_turn(command: List[str], message: str, session_file: Path, timeout: f
     if config_dir and "--config-dir" not in command:
         command = command + ["--config-dir", str(Path(config_dir).expanduser() / ".kylinbot")]
     creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if os.name == "nt" else 0
+    process_env = dict(env)
+    process_env["PYTHONIOENCODING"] = "utf-8"
     process = subprocess.Popen(
         command + ["agent", "--message", message, "--session-state-file", str(session_file)],
         stdout=subprocess.PIPE,
@@ -128,7 +130,7 @@ def invoke_turn(command: List[str], message: str, session_file: Path, timeout: f
         text=True,
         encoding="utf-8",
         errors="replace",
-        env=dict(env),
+        env=process_env,
         start_new_session=os.name != "nt",
         creationflags=creationflags,
     )

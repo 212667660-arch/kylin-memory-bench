@@ -185,6 +185,7 @@ class CommandAgent(AgentAdapter):
         for key in self.env_allowlist:
             if key in os.environ:
                 inherited[key] = os.environ[key]
+        inherited["PYTHONIOENCODING"] = "utf-8"
         return inherited
 
     def run(self, case: BenchmarkCase) -> List[EvidenceEvent]:
