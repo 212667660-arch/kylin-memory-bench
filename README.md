@@ -6,6 +6,8 @@ KylinMemoryBench 是面向 openKylin 的智能体长期记忆自动化评测 Ben
 
 2026-10-13 的当前版本复核与官网/PDF 差异见 [`docs/completion-audit-20261013.md`](docs/completion-audit-20261013.md)。项目自评分不代表赛事官方得分，也不表示全部交付完成；openKylin 桌面双智能体视频及其可访问链接仍须交付。
 
+当前补丁版本为 0.2.1：修复安装、验收和非 UTF-8 Windows 中文子进程输出问题，并加入跨平台单测、干净 wheel 安装及 Debian 生命周期 CI。openKylin 隔离 dpkg 矩阵和最终产物状态见上述审计。仓库当前私有，提交时须确保评委获得代码访问权限；正式提交邮件草稿见 [`docs/submission-email-draft.md`](docs/submission-email-draft.md)。
+
 ## 快速开始
 
 需要 Python 3.9+ 和 PyYAML 6。评审可先用一条命令完成无云凭据验收（说明见 [docs/official-acceptance.md](docs/official-acceptance.md)）：

@@ -74,3 +74,11 @@
 
 1. 四 Agent 矩阵：KylinBot/OpenClaw/Hermes 已有真实分数；KylinAgent 已解锁驱动（`scripts/kylinagent_driver.py`，hermes-agent 引擎+memory_recall 证据提取）但批次受 openKylin 网关挂死 bug 阻断（`runs/kylinagent-real-20261005/`，官方修复后重跑即可）
 2. LICENSE 与 3–5 分钟桌面视频
+# 2026-10-13 非视频工程收口
+
+- 0.2.1：Windows/openKylin 158 项测试通过；跨平台 wheel 和 Debian 生命周期 CI 全绿。
+- openKylin 隔离真实 dpkg：release9→0.2.1 安装/升级/完整验收/卸载/残留检查九步全 0；主系统包数据库未变。
+- 修复同步 GitHub main；最终源码、wheel、`.deb`、PDF、样例证据与哈希见 `dist/submission-nonvideo-20261013/`。
+- 用户明确排除视频；仓库实际私有，公开/评委授权方式待用户确认；正式提交还缺参赛身份与报名确认邮件指引，邮件草稿已备。
+- 详细当前判断见 `docs/completion-audit-20261013.md`。下文为此前阶段记录。
+
