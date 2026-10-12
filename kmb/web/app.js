@@ -428,7 +428,8 @@
     if (view === 'new') {
       const primary = configByPath(state.formPrimary || defaultConfigPaths()[0]);
       const comparison = configByPath(state.formComparison || defaultConfigPaths()[1]);
-      return { title: '评测配置', body: header('CONFIGURATION', '评测配置') + '<div class="rail-task-name">双 Agent 对比工作区</div>' + facts([['主 Agent', primary ? primary.name : '未选择'], ['对比 Agent', comparison ? comparison.name : '未选择'], ['测试套件', suite ? String(suite).split(/[\\/]/).pop() : '未选择'], ['Seed', fmt(state.params.seed, '未记录')], ['重试', fmt(state.params.retries, '未记录')], ['超时', fmt(state.params.timeout, '未记录')], ['评分器', fmt(state.params.scorer_version, '未记录')]]) + '</section>' };
+      const selectedSuite = state.formSuite || suite;
+      return { title: '评测配置', body: header('CONFIGURATION', '评测配置') + '<div class="rail-task-name">双 Agent 对比工作区</div>' + facts([['主 Agent', primary ? primary.name : '未选择'], ['对比 Agent', comparison ? comparison.name : '未选择'], ['测试套件', selectedSuite ? String(selectedSuite).split(/[\\/]/).pop() : '未选择'], ['Seed', fmt(state.params.seed, '未记录')], ['重试', fmt(state.params.retries, '未记录')], ['超时', fmt(state.params.timeout, '未记录')], ['评分器', fmt(state.params.scorer_version, '未记录')]]) + '</section>' };
     }
     if (view === 'tasks') {
       return { title: '任务进度', body: header('RUN', '当前任务') + '<div class="rail-section-title"><span>状态</span><span class="status-pill ' + (active ? 'partial' : stateName === 'Completed' ? 'completed' : stateName === 'Failed' ? 'failed' : '') + '">' + esc(runStateLabel(stateName)) + '</span></div><div class="rail-task-name">' + esc(active ? ((state.job.progress && state.job.progress.phase) || '智能体正在工作…') : '没有正在执行的任务') + '</div>' + (progress != null ? '<div class="rail-progress"><div class="progress-track"><div class="progress-value" style="width:' + progress + '%"></div></div><div class="rail-meta"><span>进度</span><strong>' + progress + '%</strong></div></div>' : '') + facts([['当前案例', active && state.job.progress ? fmt(state.job.progress.current_case, '准备中') : '未观测'], ['任务 ID', state.job && state.job.id ? state.job.id : '未开始'], ['开始时间', state.job && state.job.created_at ? formatCheckedAt(state.job.created_at) : '未记录']]) + '</section>' + header('LIVE EVENTS', '事件') + '<div class="rail-log">' + (active ? '<div class="rail-log-line"><span class="log-dot live"></span><span>' + esc((state.job.progress && state.job.progress.phase) || '后端正在执行') + '</span></div>' : '<div class="rail-empty">暂无活动事件。进入任务详情查看已归档日志。</div>') + '</div></section>' };
@@ -702,6 +703,7 @@
     const primary = state.formPrimary || defaults[0] || "";
     const comparison = state.formComparison || defaults[1] || "";
     const suite = state.formSuite || (state.suites.find((item) => /innovation/i.test(item.path) && item.status === "valid") || state.suites.find((item) => item.status === "valid") || {}).path || "";
+    state.formSuite = suite;
     const primaryConfig = configByPath(primary);
     const comparisonConfig = configByPath(comparison);
     if (!state.baselineParams) state.baselineParams = Object.assign({}, state.params);

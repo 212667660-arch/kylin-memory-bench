@@ -25,6 +25,9 @@ class OfficialBundleTests(unittest.TestCase):
             self.assertFalse(bundle.contains("runs"))
             self.assertFalse(bundle.contains(".tmp-github-research"))
             self.assertTrue(bundle.contains("docs/official-acceptance.md"))
+            self.assertTrue(bundle.contains("CONTRIBUTING.md"))
+            self.assertTrue(bundle.contains("research/openkylin-agent-ecosystem/REPORT.md"))
+            self.assertNotIn(b"\r\n", (bundle.root / "scripts/build_deb.sh").read_bytes())
             self.assertEqual(audit_bundle(bundle.root, strict=True)["status"], "pass")
 
     def test_audit_rejects_concrete_secret(self):

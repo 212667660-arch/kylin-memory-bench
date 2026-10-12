@@ -19,6 +19,7 @@ INCLUDE_DIRS = ("kmb", "configs", "suites", "docs", "scripts", "tests", "packagi
 INCLUDE_FILES = (
     "README.md", "CHANGELOG.md", "NOTICE", "THIRD_PARTY_NOTICES.md",
     "LICENSE", "pyproject.toml", "setup.py",
+    "CONTRIBUTING.md", "research/openkylin-agent-ecosystem/REPORT.md",
 )
 FORBIDDEN_NAMES = {
     ".git", ".tmp-github-research", ".venv", ".venv-kmb-system", "runs",
@@ -70,8 +71,9 @@ def _sanitize_text_files(root: Path) -> None:
         updated = content
         for pattern, replacement in patterns:
             updated = pattern.sub(replacement, updated)
-        if updated != content:
-            path.write_text(updated, encoding="utf-8")
+        if updated != content or (path.suffix == ".sh" and b"\r\n" in path.read_bytes()):
+            with path.open("w", encoding="utf-8", newline="\n") as stream:
+                stream.write(updated)
 
 
 def build_bundle(out: Path | str, source_root: Path | str = ROOT) -> BundleResult:
@@ -87,6 +89,7 @@ def build_bundle(out: Path | str, source_root: Path | str = ROOT) -> BundleResul
     for name in INCLUDE_FILES:
         path = source / name
         if path.is_file():
+            (destination / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(path, destination / name)
     _sanitize_text_files(destination)
     manifest_files = []

@@ -8,6 +8,18 @@ from kmb.scoring import score_case
 
 
 class ScoringTests(unittest.TestCase):
+    def test_export_path_update_then_reuse_accepts_correct_state_history(self):
+        from kmb.agents import ReferenceAgent
+
+        case = next(case for case in load_suite("suites/adversarial/extended.yaml")
+                    if case.id == "cross-task-002-export-new")
+        events = ReferenceAgent().run(case)
+        self.assertEqual(score_case(case, events).score, 1.0)
+        for event in events:
+            if event.kind == "action":
+                event.data["path"] = "/tmp/kmb-export-old"
+        self.assertLess(score_case(case, events).score, 1.0)
+
     def test_update_requires_new_value_and_rejects_old_value(self):
         case = BenchmarkCase.from_dict({
             "id": "u1",

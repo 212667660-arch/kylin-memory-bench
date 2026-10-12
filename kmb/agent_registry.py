@@ -162,7 +162,8 @@ def discover_agents(root: Optional[Path] = None, path_lookup: Optional[PathLooku
     # The runtime is installed, but the current adapter has no structured
     # memory API and must not claim that a GUI/service process is runnable.
     kylinagent.runnable = False
-    kylinagent.reason = "已安装，但当前只有 GUI/服务级观测，不能自动生成结构化记忆证据"
+    if kylinagent.installed:
+        kylinagent.reason = "已安装，但当前只有 GUI/服务级观测，不能自动生成结构化记忆证据"
     return [kylinbot, hermes, openclaw, kylinagent]
 
 

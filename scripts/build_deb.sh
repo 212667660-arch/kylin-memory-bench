@@ -35,7 +35,9 @@ for path in kmb configs suites docs pyproject.toml setup.py; do
   cp -a "$ROOT/$path" "$PAYLOAD/"
 done
 mkdir -p "$PAYLOAD/scripts"
+install -m 0644 "$ROOT/scripts/__init__.py" "$PAYLOAD/scripts/__init__.py"
 install -m 0755 "$ROOT/scripts/verify_run.py" "$PAYLOAD/scripts/verify_run.py"
+install -m 0755 "$ROOT/scripts/openkylin_ecosystem_agent.py" "$PAYLOAD/scripts/openkylin_ecosystem_agent.py"
 install -m 0755 "$ROOT/scripts/rescore_run.py" "$PAYLOAD/scripts/rescore_run.py"
 install -m 0755 "$ROOT/scripts/aggregate_repeats.py" "$PAYLOAD/scripts/aggregate_repeats.py"
 install -m 0755 "$ROOT/scripts/aggregate_stability.py" "$PAYLOAD/scripts/aggregate_stability.py"

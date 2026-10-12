@@ -604,6 +604,8 @@ class WorkbenchState:
         for path in sorted(self.suite_root.rglob("*.y*ml")):
             if not path.is_file() or path.is_symlink():
                 continue
+            if path.relative_to(self.suite_root).parts[0] == "coverage":
+                continue
             relative = _relative(path, self.root)
             try:
                 cases = load_suite(str(path))

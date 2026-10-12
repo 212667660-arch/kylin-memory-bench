@@ -13,8 +13,8 @@ suites:
   cases: 18
 - path: suites/adversarial/extended.yaml
   name: adversarial-extended
-  version: 1
-  sha256: 7312bc9e8d0d148f9c8101983ddb8bc7e49d21c5710bf05506f4986ca7859e5d
+  version: 2
+  sha256: 4c92859e3245ae004fe427c0bae6f4a6ebe94bf1828e0ef207ab1e44ede92591
   cases: 19
 - path: suites/adversarial/multilingual-en.yaml
   name: adversarial-multilingual-en
@@ -416,7 +416,7 @@ cases:
   - answer_not_contains
 - id: conflict-001-meeting
   suite: suites/adversarial/extended.yaml
-  version: 1
+  version: 2
   capability: dynamic_update
   language: mixed
   tags:
@@ -434,7 +434,7 @@ cases:
   - memory_value
 - id: conflict-002-owner
   suite: suites/adversarial/extended.yaml
-  version: 1
+  version: 2
   capability: dynamic_update
   language: mixed
   tags:
@@ -452,7 +452,7 @@ cases:
   - memory_value
 - id: conflict-003-tier
   suite: suites/adversarial/extended.yaml
-  version: 1
+  version: 2
   capability: dynamic_update
   language: mixed
   tags:
@@ -470,7 +470,7 @@ cases:
   - memory_value
 - id: similar-ext-001-db
   suite: suites/adversarial/extended.yaml
-  version: 1
+  version: 2
   capability: similar_distinction
   language: mixed
   tags:
@@ -487,7 +487,7 @@ cases:
   - memory_recall
 - id: similar-ext-002-region
   suite: suites/adversarial/extended.yaml
-  version: 1
+  version: 2
   capability: similar_distinction
   language: mixed
   tags:
@@ -503,7 +503,7 @@ cases:
   - memory_recall
 - id: similar-ext-003-build
   suite: suites/adversarial/extended.yaml
-  version: 1
+  version: 2
   capability: similar_distinction
   language: mixed
   tags:
@@ -520,7 +520,7 @@ cases:
   - memory_recall
 - id: noise-ext-001-chatter
   suite: suites/adversarial/extended.yaml
-  version: 1
+  version: 2
   capability: retention
   language: mixed
   tags:
@@ -536,7 +536,7 @@ cases:
   - memory_recall
 - id: noise-ext-002-distractor
   suite: suites/adversarial/extended.yaml
-  version: 1
+  version: 2
   capability: memory_recall
   language: mixed
   tags:
@@ -552,7 +552,7 @@ cases:
   - memory_recall
 - id: noise-ext-003-multi-noise
   suite: suites/adversarial/extended.yaml
-  version: 1
+  version: 2
   capability: retention
   language: mixed
   tags:
@@ -568,7 +568,7 @@ cases:
   - memory_recall
 - id: sensitive-ext-001-card
   suite: suites/adversarial/extended.yaml
-  version: 1
+  version: 2
   capability: boundary
   language: mixed
   tags:
@@ -585,7 +585,7 @@ cases:
   - sensitive_not_persisted
 - id: sensitive-ext-002-email
   suite: suites/adversarial/extended.yaml
-  version: 1
+  version: 2
   capability: boundary
   language: mixed
   tags:
@@ -602,7 +602,7 @@ cases:
   - sensitive_not_persisted
 - id: sensitive-ext-003-session
   suite: suites/adversarial/extended.yaml
-  version: 1
+  version: 2
   capability: boundary
   language: mixed
   tags:
@@ -619,7 +619,7 @@ cases:
   - sensitive_not_persisted
 - id: cross-task-001-artifact
   suite: suites/adversarial/extended.yaml
-  version: 1
+  version: 2
   capability: task_reuse
   language: mixed
   tags:
@@ -636,7 +636,7 @@ cases:
   - action_tool
 - id: cross-task-002-export-new
   suite: suites/adversarial/extended.yaml
-  version: 1
+  version: 2
   capability: task_reuse
   language: mixed
   tags:
@@ -655,7 +655,7 @@ cases:
   - state_sequence
 - id: cross-task-003-logs
   suite: suites/adversarial/extended.yaml
-  version: 1
+  version: 2
   capability: task_reuse
   language: mixed
   tags:
@@ -672,7 +672,7 @@ cases:
   - action_tool
 - id: conflict-104-brightness
   suite: suites/adversarial/extended.yaml
-  version: 1
+  version: 2
   capability: dynamic_update
   language: mixed
   tags:
@@ -690,7 +690,7 @@ cases:
   - memory_value
 - id: noise-ext-004-bilingual-feed
   suite: suites/adversarial/extended.yaml
-  version: 1
+  version: 2
   capability: memory_recall
   language: mixed
   tags:
@@ -707,7 +707,7 @@ cases:
   - memory_recall
 - id: sensitive-ext-004-iban
   suite: suites/adversarial/extended.yaml
-  version: 1
+  version: 2
   capability: boundary
   language: mixed
   tags:
@@ -724,7 +724,7 @@ cases:
   - sensitive_not_persisted
 - id: boundary-104-risk-pipeline
   suite: suites/adversarial/extended.yaml
-  version: 1
+  version: 2
   capability: boundary
   language: mixed
   tags:

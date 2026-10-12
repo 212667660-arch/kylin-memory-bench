@@ -16,6 +16,11 @@ from typing import Any, Dict, Iterable, List, Optional
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from kmb.paths import runtime_root
+
+ROOT = runtime_root()
 OFFLINE_PAIRS = (
     ("core-compare", "suites/core-zh.yaml", "offline-demo-core", "reference", "kylinbot-process"),
     ("expanded-compare", "suites/core-zh-expanded.yaml", "offline-demo-expanded", "reference", "kylinbot-process"),
@@ -60,11 +65,17 @@ def _run(command: List[str], cwd: Path, log_path: Path) -> Dict[str, Any]:
 
 def _strict_verify(out: Path, agent: str, step: int) -> Dict[str, Any]:
     run_dir = out / agent
-    return _run(
+    result = _run(
         [sys.executable, "scripts/verify_run.py", str(run_dir), "--strict"],
         ROOT,
         out.parent / "logs" / (out.name + "-%s-verify-%d.log" % (agent, step)),
     )
+    if result["exit_code"] == 0:
+        payload = json.loads((run_dir / "result.json").read_text(encoding="utf-8"))
+        if payload.get("score_valid") is not True:
+            result["exit_code"] = 3
+            result["reason"] = "structured evidence is valid, but the Agent run has an invalid score"
+    return result
 
 
 def _scan_secrets(root: Path) -> bool:

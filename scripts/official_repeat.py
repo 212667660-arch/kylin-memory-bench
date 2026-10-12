@@ -22,6 +22,9 @@ if str(ROOT) not in sys.path:
 
 from scripts.aggregate_repeats import aggregate_repeat_runs
 from scripts.verify_run import verify_run
+from kmb.paths import runtime_root
+
+ROOT = runtime_root()
 
 AGENT_DIRS = {"kylinbot": ".kylinbot", "openclaw": ".openclaw", "hermes": ".hermes"}
 IGNORED_DIRS = {"cache", "caches", "logs", "node_modules", "__pycache__", "tmp", "temp", ".cache"}
@@ -305,7 +308,8 @@ def run_official_repeat(
     suite_path = Path(suite)
     if not suite_path.is_absolute():
         suite_path = ROOT / suite_path
-    scorer_path = ROOT / "kmb/scoring.py"
+    from kmb import scoring
+    scorer_path = Path(scoring.__file__)
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "status": status,

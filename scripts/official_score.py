@@ -52,7 +52,7 @@ def calculate_official_score(evidence: Dict[str, Any], root: Optional[Path | str
     if repeat.is_file():
         repeat_payload = json.loads(repeat.read_text(encoding="utf-8"))
         aggregates = repeat_payload.get("aggregates") or {}
-        all_valid = repeat_payload.get("status") == "completed" and all(
+        all_valid = repeat_payload.get("status") == "completed" and len(aggregates) == 2 and all(
             item.get("score_valid_rate_percent") == 100.0 and item.get("batch_count", 0) > 1
             for item in aggregates.values()
         )

@@ -38,7 +38,19 @@ class OfficialScoreTests(unittest.TestCase):
                 root=root,
             )
             self.assertEqual(score["items"]["PDF-18"]["points"], 10)
-            self.assertIn(str(manifest), score["items"]["PDF-18"]["evidence"])
+            self.assertIn(str(manifest.resolve()), score["items"]["PDF-18"]["evidence"])
+
+    def test_empty_or_single_agent_repeat_cannot_receive_full_stability_points(self):
+        for aggregates in ({}, {"kylinbot": {"batch_count": 2, "score_valid_rate_percent": 100.0}}):
+            with self.subTest(aggregates=aggregates), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                repeat = root / "official-repeat"
+                repeat.mkdir()
+                (repeat / "repeat-summary.json").write_text(json.dumps({
+                    "status": "completed", "aggregates": aggregates,
+                }), encoding="utf-8")
+                score = calculate_official_score({"acceptance_dir": str(root), "checks": []}, root=root)
+                self.assertEqual(score["items"]["PDF-16"]["status"], "partial")
 
 
     def test_license_limitation_reflects_root_license(self):
