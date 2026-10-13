@@ -1,6 +1,8 @@
 # openKylin 实机/虚拟机验证执行清单
 
-> 最新实际记录：2026-09-08 已在 openKylin 2.0 SP2 x86_64 VM 完成源码安装、环境门禁、真实 Grok/DeepSeek 双 Agent 核心/对抗运行、证据/评分/报告和 `.deb` 第六批完整生命周期。Windows 10 AMD64 的历史预检仍不能替代该 VM 记录。后续仅需在发布前按本清单复核目标镜像版本；不能把一次 VM 记录外推到所有 openKylin 版本。
+当前目标和实机是 **openKylin 3.0（huanghe）**，原操作系统版本保持不动。本轮 2026-10-13 的实际证据见 [完成度审计](completion-audit-20261013.md) 和 [当前环境说明](current-environment.md)。
+
+> 历史实际记录：2026-09-08 曾在 openKylin 2.0 SP2 x86_64 VM 完成源码安装、环境门禁、真实 Grok/DeepSeek 双 Agent 核心/对抗运行、证据/评分/报告和 `.deb` 第六批完整生命周期。下文对应旧环境的版本、命令和结果保留为历史；不能把一次 VM 记录外推到所有 openKylin 版本。
 
 ## 生命周期扩展执行边界
 

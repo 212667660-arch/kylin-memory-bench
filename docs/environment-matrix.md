@@ -1,8 +1,8 @@
 # 环境验证矩阵
 
-本文件保留 2026-09-02 Windows 本地预检模板；该历史记录不构成 openKylin 结论。当前 openKylin VM 的可核验证据见文末“当前 VM 验证附录”和 `docs/openkylin-validation-runbook.md`，不得再把旧模板段落当作最新状态。
+当前实机为 **openKylin 3.0（huanghe）**，原系统版本保持不动；见 [当前环境说明](current-environment.md) 和 [2026-10-13 审计](completion-audit-20261013.md)。本文件下文保留 2026-09-02 Windows 预检及 2026-09-08 openKylin 2.0 SP2 历史记录，不能将它们当作当前系统状态。
 
-## 当前本地预检记录
+## 历史本地预检记录（2026-09-02）
 
 本轮实际预检主机为 Windows 10（AMD64），Python 3.9.5，PyYAML 6.0.3。CLI 导入和核心套件严格校验均通过；`/etc/os-release`、`dpkg-deb` 不可用，故本记录不构成 openKylin 验证。
 
@@ -33,7 +33,7 @@ python3 scripts/env_probe.py --require-openkylin --json
 
 本轮进一步探测：工作区所在 E 盘剩余约 85.31 GB；WSL 仅发现已停止的 `docker-desktop` 发行版；Docker CLI 存在但 daemon 未运行；QEMU、VirtualBox、VMware、Podman 均未发现；Hyper-V PowerShell cmdlet 不可用。未发现 openKylin 实机、虚拟机、官方镜像或可运行容器，因此本轮不执行虚拟机安装，也不把 Windows 结果替代为 openKylin 结果。项目虚拟环境已使用 `E:\上海开源软件应用创新大赛\.venv-kmb-system`，PyYAML 6.0.3 位于该虚拟环境自己的 `site-packages`；pip 临时目录和缓存固定在 E 盘 `.tmp-pip`/`.pip-cache`。Windows 可复现安装脚本为 `scripts/install_local.ps1`，Linux/openKylin 脚本为 `scripts/install_local.sh`。正式验收脚本 `scripts/run_acceptance.sh` 会强制 `--require-openkylin`，并拒绝 `deterministic` 演示 Agent。
 
-## 当前 VM 验证附录（2026-09-08）
+## 历史 VM 验证附录（2026-09-08）
 
 | 项目 | 实际值 | 证据 |
 |---|---|---|

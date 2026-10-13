@@ -56,10 +56,12 @@
 
 ## 6. openKylin 适配与复现
 
+当前实机为 **openKylin 3.0（huanghe）**，使用原有系统开展验收，系统版本保持不动。项目软件版本为 0.2.1；当前结果见 [本轮审计](completion-audit-20261013.md) 和 [环境说明](current-environment.md)。以下 2026 年 9 月 Grok/DeepSeek、2.0 SP2 与 release7 结果属于历史记录。
+
 在 Debian 系 openKylin 的 Python 3.9+ 环境中执行：安装 Python、PyYAML，复制仓库后运行 README 中的命令或 `bash scripts/run_demo.sh`。历史批次已在 openKylin VM 完成源码安装、CLI、真实 Grok/DeepSeek 双 Agent 运行、证据导出、评分、报告和卸载验证；`.deb` 第六批已在同一 VM 完成系统级安装、升级、验证、卸载和残留检查。Grok 和 DeepSeek 的真实 no-memory 基线均已完成 5 批统计，汇总位于 `runs/openkylin-validation-20260908/stability/`；两组结果均存在云 API 行为波动，不能宣称绝对稳定。系统级生命周期结论仅适用于已记录的 openKylin VM/KARE 版本。
 
 真实环境的安装、双 Agent、证据导出、校验和卸载命令见 `docs/openkylin-validation-runbook.md`。当前 Windows 预检结果不能替代 openKylin 验证。
 
-## 7. 当前决策与待确认事项
+## 7. 历史决策与待确认事项（2026-09）
 
-openKylin 2.0 SP2 x86_64 VM、Grok 4.6、DeepSeek v4 flash、证据导出方式和四套件已通过实际运行记录确认；当前真实 API 仍未导出原生记忆状态，因此结果只能表述为“统一包装层下的系统级长期记忆行为评测”。项目级许可证、云 API 赛事使用/展示条款、模型输出留存政策和后续数据/Prompt 再分发范围仍需项目负责人/法务书面确认。确认后只需补充发布声明或独立适配器，不改变核心评分协议。
+当时的 openKylin 2.0 SP2 x86_64 VM、Grok 4.6、DeepSeek v4 flash、证据导出方式和四套件已通过实际运行记录确认；真实 API 未导出原生记忆状态，因此结果只能表述为“统一包装层下的系统级长期记忆行为评测”。当时列出的许可证与第三方条款事项保留为历史；当前项目级 MIT 许可证已生效，实际第三方使用边界见 `THIRD_PARTY_NOTICES.md`。这些历史记录不定义当前 3.0 系统的版本或配置。

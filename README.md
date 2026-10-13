@@ -6,6 +6,8 @@
 
 KylinMemoryBench 是面向 openKylin 的智能体长期记忆自动化评测 Benchmark。它不是聊天机器人或 RAG 产品，而是通过统一适配器收集真实运行事件，并以可审计的确定性规则评估六类能力：长期保持、记忆调用、动态更新、相近区分、边界识别、任务复用。
 
+**当前验证系统：openKylin 3.0（huanghe）；项目软件版本：KylinMemoryBench 0.2.1。** 使用已有系统开展项目验收，操作系统版本保持原状。文档中的 openKylin 2.0 SP2 为此前测试环境的历史记录，当前环境以 [版本说明](docs/current-environment.md) 为准。
+
 ## 下载与评审入口
 
 | 入口 | 内容 |

@@ -1,8 +1,10 @@
 # 真实 Agent 接入信息清单
 
-## 当前盘点结论
+当前系统为 **openKylin 3.0（huanghe）**，真实 KylinBot/OpenClaw 两批验证见 [本轮审计](completion-audit-20261013.md)。本文件下文的 openKylin 2.0 SP2 和 Grok/DeepSeek API 验证是 2026 年 9 月历史记录，当前系统版本见 [环境说明](current-environment.md)。
 
-当前已确认两款真实模型后端：Grok 4.6（NewAPI OpenAI 兼容端点）与 DeepSeek v4 flash（DeepSeek OpenAI 兼容端点）。两者均在 openKylin 2.0 SP2 VM 通过用户级、权限为 600 的凭据文件完成真实 API 调用、核心/对抗套件和严格证据校验；配置分别为 `configs/agent-grok*.yaml` 与 `configs/agent-deepseek*.yaml`。历史探测记录和早期豆包候选仍保留在下文，不能覆盖本节当前状态。
+## 历史盘点结论（2026-09）
+
+当时已确认两款真实模型后端：Grok 4.6（NewAPI OpenAI 兼容端点）与 DeepSeek v4 flash（DeepSeek OpenAI 兼容端点）。两者均在 openKylin 2.0 SP2 VM 通过用户级、权限为 600 的凭据文件完成真实 API 调用、核心/对抗套件和严格证据校验；配置分别为 `configs/agent-grok*.yaml` 与 `configs/agent-deepseek*.yaml`。历史探测记录和早期豆包候选仍保留在下文，不能覆盖本轮 3.0 验证状态。
 
 两款 API 都没有导出原生 memory_write/memory_recall 状态。正式结果应分为纯 HTTP 可观察轨道、透明 wrapper 系统级轨道和 no-memory 基线轨道；原生记忆事件均为 0。四轨当前评分和证据路径见 `runs/openkylin-validation-20260906/final-event-report.md`。
 
