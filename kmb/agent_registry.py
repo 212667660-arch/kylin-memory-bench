@@ -91,15 +91,17 @@ def _profile(
     )
 
 
-def discover_agents(root: Optional[Path] = None, path_lookup: Optional[PathLookup] = None) -> List[AgentProfile]:
+def discover_agents(root: Optional[Path] = None, path_lookup: Optional[PathLookup] = None, home: Optional[Path] = None) -> List[AgentProfile]:
     """Return safe metadata for the four supported openKylin Agents.
 
     ``root`` is accepted for callers that already resolve a workspace; host
     Agent data always comes from the current user's home directory. Tests use
-    ``KMB_AGENT_HOME`` to point discovery at an isolated fixture tree.
+    ``KMB_AGENT_HOME`` to point discovery at an isolated fixture tree. An explicit
+    ``home`` lets the workbench inspect host installation separately from the
+    selected evaluation HOME without changing the process environment.
     """
     del root  # reserved for future workspace profile lookup
-    home = _home()
+    home = Path(home).expanduser() if home is not None else _home()
     lookup = path_lookup or shutil.which
 
     kylinbot = _profile(

@@ -33,6 +33,7 @@
     selectedCase: null,
     caseDetail: null,
     agentDetailPath: null,
+    nativeAgentDetailId: null,
     providerDetail: null,
     savedAt: null,
     moreOpen: false,
@@ -316,13 +317,13 @@
     if (!chip || !state.system) return;
     const env = state.system.openkylin || {};
     const credentials = state.system.credentials || {};
-    const secure = credentials.status === "secure";
+    const secure = Boolean(credentials.api_ready);
     const ready = secure || credentials.status === "absent";
     const envLabel = env.detected ? (env.distribution || "openKylin") : "本地";
-    const credLabel = secure ? "凭据已加载" : credentials.status === "absent" ? "无云凭据" : "凭据需检查";
+    const credLabel = secure ? "工作台 API 凭据已加载" : credentials.status === "absent" ? "工作台 API 未配置凭据" : "工作台 API 凭据需检查";
     chip.className = "status-chip " + (secure ? "ok" : ready ? "limited" : "blocked") + (env.detected ? " openkylin" : "");
     if (chipText) chipText.textContent = envLabel;
-    chip.title = envLabel + " · " + credLabel + (env.detected ? "" : " · 非 openKylin 环境，不能替代 VM 验证") + " · 页面不显示密钥";
+    chip.title = envLabel + " · " + credLabel + (env.detected ? "" : " · 非 openKylin 环境，不能替代 VM 验证") + " · 独立智能体使用自身配置 · 页面不显示密钥";
   }
 
   function updateRefreshState() {
@@ -339,7 +340,7 @@
     tasks: { title: "评测任务", subtitle: "当前队列与运行状态" },
     history: { title: "运行历史", subtitle: "本地结果目录中的真实运行" },
     results: { title: "结果中心", subtitle: "结果、对比、案例与证据" },
-    agents: { title: "智能体", subtitle: "可用配置与连接状态" },
+    agents: { title: "智能体", subtitle: "本机安装、评测就绪与最近运行状态" },
     configs: { title: "API / 模型", subtitle: "供应商、接口与凭据状态" },
     settings: { title: "系统设置", subtitle: "环境与复现信息" },
   };
@@ -445,8 +446,10 @@
       return { title: state.resultTab === 'cases' ? '案例详情' : state.resultTab === 'evidence' ? '证据上下文' : state.resultTab === 'trace' ? '记忆轨迹' : state.resultTab === 'logs' ? '运行日志' : '对比上下文', body: header('COMPARE', '调查上下文') + '<div class="rail-task-name">' + esc(first && second ? displayAgentName(first.agent || '主 Agent') + ' 对比 ' + displayAgentName(second.agent || '对比 Agent') : '等待双智能体结果') + '</div>' + facts([['运行 ID', runId], ['套件', displaySuiteName(suite)], ['能力维度', '6'], ['当前案例', state.selectedCase || '未选择'], ['证据事件', eventCount ? String(eventCount) : '未记录']]) + '</section>' };
     }
     if (view === 'agents') {
+      const native = state.agents.find((agent) => agent.id === state.nativeAgentDetailId);
+      if (native) return { title: '智能体详情', body: header('AGENT REGISTRY', '智能体详情') + '<div class="rail-task-name">' + esc(native.display_name || displayAgentName(native.id)) + '</div>' + facts([['本机安装', native.installed ? '已安装' : '未安装'], ['评测状态', native.runnable ? '命令与记忆存储就绪' : native.readiness === 'manual' ? '需手动观测' : '当前目录未就绪'], ['凭据来源', credentialLabel(native)], ['评测目录', native.execution_scope === 'isolated' ? '独立副本' : '当前用户目录'], ['最近运行', nativeRuntimeLabel(native)]]) + '</section>' };
       const config = configByPath(state.agentDetailPath);
-      return { title: '智能体详情', body: header('AGENT REGISTRY', '智能体详情') + '<div class="rail-task-name">' + esc(config ? displayAgentName(config.name) : '选择一个智能体') + '</div>' + facts(config ? [['服务商', providerLabel(config)], ['模型', config.model || config.type || '未记录'], ['记忆模式', profileMode(config)], ['凭据', credentialLabel(config)]] : [['可用智能体', String(state.configs.length)], ['参与评测', '从列表选择']]) + '</section>' };
+      return { title: '智能体详情', body: header('AGENT REGISTRY', '智能体详情') + '<div class="rail-task-name">' + esc(config ? displayAgentName(config.name) : '选择一个智能体') + '</div>' + facts(config ? [['服务商', providerLabel(config)], ['模型', config.model || config.type || '未记录'], ['记忆模式', profileMode(config)], ['凭据', credentialLabel(config)]] : [['本机已安装', String(state.agents.filter((agent) => agent.installed).length)], ['可自动评测', String(state.agents.filter((agent) => agent.runnable).length)], ['评测方案与示例', String(state.configs.length)], ['参与评测', '勾选两款本机智能体']]) + '</section>' };
     }
     if (view === 'configs') {
       const config = configByPath(state.providerDetail);
@@ -471,7 +474,7 @@
     const bar = $("#status-bar");
     if (!bar) return;
     const credentials = (state.system || {}).credentials || {};
-    const serviceText = credentials.status === "secure" ? "凭据安全" : credentials.status === "absent" ? "无云凭据" : "凭据需检查";
+    const serviceText = credentials.api_ready ? "工作台 API 凭据已加载" : "工作台 API 未配置凭据";
     const jobState = runState(state.job, currentRunSummary());
     bar.innerHTML = '<span class="status-item"><span class="status-dot"></span>本地</span>'
       + '<span class="status-item">' + escapeHtml(serviceText) + '</span>'
@@ -541,8 +544,15 @@
     if (["deterministic", "replay", "memory_disabled", "http"].includes(type)) return "control";
     return "A";
   }
-  function needsLlm(config) { return Boolean(config && ["memory_tool", "http"].includes(String(config.type))); }
-  const credentialLabel = (config) => !config ? "未检测到凭据" : config.credential === "configured" ? "凭据已加载" : config.credential === "not_required" ? "无需凭据" : "未检测到凭据";
+  function needsLlm(config) { return Boolean(config && (typeof config.requires_api === "boolean" ? config.requires_api : ["memory_tool", "http"].includes(String(config.type)))); }
+  const credentialLabel = (config) => !config ? "未配置 API 凭据" : config.credential === "configured" ? "凭据已加载" : config.credential === "not_required" ? "无需云凭据" : config.credential === "agent_managed" ? "智能体自行管理" : "未配置 API 凭据";
+  function credentialReady(config) { return Boolean(config && ["configured", "not_required", "agent_managed"].includes(config.credential)); }
+  function nativeRuntimeLabel(agent) {
+    const recent = agent && agent.last_run;
+    if (!recent) return "尚无运行记录；未检查云端连接";
+    const errors = {billing_error: "最近运行：额度不足", credential_error: "最近运行：凭据错误", timeout: "最近运行：超时", runtime_error: "最近运行：执行错误", missing_input: "最近运行：缺少运行资料", not_observable: "最近运行：证据不可观测"};
+    return errors[recent.runtime_error] || (recent.score_valid === false ? "最近运行：分数无效" : "最近运行：结果有效");
+  }
   function defaultConfigPaths(track) {
     const wanted = track || state.formTrack || "control";
     const usable = state.configs.filter((config) => config.status !== "error" && trackForConfig(config) === wanted);
@@ -577,7 +587,7 @@
   }
   function agentMetaHtml(config) {
     if (!config) return '<div class="agent-meta"><span>尚未选择配置</span></div>';
-    const credential = config.credential === "configured" || config.credential === "not_required";
+    const credential = credentialReady(config);
     return '<div class="agent-meta"><span>' + escapeHtml(providerLabel(config)) + ' · ' + escapeHtml(config.model || "本地适配器") + ' · ' + escapeHtml(profileMode(config)) + '</span><span class="' + (credential ? "credential-safe" : "credential-missing") + '">' + escapeHtml(credentialLabel(config)) + '</span></div>';
   }
 
@@ -660,7 +670,7 @@
     return '<div class="overview-failure-list">' + items.slice(0, 8).map((item) => '<div class="overview-failure-row"><span class="failure-preview-id">' + escapeHtml(item.run.id || item.run.agent || '运行') + '</span><span>' + escapeHtml(item.run.agent || 'Agent') + '</span><span class="status-pill failed">' + escapeHtml(failureLabel(item.type)) + '</span><strong>' + escapeHtml(String(item.count)) + ' 次</strong></div>').join('') + '</div>';
   }
 
-  function quickCompareMarkup() {
+  function quickCompareMarkup(registry = false) {
     const agents = Array.isArray(state.agents) ? state.agents : [];
     const selected = state.quickSelected || [];
     const active = state.job && ["queued", "running", "stopping"].includes(state.job.status) && state.job.kind === "quick_compare";
@@ -672,12 +682,15 @@
     const rows = agents.length ? agents.map((agent) => {
       const runnable = Boolean(agent.installed && agent.runnable);
       const checked = selected.includes(agent.id);
-      const status = !agent.installed ? "未安装" : runnable ? "可自动运行" : "需手动观测";
+      const status = !agent.installed ? "未安装" : runnable ? "命令/存储就绪" : agent.readiness === "manual" || agent.id === "kylinagent" ? "需手动观测" : "当前目录未就绪";
       const fixHint = !runnable && agent.fix_hint ? (agent.reason ? "；" + agent.fix_hint : agent.fix_hint) : "";
-      const detail = runnable ? (agent.evidence_mode === "agent_memory_observed" ? "可读取结构化记忆证据" : "已发现运行入口") : (agent.reason || "当前适配器不能自动驱动") + fixHint;
-      return '<label class="quick-agent-row ' + (!runnable ? "unavailable" : "") + '"><input type="checkbox" data-quick-agent value="' + escapeHtml(agent.id) + '"' + (checked ? " checked" : "") + (!runnable || active ? " disabled" : "") + '><span class="quick-agent-copy"><strong>' + escapeHtml(displayAgentName(agent.id || agent.display_name)) + '</strong><small>' + escapeHtml(detail) + '</small></span><span class="status-pill ' + (runnable ? "completed" : "partial") + '">' + escapeHtml(status) + '</span></label>';
+      let detail = runnable ? "运行命令与记忆存储就绪；云端连接以实际结果为准" : (agent.reason || "当前适配器不能自动驱动") + fixHint;
+      if (!registry && agent.last_run && agent.last_run.runtime_error) detail += "；" + nativeRuntimeLabel(agent);
+      const row = '<label class="quick-agent-row ' + (!runnable ? "unavailable" : "") + '"><input type="checkbox" data-quick-agent value="' + escapeHtml(agent.id) + '"' + (checked ? " checked" : "") + (!runnable || active ? " disabled" : "") + '><span class="quick-agent-copy"><strong>' + escapeHtml(agent.display_name || displayAgentName(agent.id)) + '</strong><small>' + escapeHtml(detail) + '</small></span><span class="status-pill ' + (runnable ? "completed" : "partial") + '">' + escapeHtml(status) + '</span></label>';
+      if (!registry) return row;
+      return '<article class="native-agent-card">' + row + '<div class="native-agent-meta"><span>' + escapeHtml(credentialLabel(agent)) + ' · ' + (agent.execution_scope === "isolated" ? "独立评测目录" : "当前用户目录") + '</span><span class="' + (agent.last_run && agent.last_run.runtime_error ? "native-runtime-warning" : "") + '">' + escapeHtml(nativeRuntimeLabel(agent)) + '</span><button class="button small" data-native-agent-detail="' + escapeHtml(agent.id) + '" type="button">查看详情</button></div></article>';
     }).join("") : '<div class="empty-inline">尚未发现已安装的支持 Agent。请在 openKylin 环境刷新。</div>';
-    return '<section class="workspace-surface quick-compare-panel"><div class="surface-toolbar"><div><div class="eyebrow">QUICK COMPARE</div><h3>快速对比</h3><p>选择两个系统中已有的 Agent，使用固定六维套件直接生成可追溯结果。</p></div><span class="quick-compare-count">已选 ' + selected.length + ' / 2</span></div><div class="quick-compare-body"><div class="quick-agent-list">' + rows + '</div><div class="quick-compare-actions"><span class="field-help">默认参数：Seed 42 · 重试 1 次 · 单案例 180 秒</span><button class="button" data-quick-auto type="button"' + (runnableCount >= 2 && !active ? "" : " disabled") + ' title="自动选择两个可运行 Agent 并立即开始">一键对比可用 Agent</button><button class="button primary" data-quick-start type="button"' + (ready ? "" : " disabled") + '>' + (active ? "对比运行中…" : "开始快速对比") + '</button></div>' + notice + (active ? '<div class="quick-job-progress" role="status"><span>' + escapeHtml((state.job.progress && state.job.progress.phase) || "正在准备") + '</span><div class="progress-track"><div class="progress-value" style="width:' + Math.round((Number(state.job.progress?.completed || 0) / Math.max(1, Number(state.job.progress?.total || 2))) * 100) + '%"></div></div></div>' : '') + '</div></section>';
+    return '<section class="workspace-surface quick-compare-panel"><div class="surface-toolbar"><div><h3>' + (registry ? "本机智能体" : "快速对比") + '</h3><p>从真实安装状态发现智能体。勾选两款，使用相同的六案例与参数开始评测。</p></div><span class="quick-compare-count">已选 ' + selected.length + ' / 2</span></div><div class="quick-compare-body"><div class="quick-agent-list">' + rows + '</div><div class="quick-compare-actions"><span class="field-help">默认参数：Seed 42 · 重试参数 1 · 单案例 180 秒</span><button class="button" data-quick-auto type="button"' + (runnableCount >= 2 && !active ? "" : " disabled") + ' title="自动选择两个可运行 Agent 并立即开始">一键对比可用 Agent</button><button class="button primary" data-quick-start type="button"' + (ready ? "" : " disabled") + '>' + (active ? "对比运行中…" : "开始快速对比") + '</button></div>' + notice + (active ? '<div class="quick-job-progress" role="status"><span>' + escapeHtml((state.job.progress && state.job.progress.phase) || "正在准备") + '</span><div class="progress-track"><div class="progress-value" style="width:' + Math.round((Number(state.job.progress?.completed || 0) / Math.max(1, Number(state.job.progress?.total || 2))) * 100) + '%"></div></div></div>' : '') + '</div></section>';
   }
 
   function renderTasks() {
@@ -693,9 +706,17 @@
   function renderAgents() {
     const usable = state.configs.filter((config) => config.status !== "error");
     const detail = configByPath(state.agentDetailPath);
-    return '<div class="workspace-intro"><div><p>密钥由本地安全配置加载，页面只显示状态。</p></div><div class="section-actions"><button class="button" data-view="configs" type="button">管理 API 配置</button><button class="button primary" data-view="new" type="button">选择并开始</button></div></div>'
-      + '<div class="agent-registry">' + (usable.length ? usable.map((config) => { const used = state.runs.filter((run) => (run.agents || []).some((agent) => agent === config.name || agent === config.agent || String(config.name).toLowerCase().includes(String(agent).toLowerCase()))); const perf = used.find((run) => run.overall != null && Number.isFinite(Number(run.overall))); return '<article class="agent-registry-row"><span class="legend-dot ' + (/deepseek/i.test(config.name) ? "orange" : "blue") + '"></span><div class="agent-registry-main"><strong>' + escapeHtml(config.name) + '</strong><span>' + escapeHtml(providerLabel(config)) + ' · ' + escapeHtml(config.model || config.type || "本地适配器") + '</span></div><span class="mode-pill">' + escapeHtml(profileMode(config)) + '</span><span class="agent-usage">' + used.length + ' 次评测</span><span class="agent-performance">' + (perf ? pct(perf.overall) : '未观测') + '</span><span class="' + (config.credential === "configured" || config.credential === "not_required" ? "credential-safe" : "credential-missing") + '">' + escapeHtml(credentialLabel(config)) + '</span><button class="button small" data-agent-detail="' + escapeHtml(config.path) + '" type="button">查看详情</button><button class="button small" data-select-agent="' + escapeHtml(config.path) + '" type="button">用于评测</button></article>'; }).join("") : '<section class="workspace-surface empty-state"><strong>没有可用智能体配置</strong><p>先在 API / 模型配置中添加配置档案。</p></section>') + '</div>'
-      + (detail ? '<section class="workspace-surface agent-detail-panel"><div class="surface-toolbar"><div><h3>' + escapeHtml(detail.name) + '</h3></div><button class="button small" data-select-agent="' + escapeHtml(detail.path) + '" type="button">用于评测</button></div><div class="agent-detail-grid"><div><span>服务商</span><strong>' + escapeHtml(providerLabel(detail)) + '</strong></div><div><span>模型</span><strong>' + escapeHtml(detail.model || detail.type || '未记录') + '</strong></div><div><span>记忆模式</span><strong>' + escapeHtml(profileMode(detail)) + '</strong></div><div><span>凭据状态</span><strong>' + escapeHtml(credentialLabel(detail)) + '</strong></div><div><span>参与评测</span><strong>' + state.runs.filter((run) => (run.agents || []).includes(detail.name)).length + ' 次</strong></div><div><span>最近表现</span><strong>来自本地运行结果</strong></div></div></section>' : '');
+    return quickCompareMarkup(true) + nativeAgentDetailMarkup()
+      + '<details class="workspace-surface evaluation-templates"' + (detail ? ' open' : '') + '><summary>评测方案与示例（' + usable.length + '）</summary><div class="workspace-intro"><div><p>这些是自定义评测方案、离线基线与回放示例。已安装的小K和 OpenClaw 在上方选择。</p></div><div class="section-actions"><button class="button" data-view="configs" type="button">管理 API 配置</button><button class="button" data-view="new" type="button">自定义评测</button></div></div>'
+      + '<div class="agent-registry">' + (usable.length ? usable.map((config) => { const used = state.runs.filter((run) => (run.agents || []).some((agent) => agent === config.name)); const perf = used.find((run) => run.overall != null && Number.isFinite(Number(run.overall))); return '<article class="agent-registry-row"><span class="legend-dot ' + (/deepseek/i.test(config.name) ? "orange" : "blue") + '"></span><div class="agent-registry-main"><strong>' + escapeHtml(config.name) + '</strong><span>' + escapeHtml(providerLabel(config)) + ' · ' + escapeHtml(config.model || config.type || "本地适配器") + '</span></div><span class="mode-pill">' + escapeHtml(profileMode(config)) + '</span><span class="agent-usage">' + used.length + ' 次评测</span><span class="agent-performance">' + (perf ? pct(perf.overall) : '未观测') + '</span><span class="' + (credentialReady(config) ? "credential-safe" : "credential-missing") + '">' + escapeHtml(credentialLabel(config)) + '</span><button class="button small" data-agent-detail="' + escapeHtml(config.path) + '" type="button">查看详情</button><button class="button small" data-select-agent="' + escapeHtml(config.path) + '" type="button">用于评测</button></article>'; }).join("") : '<section class="workspace-surface empty-state"><strong>没有可用智能体配置</strong><p>先在 API / 模型配置中添加配置档案。</p></section>') + '</div>'
+      + (detail ? '<section class="workspace-surface agent-detail-panel"><div class="surface-toolbar"><div><h3>' + escapeHtml(detail.name) + '</h3></div><button class="button small" data-select-agent="' + escapeHtml(detail.path) + '" type="button">用于评测</button></div><div class="agent-detail-grid"><div><span>服务商</span><strong>' + escapeHtml(providerLabel(detail)) + '</strong></div><div><span>模型</span><strong>' + escapeHtml(detail.model || detail.type || '未记录') + '</strong></div><div><span>记忆模式</span><strong>' + escapeHtml(profileMode(detail)) + '</strong></div><div><span>凭据状态</span><strong>' + escapeHtml(credentialLabel(detail)) + '</strong></div><div><span>参与评测</span><strong>' + state.runs.filter((run) => (run.agents || []).includes(detail.name)).length + ' 次</strong></div><div><span>最近表现</span><strong>来自本地运行结果</strong></div></div></section>' : '') + '</details>';
+  }
+
+  function nativeAgentDetailMarkup() {
+    const agent = state.agents.find((item) => item.id === state.nativeAgentDetailId);
+    if (!agent) return '';
+    const recent = agent.last_run;
+    return '<section class="workspace-surface agent-detail-panel"><div class="surface-toolbar"><h3>' + escapeHtml(agent.display_name || displayAgentName(agent.id)) + '</h3>' + (recent && recent.path ? '<button class="button small" data-open-run="' + escapeHtml(recent.path) + '" type="button">打开最近运行</button>' : '') + '</div><div class="agent-detail-grid"><div><span>本机安装</span><strong>' + (agent.installed ? '已安装' : '未安装') + '</strong></div><div><span>当前评测目录</span><strong>' + (agent.execution_scope === 'isolated' ? '独立记忆副本' : '当前用户目录') + '</strong></div><div><span>凭据来源</span><strong>' + escapeHtml(credentialLabel(agent)) + '</strong></div><div><span>最近运行</span><strong>' + escapeHtml(nativeRuntimeLabel(agent)) + '</strong></div><div><span>记忆存储路径</span><strong>' + escapeHtml((agent.memory_paths || []).join('；') || '尚未发现') + '</strong></div><div><span>评测就绪</span><strong>' + escapeHtml(agent.runnable ? '运行命令与记忆存储可用；云端连接未做新检查' : agent.reason || '尚未就绪') + '</strong></div></div></section>';
   }
 
   function renderNew() {
@@ -866,7 +887,7 @@
 
   function renderHistory() { const query = state.filters.history.toLowerCase(); const rows = state.runs.filter((run) => !query || JSON.stringify(run).toLowerCase().includes(query)); if (!rows.length) return emptyState("没有匹配的历史运行", "工作台只读取本地 runs/ 目录中的实际结果文件。", "new"); return '<div class="section-head"><div><p>按运行摘要浏览本地结果；详细路径保留在结果元数据和复现入口中。</p></div><div class="section-actions"><input id="history-filter" class="history-search" value="' + escapeHtml(state.filters.history) + '" placeholder="搜索运行 ID / 智能体 / 套件" aria-label="搜索历史运行" style="height:34px;border:1px solid var(--line-strong);padding:0 10px;font-size:12px"></div></div><section class="panel"><div class="table-wrap"><table><thead><tr><th>时间</th><th>任务</th><th>主 Agent</th><th>对比 Agent</th><th>案例数</th><th>得分</th><th>状态</th><th>耗时</th><th></th></tr></thead><tbody>' + rows.map((run) => { const agents = run.agents || []; const score = Array.isArray(run.overall) ? run.overall.map((value) => pct(value)).join(' / ') : pct(run.overall); const rawId = run.id || run.run_id || '未命名运行'; return '<tr><td>' + escapeHtml(fmt(run.started_at, '未记录')) + '</td><td><button class="link-button" data-open-run="' + escapeHtml(run.path) + '" title="' + escapeHtml(rawId) + '" type="button">' + escapeHtml(run.title || displayRunName(rawId)) + '</button><div class="history-mode">' + escapeHtml(displayMode(run.mode)) + '</div></td><td>' + escapeHtml(displayAgentName(agents[0] || run.agent || '未观测')) + '</td><td>' + escapeHtml(displayAgentName(agents[1] || '未观测')) + '</td><td>' + escapeHtml(fmt(run.cases, '—')) + '</td><td>' + escapeHtml(score) + '</td><td><span class="status-pill ' + escapeHtml(run.status || 'unknown') + '">' + escapeHtml(statusLabel(run.status)) + '</span></td><td>' + escapeHtml(fmt(run.duration_ms != null ? run.duration_ms + ' ms' : run.duration, '未记录')) + '</td><td><button class="button small" data-open-run="' + escapeHtml(run.path) + '" type="button">打开</button></td></tr>'; }).join('') + '</tbody></table></div></section>'; }
   function configCard(config) {
-    const credential = config.credential === "configured" || config.credential === "not_required";
+    const credential = credentialReady(config);
     return '<article class="config-card">'
       + '<div class="config-title"><button class="provider-card-main" data-provider-detail="' + escapeHtml(config.path) + '" type="button"><h3>' + escapeHtml(config.name) + '</h3><div class="config-type">' + escapeHtml(profileMode(config)) + ' · ' + escapeHtml(config.path) + '</div></button>'
       + '<span class="status-pill ' + (credential ? "completed" : "partial") + '">' + escapeHtml(credentialLabel(config)) + '</span></div>'
@@ -880,7 +901,7 @@
   }
   function providerCard(provider, configs) {
     const primary = configs.find((config) => profileMode(config) === "标准 API") || configs[0];
-    const ready = configs.some((config) => config.credential === "configured" || config.credential === "not_required");
+    const ready = configs.some((config) => credentialReady(config));
     return '<article class="config-card provider-card">'
       + '<div class="provider-heading">'
       + '<button class="provider-card-main" data-provider-detail="' + escapeHtml(primary.path) + '" type="button">'
@@ -901,9 +922,9 @@
   }
     function renderConfigs() {
     const credentials = (state.system || {}).credentials || {};
-    const notice = credentials.status === "secure"
-      ? '<div class="credential-notice ok"><strong>安全配置已加载</strong><span>当前服务已从同一运行环境的 <code>~/.config/kmb/credentials.env</code> 读取连接信息；页面只展示状态，不显示密钥。</span></div>'
-      : '<div class="credential-notice warn"><strong>' + (credentials.status === "insecure" ? "凭据文件权限不安全" : "云端连接未就绪") + '</strong><span>' + escapeHtml(credentials.status === "insecure" ? "凭据文件权限不安全，服务拒绝加载。请将 ~/.config/kmb/credentials.env 权限设为 600。" : "本机未检测到凭据文件（~/.config/kmb/credentials.env）。配置 API Key 环境变量并刷新后即可连接云端；不填写凭据也能运行离线基线评测。") + '</span></div>';
+    const notice = credentials.api_ready
+      ? '<div class="credential-notice ok"><strong>工作台 API 凭据已加载</strong><span>至少一个 API 档案已从安全凭据文件或进程环境变量获得凭据；页面只展示状态，不显示密钥。是否能调用仍取决于实际连接与额度。</span></div>'
+      : '<div class="credential-notice warn"><strong>' + (credentials.status === "insecure" ? "凭据文件权限不安全" : "工作台 API 凭据未配置") + '</strong><span>' + escapeHtml(credentials.status === "insecure" ? "凭据文件权限不安全，服务拒绝加载。请将 ~/.config/kmb/credentials.env 权限设为 600。" : "工作台 API 档案尚未加载凭据，可通过 ~/.config/kmb/credentials.env 或进程环境变量提供。独立智能体使用自身配置；离线方案无需云凭据。") + '</span></div>';
     const profiles = state.profiles || [];
     const groups = [];
     profiles.forEach((profile) => {
@@ -1277,7 +1298,8 @@
     if (quickStart) quickStart.addEventListener("click", startQuickCompare);
     const quickAuto = document.querySelector("[data-quick-auto]");
     if (quickAuto) quickAuto.addEventListener("click", startQuickCompareAuto);
-    document.querySelectorAll("[data-agent-detail]").forEach((button) => button.addEventListener("click", () => { state.agentDetailPath = button.dataset.agentDetail; render(); }));
+    document.querySelectorAll("[data-agent-detail]").forEach((button) => button.addEventListener("click", () => { state.agentDetailPath = button.dataset.agentDetail; state.nativeAgentDetailId = null; render(); }));
+    document.querySelectorAll("[data-native-agent-detail]").forEach((button) => button.addEventListener("click", () => { state.nativeAgentDetailId = button.dataset.nativeAgentDetail; state.agentDetailPath = null; render(); }));
     document.querySelectorAll("[data-provider-detail]").forEach((button) => button.addEventListener("click", () => { state.providerDetail = button.dataset.providerDetail; render(); }));
      document.querySelectorAll("[data-go-compare-tab]").forEach((button) => button.addEventListener("click", () => { state.resultTab = button.dataset.goCompareTab || "cases"; state.view = "results"; render(); }));
      document.querySelectorAll("[data-go-compare-case]").forEach((button) => button.addEventListener("click", () => { state.selectedCase = button.dataset.goCompareCase; state.resultTab = "cases"; state.view = "results"; render(); }));

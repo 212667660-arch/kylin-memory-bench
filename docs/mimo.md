@@ -2,6 +2,18 @@
 
 > 路径固定：`docs/mimo.md`。面向本仓库所有 AI / 协作会话。
 
+## 2026-10-13 已安装智能体入口与真实后端状态修复（代码与部署完成，按要求未运行测试）
+
+- 意图：修复智能体页只列 YAML 方案而遗漏已安装小K/OpenClaw的问题，连接真实发现、选择和快速对比后端；修正凭据误报、隔离目录下的安装误报及最近运行状态。
+- 范围：`kmb/agent_registry.py`、`kmb/workbench.py`、`kmb/web/app.js`/`styles.css`、项目版本文件；`docs/workbench.md`、`docs/current-environment.md`、README/变更说明与本台账；`runs/installed-agent-registry-20261013/` 的静态检查、构建/部署记录与界面截图；VM 中项目代码/软件包与工作台服务，不修改 Agent 日常数据。
+- 用户最新约束：VM 确实已安装 Agent；目前 Token 用完，先修改，不需要测试。本轮不运行测试套件、连接探针、真实 Agent 回合或充值动作，只做静态审阅、语法检查和部署后的页面/安全元数据核对。
+- 边界：保留原 openKylin 3.0 与既有安装、记忆和历史失败结果；不导入或输出密钥、不将额度不足讲成缺凭据或低分；保留冻结 0.2.2 标签/包，当前修复使用新的项目版本，不发布未经测试的新正式标签。
+- 验收口径：后端返回真实已安装条目和当前工作区 readiness；页面选择调用既有真实快速对比端点；本地/回放方案无需云凭据，命令方案由自身管理，HTTP 实调用缺凭据单独显示；历史额度不足保留并明确展示。完成后记录静态检查和实际部署结果，不宣称真实评测或测试通过。
+- 实际结果：已构建并安装项目包 0.2.3，工作台 PID 22733 加载新后端。VM GET /api/agents 返回四款 installed=true：小K/OpenClaw 当前独立目录 runnable=true；Hermes 本机已安装、独立目录未准备；KylinAgent 需结构化 GUI/服务事件导出。最近两侧实际失败均显示 billing_error，不显示为缺凭据或正常低分。
+- 页面与接口：智能体页优先呈现真实本机条目，勾选/开始沿用 POST /api/quick-compare；提供原生详情和最近运行入口，11 项 YAML 方案收纳到可展开的评测方案与示例。只读 API 已核对本地记忆/回放 not_required、命令 agent_managed、HTTP 真调用 not_detected；底栏明确工作台 API 的凭据范围。
+- 检查与交付：Python/JavaScript 语法及 git diff --check 通过；安装后的五项后端/前端源文件 SHA-256 与本机修改一致。界面截图 `runs/installed-agent-registry-20261013/native-agent-page.png`、部署状态及当前 deb 保留；当前 deb SHA-256 为 424aecd8bd0acf7e1cbdf4f3b1192a095ac822f21e987e8df005416af00d6f41。未运行 unittest、连接检查或新 Agent 回合，未发布 0.2.3 正式标签。
+- 原系统与数据：/etc/os-release 前后校验一致，仍为 openKylin 3.0。部署未向日常 Agent 配置/记忆发起写入；全目录指纹因后台 daemon_state.json 刷新而未完全一致，时间戳检查只发现该动态状态文件变化，不把全目录字节完全不变作为已验证结论。
+
 ## 2026-10-13 按网页执行流程重新生成演讲稿（完成）
 
 - 意图：按负责人最新要求，将照读稿完整改为网页选择 KylinBot + OpenClaw、开始快速对比和回溯本次结果的录制流程。

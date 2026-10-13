@@ -30,6 +30,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 import yaml
 
+from . import __version__
 from .agent_registry import discover_agents, profiles_to_dicts
 from .agents import build_agent_from_config, load_agent_config, resolve_api_profile
 from .report import radar_svg, write_compare, write_html_report, write_markdown
@@ -68,7 +69,7 @@ def _fix_hint(profile: Any) -> str:
     evidence_mode = str(getattr(profile, "evidence_mode", "") or "")
     if getattr(profile, "runnable", False):
         return ""
-    if evidence_mode == "gui_observed":
+    if evidence_mode == "gui_observed" or (getattr(profile, "id", "") == "kylinagent" and getattr(profile, "installed", False)):
         return "修复条件：提供结构化 GUI/服务记忆事件导出；GUI 或服务运行状态本身不构成记忆证据"
     if evidence_mode == "conversation_only":
         return "修复条件：完成该 Agent 初始化以生成结构化记忆存储"
@@ -398,11 +399,41 @@ class WorkbenchState:
         return _resolve_workspace_path(self.root, raw, (self.config_root,))
 
     def list_agents(self) -> List[Dict[str, Any]]:
-        """Return safe metadata for supported Agents already on this host."""
+        """Discover host installation and evaluation readiness independently.
+
+        This reads path metadata and existing result summaries only. It does not
+        read credentials, start Agents, or probe a model provider.
+        """
         profiles = discover_agents(self.root)
+        host = {profile.id: profile for profile in discover_agents(self.root, home=Path.home())}
         payload = profiles_to_dicts(profiles)
+        runs = self.list_runs()
+        configured_home = os.environ.get("KMB_AGENT_HOME")
+        isolated = bool(configured_home and Path(configured_home).expanduser().resolve() != Path.home().resolve())
         for profile, item in zip(profiles, payload):
+            installed_on_host = bool(host.get(profile.id) and host[profile.id].installed)
+            item["host_installed"] = installed_on_host
+            item["installed"] = profile.installed or installed_on_host
+            item["workspace_ready"] = profile.runnable
+            item["execution_scope"] = "isolated" if isolated else "user"
+            item["credential"] = "agent_managed" if item["installed"] else "not_detected"
+            item["credential_source"] = "agent_configuration"
+            item["connection_checked"] = False
+            item["readiness"] = "ready" if profile.runnable else ("manual" if item["installed"] and profile.id == "kylinagent" else "blocked")
             item["fix_hint"] = _fix_hint(profile)
+            if installed_on_host and not profile.runnable and profile.id != "kylinagent":
+                item["reason"] = "本机已安装，但当前评测目录尚未准备该智能体的记忆存储或运行入口"
+                item["fix_hint"] = "为当前评测目录准备独立配置和记忆副本，然后刷新；本机安装无需重复执行"
+            recent = next((run for run in runs if run.get("kind") == "single" and run.get("agent") == profile.id), None)
+            item["last_run"] = None
+            if recent:
+                categories = recent.get("failure_categories") or {}
+                error = next((category for category in ("billing_error", "credential_error", "timeout", "runtime_error", "missing_input", "not_observable") if categories.get(category)), None) if recent.get("score_valid") is False else None
+                item["last_run"] = {
+                    "id": recent.get("id"), "path": recent.get("path"),
+                    "status": recent.get("status"), "score_valid": recent.get("score_valid"),
+                    "overall": recent.get("overall"), "runtime_error": error,
+                }
         return payload
 
     def _validate_api_payload(self, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -577,7 +608,20 @@ class WorkbenchState:
                 agent_type = str(config.get("type", ""))
                 model = str(config.get("model", ""))
                 env_name = str(config.get("api_key_env", ""))
+                backend = config.get("backend") if isinstance(config.get("backend"), dict) else {}
+                if backend.get("api_key_env"):
+                    env_name = str(backend["api_key_env"])
+                requires_api = agent_type in {"http", "openai", "openai_compatible", "memory_controller", "memory_disabled"} or (agent_type == "memory_tool" and bool(backend))
                 configured = bool(env_name and os.environ.get(env_name))
+                if requires_api or (env_name and agent_type in {"command", "external"}):
+                    credential = "configured" if configured else "not_detected"
+                    credential_source = "workbench_environment"
+                elif agent_type == "command" or (agent_type == "external" and config.get("command")):
+                    credential = "agent_managed"
+                    credential_source = "agent_configuration"
+                else:
+                    credential = "not_required"
+                    credential_source = "none"
                 output.append({
                     "path": relative,
                     "name": str(config.get("name", path.stem)),
@@ -588,7 +632,9 @@ class WorkbenchState:
                     "endpoint": _safe_endpoint(config.get("base_url"), config.get("endpoint")) if config.get("base_url") else "本地适配器",
                     "version": str(config.get("version", "")),
                     "description": str(config.get("description", "")),
-                    "credential": "configured" if configured else ("not_required" if agent_type == "deterministic" else "not_detected"),
+                    "credential": credential,
+                    "credential_source": credential_source,
+                    "requires_api": requires_api,
                     "api_profile": str(config.get("api_profile", "")) or None,
                     "track": _track_for_config(config),
                     "source": "workspace config",
@@ -817,12 +863,17 @@ class WorkbenchState:
         try:
             cli_version = importlib.metadata.version("kylin-memory-bench")
         except importlib.metadata.PackageNotFoundError:
-            cli_version = "0.2.0 (workspace)"
+            cli_version = __version__
         try:
             import yaml as yaml_module
             yaml_version = getattr(yaml_module, "__version__", "unknown")
         except Exception:
             yaml_version = "unavailable"
+        credentials = _credential_file_status()
+        api_profiles = self.list_api_profiles()
+        credentials["scope"] = "workbench_api"
+        credentials["configured_profiles"] = sum(profile["credential"] == "configured" for profile in api_profiles)
+        credentials["api_ready"] = credentials["configured_profiles"] > 0
         return {
             "openkylin": openkylin,
             "platform": platform.platform(),
@@ -836,7 +887,7 @@ class WorkbenchState:
             "results_directory": _relative(self.runs_root, self.root) or "runs",
             "config_directory": _relative(self.config_root, self.root) or "configs",
             "suite_directory": _relative(self.suite_root, self.root) or "suites",
-            "credentials": _credential_file_status(),
+            "credentials": credentials,
             "system_scenarios": {
                 "agent_process_restart": {"status": "controlled_boundary_only", "note": "CLI 可重建包装层；不等同于系统重启"},
                 "system_restart": {"status": "requires_openkylin_controller", "note": "需受控 VM 控制器"},

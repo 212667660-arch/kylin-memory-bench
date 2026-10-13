@@ -963,6 +963,14 @@ a:hover { text-decoration: underline; }
 .quick-compare-count { color: var(--muted-foreground); font-size: 11px; white-space: nowrap; }
 .quick-compare-body { padding: 0 16px 16px; }
 .quick-agent-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.native-agent-card { min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+.native-agent-card .quick-agent-row { border: 0; border-radius: 0; }
+.native-agent-meta { display: grid; gap: 7px; padding: 0 10px 12px; color: var(--muted-foreground); font-size: 11px; line-height: 1.45; }
+.native-agent-meta .button { justify-self: start; }
+.native-runtime-warning { color: var(--status-warning, #f0ad45); }
+.evaluation-templates { padding: 14px 16px; }
+.evaluation-templates > summary { cursor: pointer; font-weight: 600; color: var(--muted-foreground); }
+.evaluation-templates .workspace-intro { margin-top: 14px; }
 .quick-agent-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
