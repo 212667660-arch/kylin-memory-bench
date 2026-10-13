@@ -8,7 +8,7 @@ KylinMemoryBench 是面向 openKylin 的智能体长期记忆自动化评测 Ben
 
 **当前系统：openKylin 3.0（huanghe）；源码项目版本：KylinMemoryBench 0.2.3；已冻结验证的正式版本：0.2.2。** 操作系统保持原状。0.2.3 修复智能体页的真实安装发现、凭据状态和执行入口；按负责人要求本轮不运行测试套件或真实模型调用，正式标签尚未发布。使用情况见 [工作台说明](docs/workbench.md)，当前环境以 [版本说明](docs/current-environment.md) 为准。
 
-2026-10-13 视频深审发现的两个 P1 评分/解析问题已修复。新增 18 项回归、全量 176 项测试与跨平台 CI 通过；在 openKylin 3.0 生成了修正后的真实双 Agent 六案例证据。范围、首次网关失败与后续验证见 [修复报告](docs/answer-evidence-fix-20261013.md)，录制步骤与照读稿见 [视频稿](docs/demo-script.md)。
+2026-10-13 视频深审发现的两个 P1 评分/解析问题已修复。新增 18 项回归、全量 176 项测试与跨平台 CI 通过；在 openKylin 3.0 生成了修正后的真实双 Agent 六案例证据。范围、首次网关失败与后续验证见 [修复报告](docs/answer-evidence-fix-20261013.md)。负责人暂缓录制，旧演讲稿、分镜与录制准备包已清理；当前操作见 [工作台说明](docs/workbench.md)。
 
 ## 下载与评审入口
 
@@ -192,7 +192,7 @@ bash scripts/uninstall_deb.sh
 
 `verify_deb.sh` 先运行包内最小离线测试，再使用 reference/flawed 校验包内 CLI/评分链路，不是正式真实 Agent 结果。项目级 LICENSE 为 MIT（2026-10-05 负责人确认生效），`.deb` 分发边界见 `docs/deb-release.md` 与 `THIRD_PARTY_NOTICES.md`。
 
-具备 `sudo/root` 的 openKylin 终端可用 `bash scripts/record_deb_lifecycle.sh` 一次性记录安装、升级、验证、卸载和残留检查。桌面演示录屏命令见 `docs/demo-script.md`；无图形会话时不得把脚本预检当作已录制视频。
+具备 `sudo/root` 的 openKylin 终端可用 `bash scripts/record_deb_lifecycle.sh` 一次性记录安装、升级、验证、卸载和残留检查。真实桌面视频仍待录制；脚本预检不能作为已录制视频的证据。
 
 重复运行稳定性可用只读聚合工具生成：
 
@@ -246,7 +246,7 @@ python -m kmb.cli run \
 
 ## 当前边界
 
-内置 `reference` 和 `flawed` 是离线、确定性的演示基线，用于验证 Benchmark 能区分正确行为与错误持久化/混淆/复用。它们不是赛事最终指定的两款真实 Agent，结果会标为 `simulated_baseline`。`kylinbot-process` 是本机已跑通的 openKylin 生态**进程适配器**（`source=process`，系统级）。最新 openKylin 3.0 VM 批次已在独立 HOME 中完成 KylinBot/OpenClaw 六案例快速对比；两者的结果仍只能表述为系统级行为，`native_memory_events=0`，不能归因模型原生记忆。桌面演示视频尚未录制（演示脚本与录制工具已就绪）；项目级 LICENSE 为 MIT（已生效）。
+内置 `reference` 和 `flawed` 是离线、确定性的演示基线，用于验证 Benchmark 能区分正确行为与错误持久化/混淆/复用。它们不是赛事最终指定的两款真实 Agent，结果会标为 `simulated_baseline`。`kylinbot-process` 是本机已跑通的 openKylin 生态**进程适配器**（`source=process`，系统级）。最新 openKylin 3.0 VM 批次已在独立 HOME 中完成 KylinBot/OpenClaw 六案例快速对比；两者的结果仍只能表述为系统级行为，`native_memory_events=0`，不能归因模型原生记忆。桌面演示视频尚未录制，负责人暂缓录制并已清理旧稿件；项目级 LICENSE 为 MIT（已生效）。
 
 详细流程、评分规则和复现说明见 [`docs/solution.md`](docs/solution.md)。
 外部 Agent 的 JSONL 证据格式见 [`docs/evidence-protocol.md`](docs/evidence-protocol.md)。

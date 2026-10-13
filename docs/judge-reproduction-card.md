@@ -105,5 +105,5 @@ python -m kmb.cli compare \
 - 证据协议：`docs/evidence-protocol.md`
 - 任务状态：`tasks/todo.md`
 - 发布边界：`docs/release-freeze.md`
-- 演示脚本（视频待录）：`docs/demo-script.md`
+- 当前工作台操作：`docs/workbench.md`（旧视频稿已清理，视频待录）
 - 本地 GUI：`python -m kmb.cli serve --host 127.0.0.1 --port 8765 --root .`
