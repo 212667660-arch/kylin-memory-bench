@@ -1,5 +1,7 @@
 # Debian 技术验收包
 
+当前正式工程版本为 **0.2.1**（2026-10-13）：在 openKylin 3.0 的隔离环境和主系统 sudo 管理员环境中，安装、升级、完整离线验收、卸载与残留检查九步全部通过。最终版本已重新安装，普通用户 CLI 和工作台对照评测通过；证据见 `docs/completion-audit-20261013.md`。下文按日期标注的 release1–release7 为历史记录。
+
 该目录的 `.deb` 流程用于 openKylin 的可复现技术验收。包名为
 `kylin-memory-bench`，架构为 `all`，依赖 `python3 (>= 3.9)` 与
 `python3-yaml`。安装内容包括 CLI、`kmb/` 源码、默认 Agent 配置、核心和
@@ -11,17 +13,17 @@
 
 ```bash
 bash scripts/build_deb.sh dist
-dpkg-deb --info dist/kylin-memory-bench_0.2.0_all.deb
-dpkg-deb --contents dist/kylin-memory-bench_0.2.0_all.deb
+dpkg-deb --info dist/kylin-memory-bench_0.2.1_all.deb
+dpkg-deb --contents dist/kylin-memory-bench_0.2.1_all.deb
 ```
 
 如需模拟升级，使用一个有效的 Debian 版本号构建新包：
 
 ```bash
-KMB_DEB_VERSION=0.2.0+test1 bash scripts/build_deb.sh dist
+KMB_DEB_VERSION=0.2.1+test1 bash scripts/build_deb.sh dist
 ```
 
-### 当前发布候选（2026-09-08）
+### 历史发布候选（2026-09-08）
 
 在 openKylin 2.0 SP2 VM 使用 `KMB_DEB_VERSION=0.2.0+release1 bash scripts/build_deb.sh dist/release-20260908` 构建并审计通过。产物为 `dist/release-20260908/kylin-memory-bench_0.2.0+release1_all.deb`，SHA-256 为 `E5C0991E7641B6A92A4A71AF667F5E7592D3D1FC67F6305B900A349D8D1E8BAC`。构建日志、`dpkg-deb --info`、完整清单和禁止内容审计见 `runs/openkylin-validation-20260908/release-build/`，均为退出码 `0`。该批次只做包构建和内容审计，不替代已归档的第六批系统生命周期。
 
@@ -36,13 +38,13 @@ release5 技术候选（2026-09-09）纳入 no-memory 聚合器字段修复和 r
 ## 安装、验证、升级与卸载
 
 ```bash
-bash scripts/install_deb.sh dist/kylin-memory-bench_0.2.0_all.deb
+sudo bash scripts/install_deb.sh dist/kylin-memory-bench_0.2.1_all.deb
 kmb validate --strict --suite /usr/share/kylin-memory-bench/suites/core-zh.yaml
 bash scripts/verify_deb.sh /tmp/kmb-deb-smoke
 
 # 新版本使用同一安装入口，dpkg 会执行升级。
-bash scripts/upgrade_deb.sh dist/kylin-memory-bench_0.2.0+test1_all.deb
-bash scripts/uninstall_deb.sh
+sudo bash scripts/upgrade_deb.sh dist/kylin-memory-bench_0.2.1+test1_all.deb
+sudo bash scripts/uninstall_deb.sh
 ```
 
 openKylin KARE 会将应用 payload 和 dpkg 状态放入 shadow overlay。生命周期脚本会检查 `/opt/kare-applications/shadow/upper` 中的状态；KARE 的“安装成功/卸载成功”日志不能替代版本、CLI、升级和残留检查。验证脚本禁写 Python 字节码，卸载时仅清理本包目录内由验证生成的 `__pycache__`/`.pyc` 文件。第六批真实生命周期证据见 `runs/deb-lifecycle-authorized-20260908-rerun6/`，九个步骤均为退出码 `0`。
@@ -50,6 +52,19 @@ openKylin KARE 会将应用 payload 和 dpkg 状态放入 shadow overlay。生�
 `verify_deb.sh` 先运行包内最小 smoke 测试，再使用内置确定性 reference/flawed 来验证安装包的 CLI、套件、
 JSONL、评分和报告产物，不得把它当作正式双真实 Agent 结果。正式评测使用
 `configs/agent-grok-memory.yaml`、`configs/agent-deepseek-memory.yaml` 及用户进程环境中的密钥。
+
+## 安装包的普通用户工作台
+
+CLI 离线验收可从任意可写目录执行：`kmb official-acceptance --mode offline --out runs/my-acceptance`。工作台需要可写工作区保存配置和结果，首次使用时复制包内默认配置和套件到自己的目录；已有工作区可直接使用。
+
+```bash
+mkdir -p ~/KylinMemoryBench
+cp -R /usr/share/kylin-memory-bench/configs /usr/share/kylin-memory-bench/suites ~/KylinMemoryBench/
+cd ~/KylinMemoryBench
+kmb serve --root . --host 127.0.0.1 --port 8765
+```
+
+然后在 openKylin 的浏览器打开 `http://127.0.0.1:8765`。本轮 VM 已准备该工作区和 `~/KylinMemoryBench/start-workbench.sh`，可直接运行脚本；对照评测的结果和雷达图已验证。工作台按 Ctrl+C 停止，评测结果保留在工作区的 `runs/`。该入口使用普通用户，不应把结果写进 `/usr/share`。
 
 如评分规则升级，包内 `scripts/rescore_run.py` 可从既有 `evidence.jsonl` 生成新的结果目录，
 不会覆盖原始运行证据或原始分数。

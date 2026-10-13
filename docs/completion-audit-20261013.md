@@ -2,9 +2,9 @@
 
 ## 结论
 
-核心评测工具已经实现，并能在 Windows 和 openKylin 3.0 运行。本轮发现的发行包与验收缺陷已修复并同步 GitHub main。追加收口发布补丁版本 **0.2.1**，修复英文 Windows 的中文子进程编码问题；Windows/openKylin 各 158 项测试、三项 GitHub CI，以及 release9→0.2.1 的九步 dpkg 生命周期矩阵全部通过。**非视频工程交付已完成，赛事整体仍未完成**：视频按用户要求后置，仓库当前私有，需要确认评委访问方式；报名确认与正式提交仍需参赛身份及邮件指引。
+核心评测工具已经实现，并能在 Windows 和 openKylin 3.0 运行。本轮发现的发行包与验收缺陷已修复并同步 GitHub main。追加收口发布补丁版本 **0.2.1**，修复英文 Windows 的中文子进程编码问题；Windows/openKylin 各 158 项测试、三项 GitHub CI，以及隔离环境与主系统管理员环境的 release9→0.2.1 九步 dpkg 生命周期矩阵全部通过。最终 0.2.1 已重新安装，普通用户 CLI 和工作台对照评测也通过。**非视频工程交付已完成，赛事整体仍未完成**：视频按用户要求后置；仓库经审查按用户授权公开，未登录代码访问已通过；用户确认报名已完成，正式作品提交仍需参赛身份、确认邮件指引和视频链接。
 
-当前 `dist/submission/` 是 10 月 11 日旧材料，不应直接提交。最终非视频材料位于 `dist/submission-nonvideo-20261013/`；其 README 和 manifest 标明当前状态、包版本、样例证据及 SHA-256。此前审计候选 `dist/submission-audit-20261013/` 和原始失败记录保留。
+当前 `dist/submission/` 是 10 月 11 日旧材料，不应直接提交。更新后的最终非视频材料位于 `dist/submission-public-20261013/`；其 README 和 manifest 标明当前状态、包版本、样例证据及 SHA-256。此前 `dist/submission-nonvideo-20261013/`、审计候选和原始失败记录保留，最终二进制沿用已验证的同一份 0.2.1 文件。
 
 ## 官网与 PDF 的对应
 
@@ -14,10 +14,10 @@
 
 | 官网要求 | 当前证据与状态 |
 |---|---|
-| 完整可运行的代码仓库链接 | `https://github.com/212667660-arch/kylin-memory-bench`；修复已上传 GitHub。`gh repo view` 实测 `isPrivate=true`，代码访问方式尚待负责人确认；“公开仓库”的早先表述不准确 |
+| 完整可运行的代码仓库链接 | `https://github.com/212667660-arch/kylin-memory-bench`；修复已上传 GitHub。用户授权审查后公开，实测 `isPrivate=false`；不携带登录凭据的 GitHub API 和 main/README 请求均 HTTP 200 |
 | 作品介绍文档，推荐 PDF | 已有旧 PDF；本轮修正文稿与 PDF，包含背景、架构、场景、创新及维护规划 |
 | 展示核心功能和流程的演示视频链接 | 未完成；旧提交说明仍是空白占位 |
-| 报名确认后按邮件指引提交材料 | 工作区未见报名确认与提交成功回执，不能推定已经提交 |
+| 报名确认后按邮件指引提交材料 | 用户已确认报名完成；尚未读取确认邮件指引，材料提交草稿已准备但未发送，未取得作品提交成功回执 |
 
 官网四维评审为技术创新 30%、场景落地 30%、开源治理 20%、长期发展 20%；PDF 企业命题另列六维权重 15%/25%/25%/15%/10%/10%。项目的 `official_score.py` 是按 PDF 制作的工程自评工具，**100/100 不代表组委会评分，也不能免除必交视频**。
 
@@ -30,7 +30,7 @@
 | b. 示例任务、运行证据和结果 | 已具备 | 本轮离线验收、历史真实双 Agent 样例、JSON/JSONL/HTML/Markdown/SVG |
 | c. 可复现脚本、配置、README、代码 | 修复后通过，并已上传 GitHub | Windows 与 openKylin 测试、干净 wheel 安装、源码包测试 |
 | d. CLI/GUI，一键运行、批量对比 | 已具备，旧 `.deb` 缺陷已修复 | CLI、工作台实际点击验证、release9 解包后完整离线验收 |
-| `.deb` 软件包（建议格式） | 最终 0.2.1 运行与真实 dpkg 生命周期均通过 | openKylin 3.0 隔离用户/挂载命名空间：release9 安装→验证→0.2.1 升级→完整验收→卸载→残留检查，九步全 0；主系统保持只读 |
+| `.deb` 软件包（建议格式） | 最终 0.2.1 运行与真实 dpkg 生命周期均通过 | openKylin 3.0 隔离命名空间及主系统 sudo 管理员环境：release9 安装→验证→0.2.1 升级→完整验收→卸载→残留检查，九步均全 0；随后重新安装供普通用户使用 |
 | e. openKylin 桌面、至少两款真实智能体、多维雷达图完整录屏 | **未完成** | 当前媒体文件为 0；`docs/demo-script.md` 只是录制脚本 |
 
 ## 已修复的可复现问题
@@ -64,9 +64,11 @@
 | 当前真实双 Agent | 两批全部完成，四份分数均有效、strict 校验全 0 | `runs/audit-20261013/vm/installed/` |
 | release9 生命周期 | 九步全部退出码 0，主系统包数据库哈希未变，主系统仍无 kmb | `runs/nonvideo-closeout-20261013/vm/lifecycle-r4/lifecycle-summary.json` |
 | 自动发行回归 | Windows Python 3.9、Ubuntu Python 3.12 干净 wheel 验收，以及 Ubuntu 安装/升级/卸载矩阵 | `.github/workflows/verify.yml`；GitHub Actions 运行记录附最终 manifest |
-| 最终 0.2.1 生命周期 | release9→0.2.1 九步全 0，主机状态哈希未变 | `runs/nonvideo-closeout-20261013/vm/final-lifecycle/lifecycle-summary.json` |
+| 最终 0.2.1 隔离生命周期 | release9→0.2.1 九步全 0，主机状态哈希未变 | `runs/nonvideo-closeout-20261013/vm/final-evidence/lifecycle-r4/lifecycle-summary.json` |
+| 主系统管理员生命周期 | release9→0.2.1 九步全 0，真实 sudo/root 与系统 dpkg；卸载后无命令、payload、文档残留 | `runs/nonvideo-closeout-20261013/host-admin-evidence/host-admin-lifecycle/lifecycle-summary.json`；交付包 `sample-evidence/host-admin-lifecycle/` |
+| 最终安装包的普通用户使用 | 0.2.1 已重新安装；从源码外执行 CLI 离线验收 pass；工作台 HTTP、配置/套件、创建评测、结果及两侧雷达图检查全通过 | 交付包 `verification/installed-user-summary.json`；普通用户工作区 `~/KylinMemoryBench`，启动说明见 `docs/deb-release.md` |
 
-0.2.1 代码 CI：[运行 38303384340](https://github.com/212667660-arch/kylin-memory-bench/actions/runs/38303384340)，三项 job 均 success。首轮发现 Windows 编码错误的失败记录同样保留，未跳过失败测试。
+0.2.1 代码 CI：[运行 38303384340](https://github.com/212667660-arch/kylin-memory-bench/actions/runs/38303384340)，main 收口 CI：[运行 38304015260](https://github.com/212667660-arch/kylin-memory-bench/actions/runs/38304015260)，三项 job 均 success。首轮发现 Windows 编码错误的失败记录同样保留，未跳过失败测试。随后仅更新文档与证据状态，运行时代码和已测试二进制不变。
 
 SSH 本轮已连通，VM 为 openKylin 3.0（huanghe）、Python 3.12.2、PyYAML 6.0.3。远程使用独立 `/tmp/kmb-audit-20261013/`，真实复测使用脚本创建的每 Agent 临时 HOME 与空记忆库。没有重装或卸载日常 Agent。
 
@@ -80,8 +82,7 @@ SSH 本轮已连通，VM 为 openKylin 3.0（huanghe）、Python 3.12.2、PyYAML
 
 1. 在 openKylin 桌面录制至少两款真实 Agent 的评测与多维雷达图，建议 3–5 分钟；视频脚本不是视频证据。
 2. 上传视频到评委可访问的位置，并在提交说明中填入真实链接。
-3. 确认代码访问方式：仓库当前私有，需负责人决定公开或依组委会指引授权评委；不能把登录状态下可访问当作评委可访问。
-4. 填写参赛身份与报名确认信息，待视频链接齐备后按邮件指引完成正式提交并保存回执。邮件草稿为 `docs/submission-email-draft.md`，未发送。
+3. 填写参赛身份与报名确认信息，待视频链接齐备后按邮件指引完成正式提交并保存回执。用户已确认报名，公开代码访问已解决；邮件草稿为 `docs/submission-email-draft.md`，未发送。
 
 ## 可继续改进
 
@@ -89,7 +90,7 @@ SSH 本轮已连通，VM 为 openKylin 3.0（huanghe）、Python 3.12.2、PyYAML
 - **真实稳定性**：两批有效只是可运行的证据，不能证明长期稳定。应在冻结模型、网关、Agent 版本和套件后跑更多批次，保留失败分母并比较均值/标准差。
 - **覆盖深度**：主覆盖报告 49 条以声明式人工案例为主，后续增加实体/噪声/语言变体和更多跨会话/长间隔测试。包装层重建不能称为真实 OS 重启。
 - **评分可信度**：工程自评分仍以文件、检查和产物作为代理指标，无法自动评价创新价值、实际应用效果和社区治理；应展示真实证据与限制。
-- **系统生命周期已补齐**：release9 在 openKylin 的隔离系统目录中完成真实 dpkg 矩阵，区别于之前仅解包运行。它沿用当前 VM 的只读系统与依赖，不冒称全新 VM；若后续进入发行版软件源，再增加标准镜像和目标架构认证。
+- **系统生命周期已补齐**：相同 0.2.1 二进制同时通过 openKylin 隔离系统目录和主系统 sudo 管理员的真实 dpkg 矩阵。当前验证沿用已有 VM 和依赖，不冒称全新 VM；若后续进入发行版软件源，再增加标准镜像和目标架构认证。
 - **KylinAgent**：当前结构化自动评测仍阻断；PDF 只要求至少两款，因此它不阻断已有双 Agent 方案。不要把发现到服务当成适配已完成。
 
 ## 使用命令
@@ -114,8 +115,8 @@ python3 -m kmb.cli official-acceptance --mode installed \
 
 ## 仓库与权限核查
 
-本轮对全部可达历史的 344 个 Git blob 做了 API token、Authorization Bearer 与私钥标记扫描，未发现匹配项；只记录对象、路径和类型，不输出密钥值。这是有限模式检查，不能保证没有其他形式的敏感资料，也不自动授权将私有历史公开。仓库可见性未擅自改变。
+公开前复查全部可达历史的 362 个 Git blob、提交/标签正文及四次 CI 完整日志，覆盖 API/GitHub/AWS token、私钥、Bearer、带凭据 URL 和直接赋值密钥模式。六个直接赋值候选经上下文核实为两处中文配置占位和四个历史版本的故意拒绝密钥输入测试；未发现待处理密钥。只记录对象、路径、类型和摘要，不记录密钥值。这是有限模式审查，不能保证排除所有敏感资料。根据用户“审查通过后公开现有仓库”的明确授权，将现有仓库设置为 PUBLIC；未登录仓库 API 和 main/README 均 HTTP 200。审查与访问证据见最终包 `verification/repository-public-review.json` 和 `verification/public-access-check.json`。
 
-隔离生命周期没有取得主机 root 权限：Bubblewrap 用户命名空间将当前用户映射为容器内 root，系统根只读；包数据库、命令目录和新包文件写入独立目录。所有安装/升级/卸载均由实际 dpkg 执行，没有使用 `--force-depends` 或伪造包状态。
+隔离生命周期使用 Bubblewrap 用户命名空间将当前用户映射为容器内 root，系统根只读；包数据库、命令目录和新包文件写入独立目录。用户随后授权管理员验证，本轮通过 sudo 在主系统额外执行完整矩阵，预检确认本包原先未安装；九步全部通过后，再安装已验证的最终版本并完成普通用户检查。两类证据分别归档，不再把主系统状态表述为全程未修改。所有安装/升级/卸载均由实际 dpkg 执行，没有使用 `--force-depends` 或伪造包状态；密码只用于 sudo 交互，不写入项目、日志或交付材料。
 
 0.2.1 的编码修复在 Linux 中不改变记忆评分规则或案例；10 月 13 日真实双 Agent 证据仍作为同一 quick 套件/评分器下的系统行为样例，未冒称在新版本上重新消耗 Token 完成全矩阵。

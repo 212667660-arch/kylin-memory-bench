@@ -1,8 +1,8 @@
 # 忆衡发布冻结清单
 
-最终非视频工程版本为 **0.2.1**：158 项跨平台测试、Windows/Ubuntu 干净 wheel CI、Ubuntu dpkg CI、openKylin 隔离 release9→0.2.1 九步生命周期全部通过。最终材料、哈希与证据见 `dist/submission-nonvideo-20261013/` 和 `docs/completion-audit-20261013.md`；早期 release7/release9 指纹保留为历史。代码同步 GitHub main，仓库当前私有，评委访问方式和报名/提交仍需负责人信息；视频按用户要求后置。
+最终非视频工程版本为 **0.2.1**：158 项跨平台测试、Windows/Ubuntu 干净 wheel CI、Ubuntu dpkg CI、openKylin 隔离及主系统 sudo 管理员 release9→0.2.1 九步生命周期全部通过。最终版本已重新安装，普通用户 CLI 与工作台对照评测通过。更新材料、哈希与证据见 `dist/submission-public-20261013/` 和 `docs/completion-audit-20261013.md`；此前材料及早期 release7/release9 指纹保留为历史。代码同步 GitHub main，仓库按负责人授权在审查后公开，未登录访问通过；负责人确认已报名，正式提交仍需身份与确认邮件指引，视频按用户要求后置。
 
-当前版本的工程复核见 `docs/completion-audit-20261013.md`。本文件中的 release7、旧 SHA-256 和旧自评分为历史冻结记录；2026-10-13 已发现并修复 pip 安装、Debian 离线验收和扩展案例期望序列问题，应使用本轮 release9 及其新 manifest。MIT 已生效，桌面视频仍待完成。
+当前版本的工程复核见 `docs/completion-audit-20261013.md`。本文件中的 release7、旧 SHA-256 和旧自评分为历史冻结记录；2026-10-13 已发现并修复 pip 安装、Debian 离线验收、扩展案例期望序列和 Windows 编码问题，应使用本轮 0.2.1 及其新 manifest。MIT 已生效，桌面视频仍待完成。
 
 历史状态：PDF a-d 已有 openKylin 验证记录；当前须同时参考上述工程复核。桌面视频（e）待完成，项目级 MIT 许可证已生效。
 
