@@ -2,6 +2,16 @@
 
 > 路径固定：`docs/mimo.md`。面向本仓库所有 AI / 协作会话。
 
+## 2026-10-13 视频方案深度复核（审阅与稿件完成，两个 P1 待修）
+
+- 意图：依据当前 0.2.1 代码、openKylin 3.0 实机与命题 PDF，给出可照着操作和朗读的录制稿。
+- 范围：`docs/demo-script.md`、`docs/video-review-20261013.md`、`docs/completion-audit-20261013.md` 的追加复核说明、README 的录制前提示、本台账，以及 `dist/video-script-20261013/` 中的 PDF/口播文本；旧稿和探针证据保存在本轮 `runs/` 中。
+- 边界：保持原操作系统版本；不修改评分器、案例、Agent 适配器或已发布二进制；本轮只读预检不启动真实 Agent 对话、不消耗模型 Token，不录制或伪造视频。
+- 验收：逐项核对 PDF 交付 e、六类 quick 案例、实际 UI 标签、隔离入口及报告路径；核实两款 Agent 预检阻断列表，检查文档命令参数、PDF 排版和 GitHub 同步。
+- 实际结果：只读预检两款 Agent 均 ready、blocked 为空、turns_started=0；工作台成功载入历史双 Agent comparison，读取 quick-update 的 7 条事件。语义探针复现更新误扣分（2/3）、最终回答错误却通过（1.0）及 CLI 正确答复被解析为 edit，证据见 `runs/video-script-review-20261013/review-probes.json`。
+- 稿件：分镜与实际操作、约 828 汉字照读口播、失败/通过案例分支和录后清单已完成；PDF 4 页、审阅 PDF 3 页，页面渲染检查通过。
+- 当前边界：两个 P1 未作代码修复，本次未跑新的付费真实评分；README 与先前完成度审计已追加修正项，旧材料和原始分数保留。正式录制应先修复并使用新的真实批次。
+
 ## 协作原则（强制）
 
 1. **本文件职责**  

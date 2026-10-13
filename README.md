@@ -8,6 +8,8 @@ KylinMemoryBench 是面向 openKylin 的智能体长期记忆自动化评测 Ben
 
 **当前验证系统：openKylin 3.0（huanghe）；项目软件版本：KylinMemoryBench 0.2.1。** 使用已有系统开展项目验收，操作系统版本保持原状。文档中的 openKylin 2.0 SP2 为此前测试环境的历史记录，当前环境以 [版本说明](docs/current-environment.md) 为准。
 
+2026-10-13 视频前深度复核新增两项评分可信度问题：回答检查的回合范围、CLI 回答与元数据的区分。当前 0.2.1 的安装和 CI 通过不能代替这两项语义验证，正式录制评分结果前应先修正并生成新批次。复现与建议见 [视频前审阅](docs/video-review-20261013.md)，分镜和口播见 [录制稿](docs/demo-script.md)。
+
 ## 下载与评审入口
 
 | 入口 | 内容 |

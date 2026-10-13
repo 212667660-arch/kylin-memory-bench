@@ -1,130 +1,168 @@
-# openKylin 桌面演示脚本（3-5 分钟）—— 100/100 版
+# KylinMemoryBench 视频分镜与口播稿
 
-本脚本只描述待录制操作，不宣称视频已录制。所有命令已于 2026-10-05 在 openKylin 3.0 VM（`~/kmb-official-review-20260924-r2`）逐条预演通过。对应赛题交付要求 e：openKylin 桌面环境下、两款不同智能体真实评测、多维对比雷达图完整录屏。
+版本：2026-10-13。主场景：现有 openKylin 3.0 桌面。建议讲解与操作约 4 分 50 秒，真实 Agent 的网络等待另计。
 
-## 录制前准备（一次性，录制当天上午执行）
+**使用前提：先修正 [深度审阅](video-review-20261013.md) 中两个 P1 评分/解析问题，并以修正后新批次录制。** 本稿不预填总分；不是已完成的视频。旧 10 月 5 日稿已备份到本轮 runs，旧视频操作和“官方满分”说法不再沿用。
 
-```bash
-cd ~/kmb-official-review-20260924-r2
-ffmpeg -version | head -1                       # 录制依赖（已验证存在）
-rm -rf runs/demo-acceptance runs/demo-compare-smoke   # 清掉预演产物，录制时现场生成
-# 预热网关（约 150 token，避免第一条真实命令冷启动失败）：
-curl -s --max-time 30 -o /dev/null -w "%{http_code}\n" https://llm-gateway.openkylin.top/v1/models \
-  -H "Authorization: Bearer $(head -1 ~/.openkylin-token)"
-```
+## 你应该录哪些功能
 
-开始录制（VM 桌面终端）：
+必录六件事：**openKylin 3.0 环境；KylinBot 与 OpenClaw 两款真实 Agent；六类案例与同一评测参数；一次隔离评测从启动到完成；双 Agent 六维雷达图；至少一个案例的检查理由与证据。**
 
-```bash
-bash scripts/record_desktop_demo.sh runs/desktop-demo-20261005 330
-```
+收尾再展示 GitHub、MIT 和 `.deb`。无需把 API 配置填写、每个菜单、四款 Agent、安装卸载全过程都录一遍。API 接入和离线模拟对照属于补充功能，不能代替真实双 Agent 的主流程。
 
-录制脚本会自动生成 `yiheng-openkylin-demo.mp4` + `sha256.txt` + `media-info.txt`（330 秒，留 20 秒余量）。**遮挡提示**：全程无需输入密钥；若终端出现 `sk-` 开头片段（Agent 横幅）不必遮挡，完整密钥不会出现在任何命令输出中。
+## 分镜顺序
 
-## 0:00-0:20 openKylin 桌面与环境
+| 参考时段 | 画面与操作 | 必须让评委看见 |
+|---|---|---|
+| 0:00–0:20 | openKylin 桌面与项目工作台，口播项目用途 | 项目解决什么问题 |
+| 0:20–0:45 | 终端系统/包版本；工作台“智能体”页 | 系统 3.0；项目版本为实际安装值；两款真实参与者 |
+| 0:45–1:15 | “新建评测”选 quick 套件查看摘要；说明六类与会议室更新例 | 测试内容具体，共享参数一致 |
+| 1:15–2:00，加实际等待 | 在终端启动六案例隔离评测，等待完成 | 真实运行、同一运行目录、两款 Agent 和完整六案例 |
+| 2:00–2:55 | 工作台“运行历史”选本次 comparison，“查看”进入“结果中心” | 两侧名称、六维表、雷达图、有效性与真实分数 |
+| 2:55–4:00 | “案例”选 quick-update 或本次其他案例，再看“证据/记忆轨迹” | 输入、预期、实际答复、规则理由、step/source/引用 |
+| 4:00–4:25 | 本次目录与 strict 校验，简述隔离、参数和观测边界 | 报告可复核，系统行为与模型原生记忆分开 |
+| 4:25–4:50 | GitHub 发布页，显示源码、PDF、deb/wheel、CI、MIT | 可部署和开源复现入口 |
 
-```bash
-uname -r && grep PRETTY /etc/os-release         # openKylin 3.0
-ls -d ~/.kylinbot ~/.openclaw ~/.hermes ~/.kylin-agent-runtime   # 四个生态智能体已安装
-```
+时间是镜头编排建议，不是对网关运行时间的保证。保留连续完整原片；真实评测超过 5 分钟时，优先保留完整流程。可另附标注“等待段倍速”的展示版，原始片仍留存。
 
-口播：这是 openKylin 3.0 真实桌面，KylinBot、OpenClaw、Hermes、KylinAgent 四个生态智能体都已安装，我们的评测工具 KylinMemoryBench 就跑在它们身上。
+## 录制前准备（镜头外）
 
-## 0:20-1:00 官方一条命令验收（无凭据离线闭环）
+在 VM 桌面中操作，保持原 openKylin 3.0 系统；不用 sudo，不升级或降级操作系统。先修正评分/解析问题并安装修正后的项目版本，确认一批真实六案例预演有效。
 
-```bash
-python3 -m kmb.cli official-acceptance --out runs/demo-acceptance --mode offline
-```
-
-预期输出：`{"status": "pass", "exit_code": 0, ...}`。口播：一条命令完成无云凭据的官方验收，自动生成严格校验摘要与报告，不下载 Agent、不填 YAML、不提交密钥。
-
-## 1:00-2:40 真实双 Agent 评测（现场运行，两案例冒烟套件）
+终端 A 启动已准备的工作台：
 
 ```bash
-python3 -m kmb.cli quick-compare --agents kylinbot openclaw --suite suites/demo-smoke.yaml --out runs/demo-compare-smoke
+~/KylinMemoryBench/start-workbench.sh
 ```
 
-说明：KylinBot 与 OpenClaw 由系统自动发现（无需配置），现场真实调用网关模型跑保留+复用两案例（约 40-60 秒）。结束后：
+浏览器打开 `http://127.0.0.1:8765`。终端 B：
 
 ```bash
-ls runs/demo-compare-smoke/        # comparison.html/md/json + 双侧 radar.svg
-xdg-open runs/demo-compare-smoke/comparison.html
+cd ~/KylinMemoryBench
+VIDEO_RUN="runs/video-real-$(date +%Y%m%d-%H%M%S)"
+printf '%s\n' "$VIDEO_RUN"
+kmb quick-compare --agents kylinbot openclaw \
+  --preflight-only --out "$VIDEO_RUN/preflight"
 ```
 
-口播：两款智能体的多维对比雷达图与完整对比报告已生成，全部基于真实运行证据。完整六案例批次证据在 `runs/official-installed-20261004/`（官方评分 100/100 的依据）。
-
-## 2:40-3:30 真实批次证据与官方评分
+检查真实预检状态，不只看命令退出码：
 
 ```bash
-python3 scripts/verify_run.py --strict runs/official-installed-20261004/official-repeat/agents/kylinbot/repeat-01
-cp -r runs/official-installed-20261004/official-repeat runs/demo-acceptance/
-python3 scripts/official_score.py --acceptance runs/demo-acceptance --out runs/demo-acceptance/scorecard
-grep "总分" runs/demo-acceptance/scorecard/scorecard.md
+python3 - "$VIDEO_RUN/preflight/quick-compare.json" <<'PY'
+import json, sys
+from pathlib import Path
+r = json.loads(Path(sys.argv[1]).read_text())
+for item in r['preflight']:
+    print(item['agent'], item['status'])
+print('blocked=', r['blocked'], 'turns=', r['turns_started'])
+assert r['turns_started'] == 0
+assert not r['blocked'], '处理预检阻断后再录制'
+PY
 ```
 
-预期：strict verify 退出码 0（KylinBot 6 案例 51 条证据）；评分为 **100/100**（含 PDF-16 稳定性满分：VM 真实双 Agent 两批全部有效）。
+预检 ready 只确认命令与存储；正式评测会调用真实 Agent 后端并消耗相应额度。不要沿用旧稿的“40–60 秒必完成”或“重录成本低”。录制前关闭通知和账户/Token 页面，只展示本批合成案例。
 
-## 3:30-4:20 证据链与表述边界
+录屏选整个 VM 桌面，文字清晰，建议 1920×1080；用已安装的录屏工具确认能录麦克风。仓库 ffmpeg 脚本只录屏幕，可录后配旁白，但不要误以为它自动录音或保证完整时长。
+
+## 镜头中实际命令
+
+环境展示：
 
 ```bash
-tail -3 runs/official-installed-20261004/official-repeat/agents/kylinbot/repeat-01/evidence.jsonl
+grep -E 'PRETTY_NAME|VERSION_ID' /etc/os-release
+dpkg-query -W kylin-memory-bench
 ```
 
-口播：每一分都来自可审计的运行事件——工具调用、记忆写入、召回、动作工件全部落盘可回放。同时如实标注边界：这些分数度量的是"模型后端 + Agent 外部记忆/动作控制器"的系统级行为（`native_memory_events=0`），不宣称模型原生长期记忆。
-
-## 4:20-4:50 收尾
-
-口播：KylinMemoryBench 官方自评分 100/100，四智能体矩阵（KylinBot 63.89/61.11、OpenClaw 22.22/22.22、Hermes 22.22）全部来自 openKylin 3.0 真实运行，工具、证据、评分与发布包全部开源可复现。
-
-## 录制后（交给 ZCode 或自行执行）
+“新建评测”页选择 `suites/quick.yaml` 只查看六类摘要，不在日常 HOME 点击“开始快速对比”。返回终端 B，启动已实现的隔离入口：
 
 ```bash
-# 在 VM 上确认产物齐全后，拷回宿主机归档：
-#   runs/desktop-demo-20261005/{yiheng-openkylin-demo.mp4, sha256.txt, media-info.txt}
+kmb official-repeat --agents kylinbot openclaw \
+  --suite suites/quick.yaml --repeats 1 --seed 42 \
+  --timeout 180 --isolated-home \
+  --out "$VIDEO_RUN/evaluation"
 ```
 
-宿主机侧收尾（ZCode 执行）：SHA256/时长校验、归档进 `runs/desktop-demo-20261005/`、`docs/pdf-compliance-audit.md` 与 `docs/requirements-traceability.md` 的 PDF-12 状态改为"已交付"、重打最终发布包。
+看到 `status=completed` 后，检查两侧有效性和运行错误：
 
-## 回退预案（录制中途失败时）
+```bash
+python3 - "$VIDEO_RUN/evaluation" <<'PY'
+import json, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+for agent in ('kylinbot', 'openclaw'):
+    p = root / 'repeat-01/quick-compare' / agent / 'result.json'
+    r = json.loads(p.read_text())
+    print(agent, 'score=', r['overall'],
+          'valid=', r['score_valid'], 'errors=', r['error_cases'])
+    assert r['score_valid'] is True and r['error_cases'] == 0
+PY
+```
 
-- 快速对比报 429/402：网关瞬时问题——结束录制，等 5 分钟后重录（冒烟套件仅 ~15 万 token，重录成本低）；
-- 任一命令报错：不要现场调试——结束录制，把报错发给 ZCode 修复预演后再录；
-- 录制时长不足/超时：`record_desktop_demo.sh` 第二参数可调（330 已留余量）。
+浏览器刷新工作台，“运行历史”中找到本次目录下 `evaluation/repeat-01/quick-compare` 的双 Agent comparison，点击“查看”。用目录和时间定位，避免误点之前的 reference/flawed 对照或重复汇总中的单 Agent 记录。
 
----
+如果界面定位不顺，可从同一批次打开离线比较报告：
 
-## 完整口播稿（照读版，2026-10-05）
+```bash
+xdg-open "$VIDEO_RUN/evaluation/repeat-01/quick-compare/comparison.html"
+```
 
-> 三句贯穿主线：**真实**（全部在 openKylin 3.0 真实桌面、真实生态智能体上跑出来）、**自动**（一条命令、证据链自动评分、零人工审核）、**诚实**（边界如实标注、失败分类分开、批次可复现）。
+`.deb` 包已安装严格校验入口，可直接执行：
 
-### 0:00-0:20 开场
+```bash
+python3 /usr/share/kylin-memory-bench/scripts/verify_run.py \
+  "$VIDEO_RUN/evaluation/agents/kylinbot/repeat-01" --strict
+python3 /usr/share/kylin-memory-bench/scripts/verify_run.py \
+  "$VIDEO_RUN/evaluation/agents/openclaw/repeat-01" --strict
+```
 
-"大家好，这是 openKylin 3.0 的真实桌面。这个项目叫 **KylinMemoryBench**——一套面向 openKylin 生态的**智能体长期记忆自动化评测基准**。刚才列出的四个目录，就是装在这台系统里的四个生态智能体：小K KylinBot、OpenClaw、Hermes，和 KylinAgent。它们背后接的是 openKylin Token 中心的同一个模型网关。"
+`comparison.html`、两侧 `radar.svg`、`result.json`、`evidence.jsonl` 和 `repeat-summary.json` 来自同一批次。单批演示不宣称稳定性统计；需要额外重复时在新目录用 `--repeats 2`，全部批次包括失败都应保留。
 
-### 0:20-1:00 一条命令验收
+## 完整口播稿（照读）
 
-"先看交付的最短路径：**一条命令**，跑完官方验收。注意——不需要云凭据、不下载任何东西、不需要填任何 YAML 配置。执行……看到 status pass、退出码 0：案例校验、离线对比、证据严格校验，一次全部完成，报告自动生成。"
+### 1. 项目用途
 
-### 1:00-2:40 真实双 Agent 评测
+大家好，我展示的项目是 KylinMemoryBench，一套运行在 openKylin 上的智能体长期记忆自动化评测工具。它帮助开发者判断：智能体是否能记住应该保留的信息、更新旧信息、拒绝不该保存的信息，并把记忆用于实际任务。我们将运行证据组织起来，自动给出可解释的指标。
 
-"重头戏：**在真实智能体身上现场跑评测**。KylinBot 和 OpenClaw 由系统自动发现，零手工配置。现场用的是精简冒烟套件，两条真实案例；完整的评测矩阵覆盖 **49 个案例、六大长期记忆能力**——对应赛题的长期保持、记忆调用、动态更新、相近区分、边界识别、任务复用。比如：让智能体'记住项目代号'，过一会儿看它记没记住、能不能用起来；给它一个一次性验证码并明确说'不要存'，看它会不会错误地记下来。现在执行……可以看到两个智能体在真实调用网关模型、产生真实工具调用。运行结束——**两款智能体各自的多维对比雷达图和完整对比报告已经生成**，每一条结论背后都有可回放的运行证据。"
+### 2. 真实环境和参与者
 
-### 2:40-3:30 证据与评分
+这里是原有的 openKylin 3.0 桌面，终端显示当前系统和项目软件版本。项目软件版本与操作系统版本是两回事。这次参与评测的是已经安装的 KylinBot 和 OpenClaw。工具可以发现它们的命令入口与存储，预检通过后再启动真实评测。
 
-"分数是怎么来的？**不是模型说记住了就算**——我们对运行结果做证据链严格校验：这一批 KylinBot 有 51 条证据事件，工具调用、记忆写入、召回、动作文件全部落盘、可逐条回放，strict 校验退出码 0。把真实重复批次证据附上，官方评分给出 **100 分满分**——其中稳定性是满分：两个真实智能体的重复批次全部有效，OpenClaw 两批分数**完全一致**，KylinBot 波动只有 2.78 分。"
+### 3. 案例和公平性
 
-### 3:30-4:20 边界（可信度所在，必念）
+这次选用 quick 套件，六个案例分别覆盖长期保持、记忆调用、动态更新、相近区分、边界识别和任务复用。例如，先告诉智能体会议室是 Room A，再改成 Room B，最后查询时，应该使用新信息。两款 Agent 使用同一套件、随机种子和运行参数。这里展示的是六案例流程，不代表两款 Agent 已完整跑过项目全部案例。
 
-"这里强调一个专业边界：这些分数度量的是'模型后端 + Agent 外部记忆控制器'的**系统级行为**——原生记忆事件为零，所以我们从不说这是模型原生长期记忆。评测也如实区分失败类型：网关限流、余额不足、行为缺陷分开统计，失败批次永远保留在分母里，绝不挑好数据。**评测工具自己的可信度，和被测智能体的分数一样重要。**"
+### 4. 启动真实隔离评测
 
-### 4:20-4:50 收尾
+现在通过一条命令启动评测。工具为每款 Agent 准备临时 HOME 和独立记忆状态副本，合成案例不会写入日常记忆。本次调用真实 Agent 后端，运行完成后会自动生成评分、比较报告和雷达图。网络等待时间由实际环境决定。
 
-"最终，KylinMemoryBench 官方自评分 **100 分**：49 个案例、四大智能体真实矩阵、.deb 一键部署、MIT 开源、完整生命周期证据。工具、数据、证据、评分全部开源可复现——这套基准会持续服务 openKylin 社区的智能体记忆能力评估。谢谢大家。"
+### 5. 多维结果
 
-### 储备问答（评审追问时用）
+评测完成后，我在运行历史中打开刚才这一批结果。这里显示两款 Agent 的实际总分，以及六个能力维度的对比和雷达图。总分用来概览，具体维度帮助定位差异。有效低分是值得分析的结果；运行错误则需要先处理，不能混作正常能力分数。
 
-- **"和直接问模型有什么区别？"** —— 简单问答验证不了冲突更新、相近干扰、错误持久化和行动复用；我们用确定性规则对运行证据打分，能区分"记住了/误记了/不该记却记了"。
-- **"证据来源有哪些？"** —— 对话消息、模型工具调用、记忆库写入/召回、沙箱文件工件（带 SHA-256）、会话检索事件，全部统一为 EvidenceEvent。
-- **"怎么保证稳定可复现？"** —— 固定 seed、独立 HOME、清空记忆表、套件与评分器 SHA-256 入档、环境指纹（技能树/配置/二进制哈希）跨日一致、失败批次保留在分母。
-- **"四个智能体都测了吗？"** —— KylinBot 63.89/61.11、OpenClaw 22.22/22.22、Hermes 22.22 都是真实批次分数；KylinAgent 的驱动与证据提取已完成，等网关一个缺陷修复后即可纳入。
-- **"能扩展吗？"** —— 套件是 YAML、智能体是配置化适配器、评分器版本化；新增智能体只需实现 CommandAgent 协议（stdin 案例 → stdout 证据）。
+### 6. 解释一项检查
+
+接下来打开一个具体案例。这里能对应看到输入、目标检查、实际答复和评分理由，再沿引用查看不同步骤的证据。对于会议室更新，既要检查最新状态是否为 Room B，也要检查最终查询是否使用新值。通过同样需要证据；没有观测到的内部状态不会自动当作已经验证。
+
+### 7. 可复核与边界
+
+本次运行保留了案例结果、原始事件、报告和运行参数，可以做严格结构校验，也能在工作台回溯。但结构完整不等于所有语义规则都天然正确。这里评测的是 Agent 和记忆、动作机制的系统级行为；没有明确的原生记忆事件时，不宣称模型原生长期记忆。单批短任务也不能证明数天或长期稳定性。
+
+### 8. 开源交付和价值
+
+最后，项目提供 CLI、浏览器工作台、openKylin Debian 安装包及完整可复现材料。代码采用 MIT 许可证，GitHub 发布页提供源码、使用说明和验证记录。希望这套工具帮助 openKylin 社区用具体案例和可核查证据，持续发现并改进智能体的记忆问题。谢谢大家。
+
+## 案例讲解的两个分支
+
+如果本批有失败案例，选择一个有清晰规则和证据的失败，补一句：“这一项没有满足检查，原因和对应事件都能展开查看。”不要把未观测到的动作解释为确定发生了错误动作。
+
+如果全部通过，选择一个通过案例，补一句：“这一项通过，是因为状态、答复或动作证据满足了对应检查。”需要补充扣分演示时，可另开 reference/flawed 离线对照，画面明确标注模拟基线；不能替代前面的两款真实 Agent。
+
+## 可省略或作为备用镜头的功能
+
+- 一键离线工程验收：`kmb official-acceptance --mode offline --out <新目录>`，用于证明工具链可复现，不是“官方评审通过”。
+- 多批次聚合：在新目录运行 `official-repeat --repeats 2`，展示均值、标准差和有效分数率；不宣称两批代表长期稳定。
+- API 档案注册：只说明可扩展接入，不录入密钥，也不把两个提供商自动说成两款生态 Agent。
+
+## 录完后的检查
+
+确认能看清系统 3.0、两款真实 Agent、启动和完成、六维雷达、至少一个案例及证据；声音清楚、没有凭据和私人通知；保持同一批次的目录与参数。保留原始连续片，上传后用未登录窗口确认视频可播放。当前稿子不把“视频已完成”或“正式材料已发送”写成事实。
