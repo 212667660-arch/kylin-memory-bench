@@ -2,6 +2,18 @@
 
 > 路径固定：`docs/mimo.md`。面向本仓库所有 AI / 协作会话。
 
+## 2026-10-14 新建评测与宿主环境自动发现统一（代码与部署完成，未运行测试）
+
+- 意图：解决新建评测仍只展示内部 YAML 配置的问题；默认选择工作台服务所在系统已安装的智能体，并真实支持自定义套件与共同参数。
+- 范围：`kmb/agent_registry.py` 的有界安装/可执行文件发现与元数据；`kmb/agent_adapters/base.py`、`hermes.py`、`kylinbot.py` 的一致命令解析；`kmb/workbench.py` 和 `kmb/quick_compare.py` 的真实已安装智能体任务参数；`kmb/web/app.js` 及必要样式的默认入口、选择、草稿与刷新；版本、README、CHANGELOG、工作台/当前环境文档与本台账；`runs/host-agent-discovery-20261014/` 的静态记录和 VM 部署。
+- 边界：自动检测仅针对后端所在机器和用户，浏览器在 Windows 不代表检测 Windows 宿主系统；不扫描整个磁盘、不读取或返回密钥、不自动安装 Agent、不修改日常记忆、不创建替代模拟智能体。保留高级 A/B/对照配置与冻结 0.2.2 材料，原 openKylin 3.0 不变。
+- 验收：后端真实发现与新建评测共享同一注册表，已安装但不可驱动/隔离目录未就绪明确显示并阻断启动；用户选定的 suite/seed/retries/timeout 传入现有原生适配器/runner，而不是退回固定快速套件。按负责人要求不执行测试、连接探针或模型调用，仅静态审阅/语法、构建安装和只读页面/元数据核对。
+- 实际修改：发现使用 PATH 与固定常见用户/系统目录，OS 用户 HOME 独立于隔离 HOME；安装来源、命令路径、检测时间/主机由后端返回。新建评测以已安装智能体为默认入口；高级记忆层配置保留且增加中文名称与用途。旧草稿不再把新入口带回内部 YAML；本轮保存的草稿包含来源、轨道和实际两侧标识。
+- 执行边界：原生任务收到真实 Agent id，后端重新检查可执行性并校验共享 suite/seed/retries/timeout，转入原生适配器和现有 runner。实际评分器固定 deterministic-v2；主机安装与评测目录就绪分开判断，未就绪不能启动。页面进入和可见时每 30 秒仅查询安装元数据，输入/下拉操作时避免重绘打断。
+- 部署结果：0.2.4 已构建安装，工作台 PID 28508 返回版本 0.2.4，检测主机 Cisyam-pc。小K/OpenClaw installed=true、runnable=true；Hermes 已安装但隔离目录未准备；KylinAgent 需手动观测。保留原 KMB_AGENT_HOME 与 openKylin 3.0，系统版本文件 SHA-256 前后相同。
+- 静态与页面：全部 tracked Python 源仅语法解析，JavaScript `node --check` 与差异空白检查通过；七项安装后的源文件与本机 SHA-256 一致。页面已显示小K/OpenClaw、六案例 quick、42/1/180 参数及两侧最近额度不足。证据为 `runs/host-agent-discovery-20261014/new-evaluation.png`、`deployment-status.json`、`static-checks.json`；deb SHA-256 为 85d9088cdef617958401f73cfde74ec5b7b0caf0a60f8d4662cfa3dc1a692927。没有点击开始、运行测试或新的模型回合；本轮不宣称评测回归通过、不发布正式标签。
+- 交付：同步工作区文档到 VM 并提交 GitHub；旧 0.2.2 标签、发行附件、历史结果与清理记录保留。
+
 ## 2026-10-13 清理旧演讲稿与录制材料（清理完成）
 
 - 意图：按负责人要求清理旧演讲稿、分镜、录制操作说明及其独立交付包，避免继续误用。

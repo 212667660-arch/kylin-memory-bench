@@ -5,13 +5,13 @@ import json
 import os
 import re
 import shlex
-import shutil
 import signal
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional
 
 from ..models import EvidenceEvent
+from ..agent_registry import resolve_agent_executable
 from .sqlite_memory import diff_snapshots
 
 
@@ -86,7 +86,7 @@ def executable_available(command: Iterable[str]) -> bool:
         return False
     executable = parts[0]
     path = Path(executable).expanduser()
-    return path.is_file() or shutil.which(executable) is not None
+    return resolve_agent_executable(str(path)) is not None
 
 
 def preflight_command(command: Iterable[str], label: str = "Agent command") -> Dict[str, Any]:
@@ -197,6 +197,9 @@ def _find_text(value: Any) -> str:
 
 
 def invoke_command(command: List[str], timeout: float, env: Optional[Mapping[str, str]] = None) -> str:
+    command = list(command)
+    if command:
+        command[0] = resolve_agent_executable(command[0], Path(env["HOME"]) if env and env.get("HOME") else None) or command[0]
     creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if os.name == "nt" else 0
     process = subprocess.Popen(
         command,

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kylin-memory-bench"
-version = "0.2.3"
+version = "0.2.4"
 description = "Evidence-based long-term memory benchmark for AI agents"
 requires-python = ">=3.9"
 dependencies = ["PyYAML>=6.0"]

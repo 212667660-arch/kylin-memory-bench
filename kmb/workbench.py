@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import importlib.metadata
 import json
+import math
 import mimetypes
 import os
 import platform
@@ -31,7 +32,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 import yaml
 
 from . import __version__
-from .agent_registry import discover_agents, profiles_to_dicts
+from .agent_registry import discover_agents, host_home, profiles_to_dicts
 from .agents import build_agent_from_config, load_agent_config, resolve_api_profile
 from .report import radar_svg, write_compare, write_html_report, write_markdown
 from .runner import load_suite, run_suite, validate_cases
@@ -62,6 +63,21 @@ CREDENTIAL_NAMES = {
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _evaluation_parameters(payload: Dict[str, Any]) -> Dict[str, Any]:
+    seed = payload.get("seed", 42)
+    seed = None if seed in (None, "") else int(seed)
+    retries = int(payload.get("retries", 1))
+    timeout = float(payload.get("timeout", 180))
+    scorer_version = str(payload.get("scorer_version", "deterministic-v2"))
+    if retries < 0 or retries > 5:
+        raise ValueError("重试次数必须在 0 到 5 之间")
+    if not math.isfinite(timeout) or timeout < 1 or timeout > 900:
+        raise ValueError("超时时间必须在 1 到 900 秒之间")
+    if not re.fullmatch(r"[A-Za-z0-9._+:-]{1,64}", scorer_version):
+        raise ValueError("评分器版本格式无效")
+    return {"seed": seed, "retries": retries, "timeout": timeout, "scorer_version": scorer_version}
 
 
 def _fix_hint(profile: Any) -> str:
@@ -405,14 +421,19 @@ class WorkbenchState:
         read credentials, start Agents, or probe a model provider.
         """
         profiles = discover_agents(self.root)
-        host = {profile.id: profile for profile in discover_agents(self.root, home=Path.home())}
+        host = {profile.id: profile for profile in discover_agents(self.root, home=host_home())}
         payload = profiles_to_dicts(profiles)
         runs = self.list_runs()
         configured_home = os.environ.get("KMB_AGENT_HOME")
-        isolated = bool(configured_home and Path(configured_home).expanduser().resolve() != Path.home().resolve())
+        isolated = bool(configured_home and Path(configured_home).expanduser().resolve() != host_home().resolve())
+        detected_at = _utc_now()
         for profile, item in zip(profiles, payload):
             installed_on_host = bool(host.get(profile.id) and host[profile.id].installed)
             item["host_installed"] = installed_on_host
+            item["host_detection_sources"] = list(host[profile.id].detection_sources) if installed_on_host else []
+            item["host_executable_path"] = host[profile.id].executable_path
+            item["discovery_host"] = platform.node()
+            item["detected_at"] = detected_at
             item["installed"] = profile.installed or installed_on_host
             item["workspace_ready"] = profile.runnable
             item["execution_scope"] = "isolated" if isolated else "user"
@@ -879,6 +900,7 @@ class WorkbenchState:
             "platform": platform.platform(),
             "system": platform.system(),
             "machine": platform.machine(),
+            "agent_discovery": {"scope": "backend_host", "hostname": platform.node(), "automatic": True, "checks": ["executable", "memory_store", "configuration_file_metadata"], "starts_agents": False},
             "python": platform.python_version(),
             "python_executable": str(Path(os.sys.executable).resolve()),
             "pyyaml": yaml_version,
@@ -917,6 +939,13 @@ class WorkbenchState:
             return {"status": "error", "http_status": None, "latency_ms": elapsed, "name": name, "model": model, "endpoint": endpoint, "error": _redact_text(str(exc)), "checked_at": _utc_now()}
 
     def start_run(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        source = payload.get("source", "configuration")
+        if source == "installed":
+            if payload.get("api_profiles"):
+                raise ValueError("已安装智能体使用自身配置，不接受工作台 API 档案覆盖")
+            return self.start_quick_compare(dict(payload, agents=[payload.get("primary_agent"), payload.get("comparison_agent")]))
+        if source != "configuration":
+            raise ValueError("source 必须是 installed 或 configuration")
         primary = self.config_path(payload.get("primary_agent"))
         comparison = self.config_path(payload.get("comparison_agent"))
         suite = self.suite_path(payload.get("suite"))
@@ -926,20 +955,8 @@ class WorkbenchState:
             raise ValueError("主 Agent 与对比 Agent 必须不同")
         cases = load_suite(str(suite))
         validate_cases(cases, require_all_capabilities=False)
-        seed = payload.get("seed")
-        if seed in (None, ""):
-            seed = None
-        else:
-            seed = int(seed)
-        retries = int(payload.get("retries", 1))
-        timeout = float(payload.get("timeout", 180))
-        scorer_version = str(payload.get("scorer_version", "deterministic-v2"))
-        if retries < 0 or retries > 5:
-            raise ValueError("重试次数必须在 0 到 5 之间")
-        if timeout <= 0 or timeout > 900:
-            raise ValueError("超时时间必须在 1 到 900 秒之间")
-        if not re.match(r"^[A-Za-z0-9._+:-]{1,64}$", scorer_version):
-            raise ValueError("评分器版本格式无效")
+        parameters = _evaluation_parameters(dict(payload, seed=payload.get("seed")))
+        seed, retries, timeout, scorer_version = (parameters[key] for key in ("seed", "retries", "timeout", "scorer_version"))
         track = str(payload.get("track") or "control")
         if track not in {"A", "B", "control"}:
             raise ValueError("track 必须是 A（生态智能体）/ B（记忆层）/ control（对照基线）")
@@ -1006,15 +1023,22 @@ class WorkbenchState:
         return target
 
     def start_quick_compare(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        from .quick_compare import DEFAULT_RETRIES, DEFAULT_SEED, DEFAULT_TIMEOUT, _select_profiles
+        from .quick_compare import QuickCompareOptions, QUICK_SUITE, _select_profiles
 
         raw_agents = payload.get("agents") or payload.get("agent_ids") or []
         if not isinstance(raw_agents, list):
             raise ValueError("agents 必须是 Agent id 数组")
+        parameters = _evaluation_parameters(payload)
+        if parameters["scorer_version"] != "deterministic-v2":
+            raise ValueError("已安装智能体当前使用 deterministic-v2 评分器")
+        suite = self.suite_path(payload.get("suite") or QUICK_SUITE)
+        cases = load_suite(str(suite))
+        suite_relative = _relative(suite, self.root)
+        validate_cases(cases, require_all_capabilities=(suite_relative == QUICK_SUITE))
         profiles = discover_agents(self.root)
         try:
             selected = _select_profiles(
-                type("QuickOptions", (), {"agent_ids": [str(item) for item in raw_agents] or None})(),
+                QuickCompareOptions(agent_ids=[str(item) for item in raw_agents] or None),
                 profiles,
             )
         except ValueError as exc:
@@ -1030,15 +1054,17 @@ class WorkbenchState:
         job = {
             "id": job_id, "kind": "quick_compare", "status": "queued", "created_at": _utc_now(), "updated_at": _utc_now(),
             "progress": {"completed": 0, "total": 2, "phase": "排队中", "current_agent": None},
-            "params": {"seed": DEFAULT_SEED, "retries": DEFAULT_RETRIES, "timeout": DEFAULT_TIMEOUT, "suite": "suites/quick.yaml"},
+            "params": dict(parameters, suite=suite_relative, suite_sha256=_sha256(suite)),
+            "track": "A", "source": "installed",
             "agents": [profile.id for profile in selected],
             "output": _relative(output, self.root), "error": None,
         }
+        (output / "workbench-meta.json").write_text(json.dumps({"track": "A", "source": "installed", "created_at": job["created_at"], "parameters": job["params"]}, ensure_ascii=False, indent=2), encoding="utf-8")
         with self.lock:
             self.jobs[job_id] = job
             self.cancel_events[job_id] = threading.Event()
         self._write_job(job)
-        self.executor.submit(self._run_quick_job, job_id, [profile.id for profile in selected], output)
+        self.executor.submit(self._run_quick_job, job_id, [profile.id for profile in selected], output, job["params"])
         return self._public_job(job)
 
     def _write_job(self, job: Dict[str, Any]) -> None:
@@ -1107,13 +1133,14 @@ class WorkbenchState:
             (output / "workbench-error.log").write_text(str(message) + "\n", encoding="utf-8")
             self._update_job(job_id, status="error", progress=self.jobs.get(job_id, {}).get("progress", {}), error=message, result_path=_relative(output, self.root))
 
-    def _run_quick_job(self, job_id: str, agent_ids: List[str], output: Path) -> None:
+    def _run_quick_job(self, job_id: str, agent_ids: List[str], output: Path, parameters: Optional[Dict[str, Any]] = None) -> None:
         from .quick_compare import QuickCompareOptions, run_quick_compare
 
         try:
             self._update_job(job_id, status="running", progress={"completed": 0, "total": 2, "phase": "准备快速对比", "current_agent": None})
+            parameters = parameters or {}
             result = run_quick_compare(
-                QuickCompareOptions(agent_ids=agent_ids, out_dir=str(output)),
+                QuickCompareOptions(agent_ids=agent_ids, out_dir=str(output), suite=parameters.get("suite", "suites/quick.yaml"), seed=parameters.get("seed", 42), retries=parameters.get("retries", 1), timeout=parameters.get("timeout", 180)),
                 root=self.root,
             )
             self._update_job(

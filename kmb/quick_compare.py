@@ -26,7 +26,7 @@ DEFAULT_TIMEOUT = 180.0
 class QuickCompareOptions:
     agent_ids: Optional[List[str]] = None
     out_dir: str = ""
-    seed: int = DEFAULT_SEED
+    seed: Optional[int] = DEFAULT_SEED
     retries: int = DEFAULT_RETRIES
     timeout: float = DEFAULT_TIMEOUT
     agent_homes: Optional[Dict[str, str]] = None
@@ -122,7 +122,7 @@ def run_quick_compare(options: QuickCompareOptions, root: Optional[Path] = None)
         details = "; ".join("%s: %s" % (item.get("agent", "agent"), item.get("reason", "preflight blocked")) for item in blocked)
         (output / "quick-compare.json").write_text(json.dumps({
             "run_id": run_id,
-            "suite": QUICK_SUITE,
+            "suite": str(options.suite),
             "agents": [profile_to_dict(profile) for profile in selected],
             "parameters": {"seed": options.seed, "retries": options.retries, "timeout": options.timeout},
             "preflight": preflight,

@@ -11,6 +11,7 @@ from scripts.kylinbot_command_agent import run_case
 
 from ..models import BenchmarkCase, EvidenceEvent
 from .base import preflight_command
+from ..agent_registry import resolve_agent_executable
 
 
 class KylinBotAdapter:
@@ -32,7 +33,7 @@ class KylinBotAdapter:
         }
 
     def preflight(self) -> Dict[str, Any]:
-        command = shlex.split(os.environ.get("KYLINBOT_COMMAND", "kylin-bot"))
+        command = self._command()
         checks = [
             {
                 "name": "memory_store",
@@ -50,8 +51,14 @@ class KylinBotAdapter:
             "reason": blocked.get("reason") if blocked else "read-only preflight passed",
         }
 
+    def _command(self) -> List[str]:
+        command = shlex.split(os.environ.get("KYLINBOT_COMMAND", "kylin-bot"))
+        if command:
+            command[0] = resolve_agent_executable(command[0], self.home) or command[0]
+        return command
+
     def run(self, case: BenchmarkCase) -> List[EvidenceEvent]:
-        raw_events = run_case(asdict(case), db_path=self.db_path, timeout=self.timeout, home=self.home)
+        raw_events = run_case(asdict(case), command=self._command(), db_path=self.db_path, timeout=self.timeout, home=self.home)
         events: List[EvidenceEvent] = []
         for raw in raw_events:
             events.append(EvidenceEvent(

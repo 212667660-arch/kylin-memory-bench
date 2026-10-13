@@ -24,9 +24,10 @@
     baselineParams: null,
     filters: { agent: "all", capability: "all", failure: "all", history: "" },
     loading: false,
+    discoveryLoading: false,
     lastRefreshAt: null,
     configSaving: false,
-    profiles: [], formTrack: "control", formApiPrimary: "", formApiComparison: "", editingProfileId: null,
+    profiles: [], formSource: "installed", formTrack: "A", formApiPrimary: "", formApiComparison: "", editingProfileId: null,
     configNotice: null,
     railCollapsed: false,
     resultTab: "result",
@@ -280,7 +281,7 @@
     if (!state.savedAt) {
       try {
         const draft = JSON.parse(localStorage.getItem("kmb-workbench-draft") || "null");
-        if (draft) { state.formPrimary = draft.primary || state.formPrimary; state.formComparison = draft.comparison || state.formComparison; state.formSuite = draft.suite || state.formSuite; state.params = Object.assign({}, state.params, draft.params || {}); }
+        if (draft && draft.version === 2) { state.formSource = draft.source === "configuration" ? "configuration" : "installed"; state.formTrack = state.formSource === "installed" ? "A" : (["A", "B", "control"].includes(draft.track) ? draft.track : "control"); state.formPrimary = draft.primary || ""; state.formComparison = draft.comparison || ""; state.formSuite = draft.suite || ""; state.params = Object.assign({}, state.params, draft.params || {}); state.savedAt = new Date(); }
       } catch (error) { /* ignore malformed local-only draft */ }
     }
     const failures = [];
@@ -293,6 +294,7 @@
     const runnable = (state.agents || []).filter((agent) => agent && agent.installed && agent.runnable).map((agent) => agent.id);
     state.quickSelected = state.quickSelected.filter((id) => runnable.includes(id));
     if (!state.quickSelected.length) state.quickSelected = runnable.slice(0, 2);
+    normalizeFormSelection();
     if (failures.length) showGlobalError(failures.join("；")); else showGlobalError("");
     updateEnvironmentBadge();
     if (state.selectedRunPath && state.view === "results") {
@@ -303,6 +305,23 @@
     render();
     updateRefreshState();
   }
+
+  async function refreshAgentDiscovery() {
+    if (state.loading || state.discoveryLoading || document.hidden || !['new', 'agents', 'overview'].includes(state.view)) return;
+    state.discoveryLoading = true;
+    try {
+      const result = await api('/api/agents');
+      state.agents = result.agents || [];
+      const runnable = state.agents.filter((agent) => agent.runnable).map((agent) => agent.id);
+      state.quickSelected = state.quickSelected.filter((id) => runnable.includes(id));
+      if (!state.quickSelected.length) state.quickSelected = runnable.slice(0, 2);
+      normalizeFormSelection();
+      const editing = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+      if (!editing && !document.querySelector('.select-menu.open')) render();
+    } catch (error) { showGlobalError('自动检测智能体失败：' + error.message); }
+    finally { state.discoveryLoading = false; }
+  }
+  window.setInterval(refreshAgentDiscovery, 30000);
 
   function showGlobalError(message) {
     const target = $("#global-error");
@@ -359,6 +378,7 @@
     document.querySelectorAll(".nav-item").forEach((button) => button.classList.toggle("active", button.dataset.view === view));
     state.moreOpen = false;
     render();
+    if (['new', 'agents', 'overview'].includes(view)) refreshAgentDiscovery();
   }
 
   function render() {
@@ -427,10 +447,11 @@
     const facts = (items) => '<dl class="rail-facts">' + items.map((item) => '<div><dt>' + esc(item[0]) + '</dt><dd title="' + esc(item[1]) + '">' + esc(item[1]) + '</dd></div>').join('') + '</dl>';
     const header = (_kicker, title) => '<section class="rail-section"><div class="rail-section-title"><span>' + esc(title) + '</span></div>';
     if (view === 'new') {
-      const primary = configByPath(state.formPrimary || defaultConfigPaths()[0]);
-      const comparison = configByPath(state.formComparison || defaultConfigPaths()[1]);
+      const pair = currentFormPair();
+      const primary = state.formSource === "installed" ? nativeById(pair[0]) : configByPath(pair[0]);
+      const comparison = state.formSource === "installed" ? nativeById(pair[1]) : configByPath(pair[1]);
       const selectedSuite = state.formSuite || suite;
-      return { title: '评测配置', body: header('CONFIGURATION', '评测配置') + '<div class="rail-task-name">双 Agent 对比工作区</div>' + facts([['主 Agent', primary ? primary.name : '未选择'], ['对比 Agent', comparison ? comparison.name : '未选择'], ['测试套件', selectedSuite ? String(selectedSuite).split(/[\\/]/).pop() : '未选择'], ['Seed', fmt(state.params.seed, '未记录')], ['重试', fmt(state.params.retries, '未记录')], ['超时', fmt(state.params.timeout, '未记录')], ['评分器', fmt(state.params.scorer_version, '未记录')]]) + '</section>' };
+      return { title: '评测配置', body: header('CONFIGURATION', '评测配置') + '<div class="rail-task-name">双智能体对比工作区</div>' + facts([['来源', state.formSource === 'installed' ? '本机自动发现' : '高级配置'], ['主智能体', primary ? primary.display_name || primary.name : '未选择'], ['对比智能体', comparison ? comparison.display_name || comparison.name : '未选择'], ['测试套件', selectedSuite ? String(selectedSuite).split(/[\\/]/).pop() : '未选择'], ['Seed', fmt(state.params.seed, '未记录')], ['重试', fmt(state.params.retries, '未记录')], ['超时', fmt(state.params.timeout, '未记录')], ['评分器', fmt(state.params.scorer_version, '未记录')]]) + '</section>' };
     }
     if (view === 'tasks') {
       return { title: '任务进度', body: header('RUN', '当前任务') + '<div class="rail-section-title"><span>状态</span><span class="status-pill ' + (active ? 'partial' : stateName === 'Completed' ? 'completed' : stateName === 'Failed' ? 'failed' : '') + '">' + esc(runStateLabel(stateName)) + '</span></div><div class="rail-task-name">' + esc(active ? ((state.job.progress && state.job.progress.phase) || '智能体正在工作…') : '没有正在执行的任务') + '</div>' + (progress != null ? '<div class="rail-progress"><div class="progress-track"><div class="progress-value" style="width:' + progress + '%"></div></div><div class="rail-meta"><span>进度</span><strong>' + progress + '%</strong></div></div>' : '') + facts([['当前案例', active && state.job.progress ? fmt(state.job.progress.current_case, '准备中') : '未观测'], ['任务 ID', state.job && state.job.id ? state.job.id : '未开始'], ['开始时间', state.job && state.job.created_at ? formatCheckedAt(state.job.created_at) : '未记录']]) + '</section>' + header('LIVE EVENTS', '事件') + '<div class="rail-log">' + (active ? '<div class="rail-log-line"><span class="log-dot live"></span><span>' + esc((state.job.progress && state.job.progress.phase) || '后端正在执行') + '</span></div>' : '<div class="rail-empty">暂无活动事件。进入任务详情查看已归档日志。</div>') + '</div></section>' };
@@ -488,7 +509,7 @@
     if (!root) return;
     const active = state.job && ["queued", "running", "stopping"].includes(state.job.status);
     const selected = currentRunSummary();
-    const canStart = state.view === "new" && !active;
+    const canStart = state.view === "new" && formCanStart() && !active;
     root.innerHTML = '<button class="toolbar-button icon-only" data-toolbar="refresh" type="button" title="刷新"' + (state.loading ? " disabled" : "") + '><span class="toolbar-icon">↻</span></button>'
       + (active
         ? '<button class="toolbar-button danger" data-toolbar="stop" type="button" title="停止评测"><span>■</span><span>停止</span></button>'
@@ -518,12 +539,14 @@
     if (action === "reset-view") { state.resultTab = "result"; state.selectedCase = null; state.moreOpen = false; render(); return; }
     if (action === "copy-id") { const run = currentRunSummary(); return copyText(run && (run.id || state.selectedRunPath)); }
     if (action === "save") {
-      const payload = { primary: state.formPrimary || "", comparison: state.formComparison || "", suite: state.formSuite || "", params: state.params };
+      const pair = currentFormPair();
+      const payload = { version: 2, source: state.formSource, track: state.formTrack, primary: pair[0], comparison: pair[1], suite: state.formSuite || "", params: state.params };
       try { localStorage.setItem("kmb-workbench-draft", JSON.stringify(payload)); state.savedAt = new Date(); renderToolbar(); } catch (error) { showGlobalError("保存本地工作区草稿失败：" + error.message); }
       return;
     }
     if (action === "copy") {
-      const config = { primary_agent: state.formPrimary || "", comparison_agent: state.formComparison || "", suite: state.formSuite || "", seed: state.params.seed, retries: state.params.retries, timeout: state.params.timeout, scorer_version: state.params.scorer_version };
+      const pair = currentFormPair();
+      const config = { source: state.formSource, track: state.formTrack, primary_agent: pair[0], comparison_agent: pair[1], suite: state.formSuite || "", seed: state.params.seed, retries: state.params.retries, timeout: state.params.timeout, scorer_version: state.params.scorer_version };
       return copyText(JSON.stringify(config, null, 2));
     }
   }
@@ -534,6 +557,38 @@
   }
 
   function configByPath(path) { return state.configs.find((config) => config.path === path); }
+  function nativeById(id) { return state.agents.find((agent) => agent.id === id); }
+  function defaultNativeIds() {
+    const installed = state.agents.filter((agent) => agent.installed).sort((a, b) => Number(b.runnable) - Number(a.runnable));
+    return [installed[0]?.id || "", installed[1]?.id || ""];
+  }
+  function currentFormPair() {
+    const defaults = state.formSource === "installed" ? defaultNativeIds() : defaultConfigPaths(state.formTrack);
+    return [state.formPrimary === undefined ? defaults[0] : state.formPrimary, state.formComparison === undefined ? defaults[1] : state.formComparison];
+  }
+  function normalizeFormSelection() {
+    const exists = (value) => state.formSource === "installed" ? Boolean(nativeById(value)) : Boolean(configByPath(value) && trackForConfig(configByPath(value)) === state.formTrack);
+    if (state.formPrimary && !exists(state.formPrimary)) state.formPrimary = undefined;
+    if (state.formComparison && !exists(state.formComparison)) state.formComparison = undefined;
+    if (state.formSource === "installed") { state.formTrack = "A"; state.params.scorer_version = "deterministic-v2"; }
+    if (state.formSuite && !suiteByPath(state.formSuite)) state.formSuite = "";
+  }
+  const CONFIG_TITLES = {"b-memory-kv-real": "键值记忆层 · 云模型", "b-memory-kv": "键值记忆层 · 本地规则", "b-memory-similar-real": "相近信息记忆层 · 云模型", "b-memory-similar": "相近信息记忆层 · 本地规则"};
+  function configTitle(config) { return CONFIG_TITLES[config?.name] || config?.name || "未选择"; }
+  function nativeReadinessLabel(agent) { return !agent.installed ? "未检测到安装" : agent.runnable ? "评测目录就绪" : agent.readiness === "manual" ? "需手动观测" : "评测目录未就绪"; }
+  function nativeOptions(selected) {
+    return '<option value=""' + (!selected ? ' selected' : '') + '>请选择智能体</option>' + state.agents.map((agent) => '<option value="' + escapeHtml(agent.id) + '"' + (agent.id === selected ? ' selected' : '') + '>' + escapeHtml(agent.display_name + ' · ' + nativeReadinessLabel(agent)) + '</option>').join('');
+  }
+  function nativeMetaHtml(agent) {
+    if (!agent) return '<div class="agent-meta"><span>请选择后端自动发现的智能体</span></div>';
+    return '<div class="agent-meta"><span>' + (agent.host_installed ? '本机已安装' : agent.installed ? '当前评测目录中已发现' : '本机未检测到安装') + '</span><span class="' + (agent.runnable ? 'credential-safe' : 'credential-missing') + '">' + escapeHtml(nativeReadinessLabel(agent)) + '</span></div><div class="field"><label>API / 模型</label><span class="field-help">使用智能体自身的模型与凭据配置。</span></div><div class="field-help">' + escapeHtml(agent.runnable ? (agent.execution_scope === 'isolated' ? '本次使用独立记忆副本。' : '本次使用当前用户目录。') : agent.reason || '运行条件尚未就绪') + '</div><div class="agent-pane-footer"><span class="' + (agent.last_run?.runtime_error ? 'credential-missing' : 'health-state') + '">' + escapeHtml(nativeRuntimeLabel(agent)) + '</span></div>';
+  }
+  function formCanStart() {
+    const pair = currentFormPair();
+    const suite = suiteByPath(state.formSuite);
+    if (!pair[0] || !pair[1] || pair[0] === pair[1] || !suite || suite.status !== 'valid' || (state.job && ['queued', 'running', 'stopping'].includes(state.job.status))) return false;
+    return state.formSource !== 'installed' || pair.every((id) => nativeById(id)?.runnable);
+  }
   const providerOrder = ["Grok", "DeepSeek"];
   const profileMode = (config) => displayProfileMode((config && config.profile_mode) || (config && config.type) || "未分类");
   const providerLabel = (config) => (config && config.provider) || "其他";
@@ -575,7 +630,7 @@
   }
   function configOptions(selected, track) {
     const usable = state.configs.filter((config) => trackForConfig(config) === (track || state.formTrack || "control"));
-    return usable.map((config) => '<option value="' + escapeHtml(config.path) + '"' + (config.path === selected ? " selected" : "") + '>' + escapeHtml(config.name) + '</option>').join("");
+    return '<option value="">请选择评测配置</option>' + usable.map((config) => '<option value="' + escapeHtml(config.path) + '"' + (config.path === selected ? " selected" : "") + '>' + escapeHtml(configTitle(config)) + '</option>').join("");
   }
   function apiSelectHtml(pane, config, selected) {
     if (!needsLlm(config)) return '<div class="field"><label>API 模型</label><span class="muted-line">不适用（该智能体无 LLM 后端）</span></div>';
@@ -720,37 +775,44 @@
   }
 
   function renderNew() {
-    const defaults = defaultConfigPaths(state.formTrack);
-    const primary = state.formPrimary || defaults[0] || "";
-    const comparison = state.formComparison || defaults[1] || "";
-    const suite = state.formSuite || (state.suites.find((item) => /innovation/i.test(item.path) && item.status === "valid") || state.suites.find((item) => item.status === "valid") || {}).path || "";
+    const installed = state.formSource === "installed";
+    const [primary, comparison] = currentFormPair();
+    const suite = state.formSuite || (state.suites.find((item) => (installed ? /(?:^|\/)quick\.yaml$/ : /innovation/i).test(item.path) && item.status === "valid") || state.suites.find((item) => item.status === "valid") || {}).path || "";
     state.formSuite = suite;
-    const primaryConfig = configByPath(primary);
-    const comparisonConfig = configByPath(comparison);
+    const primaryConfig = installed ? nativeById(primary) : configByPath(primary);
+    const comparisonConfig = installed ? nativeById(comparison) : configByPath(comparison);
     if (!state.baselineParams) state.baselineParams = Object.assign({}, state.params);
     const changed = JSON.stringify(state.params) !== JSON.stringify(state.baselineParams);
     const job = state.job;
     const progress = job && job.progress ? Math.round((Number(job.progress.completed || 0) / Math.max(1, Number(job.progress.total || 2))) * 100) : 0;
-    const trackOptions = [["A", "A 轨 · 生态智能体"], ["B", "B 轨 · 记忆层智能体"], ["control", "对照基线 · 离线/回放"]];
-    const trackSelector = '<section class="workspace-surface track-workspace"><div class="surface-toolbar"><div><h3>评测轨道</h3></div><span class="track-note">轨道只做归类与过滤，不改变证据语义：A 轨 = 系统级行为，B 轨 = 记忆层行为，对照 = 模拟/回放。</span></div><div class="track-selector">' + trackOptions.map((item) => '<button class="track-option' + (state.formTrack === item[0] ? " active" : "") + '" data-track="' + item[0] + '" type="button">' + item[1] + '</button>').join("") + '</div></section>';
-    return '<div class="workspace-intro compact-intro"><div><p>使用相同参数运行两个 Agent。</p></div><div class="section-actions"><button class="button" data-action="reload" type="button">刷新配置</button><button class="button" data-toolbar="copy" type="button">复制配置</button></div></div>'
+    const trackOptions = [["A", "生态适配配置"], ["B", "记忆层对比"], ["control", "离线基线与回放"]];
+    const trackExplanation = state.formTrack === 'B' ? '比较键值记忆与相近信息检索两种记忆层方案；云模型版需要工作台 API 凭据，本地规则版无需云凭据。这些是评测配置，不是系统安装的智能体。' : state.formTrack === 'control' ? '离线模拟、无记忆对照或证据回放，用于检查评测流程。' : '通过自定义适配配置接入生态智能体。直接使用已安装的小K、OpenClaw，请选择上方“已安装智能体”。';
+    const trackSelector = installed ? '' : '<section class="workspace-surface track-workspace"><div class="surface-toolbar"><h3>高级评测配置</h3></div><div class="track-selector">' + trackOptions.map((item) => '<button class="track-option' + (state.formTrack === item[0] ? " active" : "") + '" data-track="' + item[0] + '" type="button">' + item[1] + '</button>').join("") + '</div><p class="field-help">' + trackExplanation + '</p></section>';
+    const hostname = state.system?.agent_discovery?.hostname || state.agents[0]?.discovery_host || '工作台所在机器';
+    const detectedAt = state.agents[0]?.detected_at;
+    const sourceSelector = '<section class="workspace-surface track-workspace"><div class="surface-toolbar"><h3>智能体来源</h3></div><div class="track-selector"><button class="track-option' + (installed ? ' active' : '') + '" data-agent-source="installed" type="button">已安装智能体 · 自动发现</button><button class="track-option' + (!installed ? ' active' : '') + '" data-agent-source="configuration" type="button">高级配置 · 记忆层 / 对照</button></div><p class="field-help">检测主机：' + escapeHtml(hostname) + (detectedAt ? ' · ' + escapeHtml(formatCheckedAt(detectedAt)) + ' 已检查' : '') + '。检查工作台后端的命令、配置文件是否存在及记忆存储；不会启动智能体或检查云端额度。</p></section>';
+    return '<div class="workspace-intro compact-intro"><div><p>使用相同套件和参数运行两个智能体。</p></div><div class="section-actions"><button class="button" data-action="reload" type="button">重新检测</button><button class="button" data-toolbar="copy" type="button">复制配置</button></div></div>'
+      + sourceSelector
       + trackSelector
       + '<section class="workspace-surface compare-workspace"><div class="surface-toolbar"><div><h3>Agent 对比</h3></div><span class="compare-lock">参数锁定</span></div><div class="agent-compare-grid">'
-      + '<div class="agent-pane blue"><div class="agent-pane-head"><div><h3>主智能体</h3></div></div><div class="field"><label for="primary-agent">配置档案</label><select id="primary-agent">' + configOptions(primary, state.formTrack) + '</select></div>' + agentMetaHtml(primaryConfig) + apiSelectHtml("primary", primaryConfig, state.formApiPrimary) + '<div class="agent-pane-footer"><span id="health-primary">' + healthStateMarkup(primary, "尚未检查连接") + '</span><button class="button small" data-health="primary" type="button">连接检查</button></div></div>'
+      + formAgentPaneHtml('primary', primary, primaryConfig, installed)
       + '<div class="compare-divider" aria-hidden="true">对比</div>'
-      + '<div class="agent-pane orange"><div class="agent-pane-head"><div><h3>对比智能体</h3></div></div><div class="field"><label for="comparison-agent">配置档案</label><select id="comparison-agent">' + configOptions(comparison, state.formTrack) + '</select></div>' + agentMetaHtml(comparisonConfig) + apiSelectHtml("comparison", comparisonConfig, state.formApiComparison) + '<div class="agent-pane-footer"><span id="health-comparison">' + healthStateMarkup(comparison, "尚未检查连接") + '</span><button class="button small" data-health="comparison" type="button">连接检查</button></div></div>'
+      + formAgentPaneHtml('comparison', comparison, comparisonConfig, installed)
       + '</div></section>'
       + '<section class="workspace-surface run-config"><div class="surface-toolbar"><div><h3>评测参数</h3></div>' + (changed ? '<span class="change-badge">参数已变化</span>' : '<span class="lock-badge">▣ 已锁定</span>') + '</div><div class="run-config-grid"><div class="field suite-field"><label for="suite">测试套件</label><select id="suite">' + suiteOptions(suite) + '</select>' + suiteInsightHtml(suite) + '</div><div class="field"><label for="seed">Seed</label><input id="seed" type="number" value="' + escapeHtml(state.params.seed) + '"></div><div class="field"><label for="retries">重试次数</label><input id="retries" min="0" max="5" type="number" value="' + escapeHtml(state.params.retries) + '"></div><div class="field"><label for="timeout">单案例超时（秒）</label><input id="timeout" min="1" max="900" type="number" value="' + escapeHtml(state.params.timeout) + '"></div><div class="field"><label for="scorer-version">评分器版本</label><input id="scorer-version" type="text" value="' + escapeHtml(state.params.scorer_version) + '"></div></div>' + (changed ? '<div class="change-warning"><strong>比较参数已变化。</strong> 本次运行将使用新的条件，不能与旧运行直接当作同一实验。</div>' : '') + '</section>'
-      + '<section class="workspace-surface validation-workspace"><div class="surface-toolbar"><div><h3>运行前校验</h3></div><button id="start-run" class="button primary" type="button"' + ((!primary || !comparison || !suite || primary === comparison) ? " disabled" : "") + '>▶ 开始评测</button></div><div class="validation-inline"><ul class="validation-list">'
-      + validationItem(Boolean(primary), primary ? "主 Agent 配置已选择" : "请选择主 Agent")
-      + validationItem(Boolean(comparison), comparison ? "对比 Agent 配置已选择" : "请选择对比 Agent")
-      + validationItem(Boolean(primary && comparison && primary !== comparison), primary === comparison ? "两个 Agent 必须使用不同配置" : "两个 Agent 配置不同")
+      + '<section class="workspace-surface validation-workspace"><div class="surface-toolbar"><div><h3>运行前校验</h3></div><button id="start-run" class="button primary" type="button"' + (!formCanStart() ? " disabled" : "") + '>▶ 开始评测</button></div><div class="validation-inline"><ul class="validation-list">'
+      + validationItem(Boolean(primaryConfig && (!installed || primaryConfig.runnable)), installed ? '主智能体已安装且评测目录就绪' : '主智能体评测配置已选择')
+      + validationItem(Boolean(comparisonConfig && (!installed || comparisonConfig.runnable)), installed ? '对比智能体已安装且评测目录就绪' : '对比智能体评测配置已选择')
+      + validationItem(Boolean(primary && comparison && primary !== comparison), primary === comparison ? "请选择两个不同的智能体" : "两个参与者不同")
       + validationItem(Boolean(state.suites.find((item) => item.path === suite && item.status === "valid")), "套件通过结构校验")
       + validationItem(Boolean(state.formTrack), "评测轨道已选择（" + (TRACK_LABELS[state.formTrack] || state.formTrack) + "）")
-      + validationItem(primaryConfig && needsLlm(primaryConfig) ? Boolean(state.formApiPrimary || (primaryConfig.api_profile)) : true, "主智能体 API 模型已确定")
-      + validationItem(comparisonConfig && needsLlm(comparisonConfig) ? Boolean(state.formApiComparison || (comparisonConfig.api_profile)) : true, "对比智能体 API 模型已确定")
+      + (installed ? '<li class="field-help">两款智能体使用各自配置；当前云端连接与余额未验证。</li>' : validationItem(primaryConfig && needsLlm(primaryConfig) ? Boolean(state.formApiPrimary || (primaryConfig.api_profile)) : true, "主智能体 API 模型已确定") + validationItem(comparisonConfig && needsLlm(comparisonConfig) ? Boolean(state.formApiComparison || (comparisonConfig.api_profile)) : true, "对比智能体 API 模型已确定"))
       + validationItem(!changed, changed ? "比较参数已变化，结果将被标记为新条件" : "比较参数保持一致")
       + '</ul>' + fairnessSummaryHtml() + (job ? '<div class="job-status" role="status" aria-live="polite"><div class="job-meta"><strong>' + escapeHtml(job.status === "error" ? "运行失败" : runStateLabel(runState(job, null))) + '</strong><span>' + progress + '%</span></div><div class="progress-track"><div class="progress-value" style="width:' + progress + '%"></div></div><div class="job-meta"><span>运行 ID ' + escapeHtml(job.id) + '</span><span>结果目录 ' + escapeHtml(job.output || job.result_path || "待生成") + '</span></div>' + (job.error ? '<div class="job-error">' + escapeHtml(job.error) + '</div>' : '') + (job.result_path ? '<div style="margin-top:10px"><button class="link-button" data-open-run="' + escapeHtml(job.result_path) + '" type="button">打开这次结果</button></div>' : '') + '</div>' : '') + '</div></section>';
+  }
+  function formAgentPaneHtml(pane, selected, config, installed) {
+    const primary = pane === 'primary';
+    return '<div class="agent-pane ' + (primary ? 'blue' : 'orange') + '"><div class="agent-pane-head"><h3>' + (primary ? '主智能体' : '对比智能体') + '</h3></div><div class="field"><label for="' + pane + '-agent">' + (installed ? '本机智能体' : '评测配置') + '</label><select id="' + pane + '-agent">' + (installed ? nativeOptions(selected) : configOptions(selected, state.formTrack)) + '</select></div>' + (installed ? nativeMetaHtml(config) : agentMetaHtml(config) + apiSelectHtml(pane, config, primary ? state.formApiPrimary : state.formApiComparison) + '<div class="agent-pane-footer"><span id="health-' + pane + '">' + healthStateMarkup(selected, '尚未检查连接') + '</span><button class="button small" data-health="' + pane + '" type="button">连接检查</button></div>') + '</div>';
   }
   function validationItem(pass, text) { return '<li class="validation-item ' + (pass ? "pass" : "fail") + '"><span class="validation-mark">' + (pass ? "✓" : "!") + '</span><span>' + escapeHtml(text) + '</span></li>'; }
 
@@ -1256,10 +1318,11 @@
   function bindViewEvents() {
     document.querySelectorAll("#view-root [data-view]").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
     const primary = $("#primary-agent"), comparison = $("#comparison-agent"), suite = $("#suite");
-    if (primary) primary.addEventListener("change", (event) => { state.formPrimary = event.target.value; render(); });
-    if (comparison) comparison.addEventListener("change", (event) => { state.formComparison = event.target.value; render(); });
+    if (primary) primary.addEventListener("change", (event) => { state.formPrimary = event.target.value; state.formApiPrimary = (configByPath(state.formPrimary) || {}).api_profile || ''; render(); });
+    if (comparison) comparison.addEventListener("change", (event) => { state.formComparison = event.target.value; state.formApiComparison = (configByPath(state.formComparison) || {}).api_profile || ''; render(); });
     if (suite) suite.addEventListener("change", (event) => { state.formSuite = event.target.value; render(); });
     ["seed", "retries", "timeout", "scorer-version"].forEach((id) => { const input = $("#" + id); if (input) input.addEventListener("change", () => { updateParamsFromForm(); render(); }); });
+    const scorerInput = $('#scorer-version'); if (scorerInput && state.formSource === 'installed') { scorerInput.readOnly = true; scorerInput.title = '当前原生智能体适配器使用此评分器'; }
     document.querySelectorAll("[data-health]").forEach((button) => button.addEventListener("click", () => healthCheck(button.dataset.health)));
     document.querySelectorAll("[data-health-config]").forEach((button) => button.addEventListener("click", () => healthConfig(button.dataset.healthConfig)));
     const start = $("#start-run"); if (start) start.addEventListener("click", startRun);
@@ -1273,8 +1336,9 @@
      document.querySelectorAll("[data-result-tab]").forEach((button) => button.addEventListener("click", () => { const tab = button.dataset.resultTab; state.resultTab = tab; state.view = "results"; render(); }));
     document.querySelectorAll("[data-select-case]").forEach((button) => button.addEventListener("click", () => { state.selectedCase = button.dataset.selectCase; state.resultTab = "cases"; render(); }));
     document.querySelectorAll("[data-open-case-evidence]").forEach((button) => button.addEventListener("click", () => { const caseId = button.dataset.openCaseEvidence; const agents = normalizeAgents(state.selectedRun); const failed = filterFailures(collectFailures(agents)).find((item) => item.result.case_id === caseId); if (failed) return openFailure(failed); const summary = agents.find((agent) => (agent.results || []).some((result) => result.case_id === caseId)); const result = summary && (summary.results || []).find((item) => item.case_id === caseId); if (summary && result) return openFailure({ agent: summary.agent, result, failure: { type: result.status === "pass" ? "verified" : "invalid_behavior", reason: result.status === "pass" ? "该 Case 已通过确定性规则检查，继续查看 EvidenceEvent 记录。" : "该 Case 未通过，但未提供结构化失败原因。" }, agentSummary: summary }); showGlobalError("该 Case 没有可读取的证据事件"); }));
-    document.querySelectorAll("[data-select-agent]").forEach((button) => button.addEventListener("click", () => { const path = button.dataset.selectAgent; if (!state.formPrimary) { state.formPrimary = path; state.formApiPrimary = (configByPath(path) || {}).api_profile || ""; } else { state.formComparison = path; state.formApiComparison = (configByPath(path) || {}).api_profile || ""; } setView("new"); }));
-    document.querySelectorAll("[data-track]").forEach((button) => button.addEventListener("click", () => { state.formTrack = button.dataset.track; state.formPrimary = ""; state.formComparison = ""; state.formApiPrimary = ""; state.formApiComparison = ""; const defaults = defaultConfigPaths(state.formTrack); state.formPrimary = defaults[0] || ""; state.formComparison = defaults[1] || ""; state.formApiPrimary = (configByPath(state.formPrimary) || {}).api_profile || ""; state.formApiComparison = (configByPath(state.formComparison) || {}).api_profile || ""; setView("new"); render(); }));
+    document.querySelectorAll("[data-select-agent]").forEach((button) => button.addEventListener("click", () => { const path = button.dataset.selectAgent; const track = trackForConfig(configByPath(path)); if (state.formSource !== 'configuration' || state.formTrack !== track) { state.formPrimary = undefined; state.formComparison = undefined; } state.formSource = 'configuration'; state.formTrack = track; state.formPrimary = path; state.formComparison = defaultConfigPaths(track).find((candidate) => candidate !== path) || ''; state.formApiPrimary = (configByPath(path) || {}).api_profile || ''; state.formApiComparison = (configByPath(state.formComparison) || {}).api_profile || ''; setView("new"); }));
+    document.querySelectorAll("[data-agent-source]").forEach((button) => button.addEventListener("click", () => { state.formSource = button.dataset.agentSource; state.formTrack = state.formSource === 'installed' ? 'A' : 'control'; state.formPrimary = undefined; state.formComparison = undefined; state.formApiPrimary = ''; state.formApiComparison = ''; normalizeFormSelection(); render(); }));
+    document.querySelectorAll("[data-track]").forEach((button) => button.addEventListener("click", () => { state.formSource = 'configuration'; state.formTrack = button.dataset.track; state.formPrimary = undefined; state.formComparison = undefined; state.formApiPrimary = ""; state.formApiComparison = ""; const defaults = defaultConfigPaths(state.formTrack); state.formApiPrimary = (configByPath(defaults[0]) || {}).api_profile || ""; state.formApiComparison = (configByPath(defaults[1]) || {}).api_profile || ""; setView("new"); }));
     document.addEventListener("change", (event) => {
       const pane = event.target && event.target.getAttribute && event.target.getAttribute("data-api-pane");
       if (pane === "primary") state.formApiPrimary = event.target.value;
@@ -1312,21 +1376,22 @@
     updateParamsFromForm();
     let primary = $("#primary-agent")?.value, comparison = $("#comparison-agent")?.value, suite = $("#suite")?.value;
     // 标签页可能是在服务重启期间启动的（数据未加载）——启动前自动重取一次
-    if (!primary || !comparison || !suite || !(state.configs || []).length) {
+    if (!primary || !comparison || !suite || !(state.formSource === 'installed' ? state.agents : state.configs).length) {
       await loadData();
       primary = $("#primary-agent")?.value || primary;
       comparison = $("#comparison-agent")?.value || comparison;
       suite = $("#suite")?.value || suite;
     }
     if (!primary || !comparison || !suite) {
-      showGlobalError("评测数据尚未加载（配置/套件为空）。请点击刷新配置或重新打开工作台后重试。");
+      showGlobalError("请选择两款智能体和有效套件；可点击重新检测更新列表。");
       return;
     }
+    if (state.formSource === 'installed' && [primary, comparison].some((id) => !nativeById(id)?.runnable)) { showGlobalError('所选智能体尚未就绪。请查看安装情况与评测目录说明。'); return; }
     const primaryConfig = configByPath(primary), comparisonConfig = configByPath(comparison);
     const apiProfiles = {};
     if (needsLlm(primaryConfig) && state.formApiPrimary) apiProfiles[primary] = state.formApiPrimary;
     if (needsLlm(comparisonConfig) && state.formApiComparison) apiProfiles[comparison] = state.formApiComparison;
-    const payload = { primary_agent: primary, comparison_agent: comparison, suite, track: state.formTrack || "control", api_profiles: apiProfiles, seed: state.params.seed === "" ? null : Number(state.params.seed), retries: Number(state.params.retries), timeout: Number(state.params.timeout), scorer_version: state.params.scorer_version }; const button = $("#start-run"); if (button) button.disabled = true; try { state.job = await api("/api/runs", { method: "POST", body: JSON.stringify(payload) }); pollJob(state.job.id); render(); } catch (error) { showGlobalError(error.message); if (button) button.disabled = false; } }
+    const payload = { source: state.formSource, primary_agent: primary, comparison_agent: comparison, suite, track: state.formTrack || "A", api_profiles: apiProfiles, seed: state.params.seed === "" ? null : Number(state.params.seed), retries: Number(state.params.retries), timeout: Number(state.params.timeout), scorer_version: state.params.scorer_version }; const button = $("#start-run"); if (button) button.disabled = true; try { state.job = await api("/api/runs", { method: "POST", body: JSON.stringify(payload) }); pollJob(state.job.id); render(); } catch (error) { showGlobalError(error.message); if (button) button.disabled = false; } }
   async function startQuickCompare() {
     const selected = (state.quickSelected || []).slice(0, 2);
     if (selected.length !== 2) {

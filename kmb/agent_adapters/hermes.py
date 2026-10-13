@@ -45,7 +45,8 @@ class HermesAdapter:
         home = self.home
         default_executable = home / ".kylin-agent-runtime/agent-runtime/venv/bin/hermes"
         if not default_executable.is_file():
-            default_executable = Path("hermes")
+            from ..agent_registry import resolve_agent_executable
+            default_executable = Path(resolve_agent_executable("hermes", home) or resolve_agent_executable("hermes-agent", home) or "hermes")
         return configured_command(
             "HERMES_COMMAND",
             str(default_executable),
