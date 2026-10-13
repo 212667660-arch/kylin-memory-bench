@@ -1,6 +1,10 @@
 # 忆衡发布冻结清单
 
-最终非视频工程版本为 **0.2.1**：158 项跨平台测试、Windows/Ubuntu 干净 wheel CI、Ubuntu dpkg CI、openKylin 隔离及主系统 sudo 管理员 release9→0.2.1 九步生命周期全部通过。最终版本已重新安装，普通用户 CLI 与工作台对照评测通过。更新材料、哈希与证据见 `dist/submission-public-20261013/` 和 `docs/completion-audit-20261013.md`；此前材料及早期 release7/release9 指纹保留为历史。代码同步 GitHub main，仓库按负责人授权在审查后公开，未登录访问通过；负责人确认已报名，正式提交仍需身份与确认邮件指引，视频按用户要求后置。
+当前发行版本为 **0.2.2**，修复回答回合及 CLI 正文解析问题，原 openKylin 3.0 保持不变。176 项测试、三项 CI、新的真实六案例及安装后 CLI/工作台验证见 [修复报告](answer-evidence-fix-20261013.md)。当前材料 `dist/submission-0.2.2-20261013/`，精确二进制与源码哈希见其 manifest；历史包不覆盖。视频及正式作品提交仍待完成。
+
+下文保留 0.2.1 和更早阶段的历史冻结记录，不作为 0.2.2 的当前状态。
+
+0.2.1 历史非视频工程版本：158 项跨平台测试、Windows/Ubuntu 干净 wheel CI、Ubuntu dpkg CI、openKylin 隔离及主系统 sudo 管理员 release9→0.2.1 九步生命周期全部通过。最终版本已重新安装，普通用户 CLI 与工作台对照评测通过。更新材料、哈希与证据见 `dist/submission-public-20261013/` 和 `docs/completion-audit-20261013.md`；此前材料及早期 release7/release9 指纹保留为历史。代码同步 GitHub main，仓库按负责人授权在审查后公开，未登录访问通过；负责人确认已报名，正式提交仍需身份与确认邮件指引，视频按用户要求后置。
 
 当前版本的工程复核见 `docs/completion-audit-20261013.md`。本文件中的 release7、旧 SHA-256 和旧自评分为历史冻结记录；2026-10-13 已发现并修复 pip 安装、Debian 离线验收、扩展案例期望序列和 Windows 编码问题，应使用本轮 0.2.1 及其新 manifest。MIT 已生效，桌面视频仍待完成。
 

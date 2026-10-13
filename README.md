@@ -6,17 +6,17 @@
 
 KylinMemoryBench 是面向 openKylin 的智能体长期记忆自动化评测 Benchmark。它不是聊天机器人或 RAG 产品，而是通过统一适配器收集真实运行事件，并以可审计的确定性规则评估六类能力：长期保持、记忆调用、动态更新、相近区分、边界识别、任务复用。
 
-**当前验证系统：openKylin 3.0（huanghe）；项目软件版本：KylinMemoryBench 0.2.1。** 使用已有系统开展项目验收，操作系统版本保持原状。文档中的 openKylin 2.0 SP2 为此前测试环境的历史记录，当前环境以 [版本说明](docs/current-environment.md) 为准。
+**当前验证系统：openKylin 3.0（huanghe）；项目软件版本：KylinMemoryBench 0.2.2。** 使用已有系统开展项目验收，操作系统版本保持原状。文档中的 openKylin 2.0 SP2 为此前测试环境的历史记录，当前环境以 [版本说明](docs/current-environment.md) 为准。
 
-2026-10-13 视频前深度复核新增两项评分可信度问题：回答检查的回合范围、CLI 回答与元数据的区分。当前 0.2.1 的安装和 CI 通过不能代替这两项语义验证，正式录制评分结果前应先修正并生成新批次。复现与建议见 [视频前审阅](docs/video-review-20261013.md)，分镜和口播见 [录制稿](docs/demo-script.md)。
+2026-10-13 视频深审发现的两个 P1 评分/解析问题已修复。新增 18 项回归、全量 176 项测试与跨平台 CI 通过；在 openKylin 3.0 生成了修正后的真实双 Agent 六案例证据。范围、首次网关失败与后续验证见 [修复报告](docs/answer-evidence-fix-20261013.md)，录制步骤与照读稿见 [视频稿](docs/demo-script.md)。
 
 ## 下载与评审入口
 
 | 入口 | 内容 |
 |---|---|
-| [0.2.1 发布页](https://github.com/212667660-arch/kylin-memory-bench/releases/tag/v0.2.1) | 完整非视频材料 ZIP、openKylin `.deb`、Python wheel 和验证证据 |
-| [作品介绍 PDF](https://github.com/212667660-arch/kylin-memory-bench/releases/download/v0.2.1/project-introduction-0.2.1.pdf) | 项目背景、架构、应用场景、创新点与维护规划 |
-| [完成度审计 PDF](https://github.com/212667660-arch/kylin-memory-bench/releases/download/v0.2.1/completion-audit-20261013.pdf) | 官网/PDF 对应、修复记录、验证范围与尚待交付内容 |
+| [0.2.2 发布页](https://github.com/212667660-arch/kylin-memory-bench/releases/tag/v0.2.2) | 完整非视频材料 ZIP、openKylin `.deb`、Python wheel 和验证证据 |
+| [作品介绍 PDF](https://github.com/212667660-arch/kylin-memory-bench/releases/download/v0.2.2/project-introduction-0.2.2.pdf) | 项目背景、架构、应用场景、创新点与维护规划 |
+| [完成度审计 PDF](https://github.com/212667660-arch/kylin-memory-bench/releases/download/v0.2.2/completion-audit-20261013.pdf) | 官网/PDF 对应、修复记录、验证范围与尚待交付内容 |
 | [评委复现卡](docs/judge-reproduction-card.md) | 无云凭据的离线对比、结果与雷达图 |
 | [真实 Agent 快速对比](docs/quick-start.md) | 在 openKylin 中比较已安装的 Agent |
 
@@ -24,7 +24,7 @@ KylinMemoryBench 是面向 openKylin 的智能体长期记忆自动化评测 Ben
 
 2026-10-13 的当前版本复核与官网/PDF 差异见 [`docs/completion-audit-20261013.md`](docs/completion-audit-20261013.md)。项目自评分不代表赛事官方得分，也不表示全部交付完成；openKylin 桌面双智能体视频及其可访问链接仍须交付。
 
-当前补丁版本为 0.2.1：修复安装、验收和非 UTF-8 Windows 中文子进程输出问题，并加入跨平台单测、干净 wheel 安装及 Debian 生命周期 CI。openKylin 主系统管理员安装、升级、验收、卸载和残留检查九步全部通过；最终版本已重新安装，普通用户 CLI 与工作台对照评测均通过。仓库经历史与 CI 日志审查后按负责人授权公开，未登录代码访问已验证；负责人已确认报名完成。正式提交仍需参赛身份、确认邮件指引及视频链接，草稿见 [`docs/submission-email-draft.md`](docs/submission-email-draft.md)。安装包用户的工作台启动说明见 [`docs/deb-release.md`](docs/deb-release.md)。
+当前补丁版本为 0.2.2，回答检查对齐目标回合，CLI 正确提取完整 assistant 正文。openKylin 原系统中的项目包已升级，普通用户 CLI 与工作台验证通过。仓库已按负责人授权公开；报名已确认。正式提交仍需团队身份、确认邮件指引及视频链接，草稿见 [提交邮件草稿](docs/submission-email-draft.md)；安装包使用方法见 [Debian 说明](docs/deb-release.md)。0.2.1 的原包和历史证据保留，旧解析受影响分数不作为 0.2.2 当前结果。
 
 ## 快速开始
 

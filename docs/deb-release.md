@@ -1,6 +1,6 @@
 # Debian 技术验收包
 
-当前正式工程版本为 **0.2.1**（2026-10-13）：在 openKylin 3.0 的隔离环境和主系统 sudo 管理员环境中，安装、升级、完整离线验收、卸载与残留检查九步全部通过。最终版本已重新安装，普通用户 CLI 和工作台对照评测通过；证据见 `docs/completion-audit-20261013.md`。下文按日期标注的 release1–release7 为历史记录。
+当前项目软件版本为 **0.2.2**（2026-10-13），已修复回答回合与 CLI 正文解析问题。现有 openKylin 3.0 上完成项目包 0.2.1→0.2.2 升级，包内 smoke、完整离线验收和普通用户工作台验证通过；Ubuntu CI 另验证 0.2.2 安装/升级/卸载和残留检查。详细范围见 [修复报告](answer-evidence-fix-20261013.md)。0.2.1 的九步主系统生命周期及下文 release1–release7 均为历史记录，原系统版本保持不变。
 
 该目录的 `.deb` 流程用于 openKylin 的可复现技术验收。包名为
 `kylin-memory-bench`，架构为 `all`，依赖 `python3 (>= 3.9)` 与
@@ -13,14 +13,14 @@
 
 ```bash
 bash scripts/build_deb.sh dist
-dpkg-deb --info dist/kylin-memory-bench_0.2.1_all.deb
-dpkg-deb --contents dist/kylin-memory-bench_0.2.1_all.deb
+dpkg-deb --info dist/kylin-memory-bench_0.2.2_all.deb
+dpkg-deb --contents dist/kylin-memory-bench_0.2.2_all.deb
 ```
 
 如需模拟升级，使用一个有效的 Debian 版本号构建新包：
 
 ```bash
-KMB_DEB_VERSION=0.2.1+test1 bash scripts/build_deb.sh dist
+KMB_DEB_VERSION=0.2.2+test1 bash scripts/build_deb.sh dist
 ```
 
 ### 历史发布候选（2026-09-08）
@@ -38,12 +38,12 @@ release5 技术候选（2026-09-09）纳入 no-memory 聚合器字段修复和 r
 ## 安装、验证、升级与卸载
 
 ```bash
-sudo bash scripts/install_deb.sh dist/kylin-memory-bench_0.2.1_all.deb
+sudo bash scripts/install_deb.sh dist/kylin-memory-bench_0.2.2_all.deb
 kmb validate --strict --suite /usr/share/kylin-memory-bench/suites/core-zh.yaml
 bash scripts/verify_deb.sh /tmp/kmb-deb-smoke
 
 # 新版本使用同一安装入口，dpkg 会执行升级。
-sudo bash scripts/upgrade_deb.sh dist/kylin-memory-bench_0.2.1+test1_all.deb
+sudo bash scripts/upgrade_deb.sh dist/kylin-memory-bench_0.2.2+test1_all.deb
 sudo bash scripts/uninstall_deb.sh
 ```
 
@@ -67,7 +67,7 @@ kmb serve --root . --host 127.0.0.1 --port 8765
 然后在 openKylin 的浏览器打开 `http://127.0.0.1:8765`。本轮 VM 已准备该工作区和 `~/KylinMemoryBench/start-workbench.sh`，可直接运行脚本；对照评测的结果和雷达图已验证。工作台按 Ctrl+C 停止，评测结果保留在工作区的 `runs/`。该入口使用普通用户，不应把结果写进 `/usr/share`。
 
 如评分规则升级，包内 `scripts/rescore_run.py` 可从既有 `evidence.jsonl` 生成新的结果目录，
-不会覆盖原始运行证据或原始分数。
+不会覆盖原始运行证据或原始分数。CLI 旧解析若已丢失正确答复，不能仅重算旧证据证明修复，必须新跑真实批次。
 
 若当前终端没有 sudo，允许使用 `dpkg-deb -x` 和 `KMB_HOME=<解包路径>` 做用户态
 payload smoke，以确认包内启动器、CLI 和套件可运行；这不能替代 `dpkg -i` 的系统安装验收。
