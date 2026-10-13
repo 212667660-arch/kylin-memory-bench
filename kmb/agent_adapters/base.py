@@ -143,41 +143,56 @@ def infer_key(text: str, known_keys: Iterable[str] = ()) -> str:
 def extract_text(raw: str) -> str:
     """Extract assistant text from plain, JSON, or JSONL CLI output."""
     text = ANSI_RE.sub("", str(raw or "")).replace("\r\n", "\n").strip()
-    candidates: List[Any] = []
-    for line in reversed(text.splitlines()):
-        line = line.strip()
-        if not line:
+    try:
+        return _find_text(json.loads(text)).strip()
+    except json.JSONDecodeError:
+        pass
+    # A CLI may prefix pretty-printed JSON with status lines or emit JSONL.
+    # Decode complete records and skip their interior lines so a nested tool
+    # object cannot be mistaken for a later assistant response.
+    candidates = []
+    lines = text.splitlines(keepends=True)
+    decoder = json.JSONDecoder()
+    index = 0
+    structured = False
+    while index < len(lines):
+        if not lines[index].lstrip().startswith(("{", "[", '"')):
+            index += 1
             continue
+        structured = True
+        remaining = "".join(lines[index:]).lstrip()
         try:
-            candidates.append(json.loads(line))
+            candidate, end = decoder.raw_decode(remaining)
         except json.JSONDecodeError:
+            index += 1
             continue
-    for candidate in candidates:
+        candidates.append(candidate)
+        index += remaining[:end].count("\n") + 1
+    for candidate in reversed(candidates):
         found = _find_text(candidate)
         if found:
             return found.strip()
-    return text
+    return "" if structured else text
 
 
 def _find_text(value: Any) -> str:
     if isinstance(value, str):
         return value
     if isinstance(value, list):
-        for item in reversed(value):
-            found = _find_text(item)
-            if found:
-                return found
-        return ""
+        parts = [_find_text(item) for item in value]
+        return "\n".join(text for text in parts if text)
     if isinstance(value, dict):
-        for key in ("text", "content", "message", "response", "output"):
+        if value.get("role") not in (None, "assistant"):
+            return ""
+        if value.get("kind") not in (None, "assistant", "assistant_message", "message"):
+            return ""
+        if "level" in value or value.get("type") in ("tool", "tool_call", "tool_result", "function_call", "reasoning", "thinking", "log", "error"):
+            return ""
+        for key in ("finalAssistantVisibleText", "finalAssistantRawText", "text", "content", "message", "response", "output", "result", "payloads", "choices", "delta", "data"):
             if key in value:
                 found = _find_text(value[key])
                 if found:
                     return found
-        for item in reversed(list(value.values())):
-            found = _find_text(item)
-            if found:
-                return found
     return ""
 
 
@@ -224,8 +239,8 @@ def invoke_command(command: List[str], timeout: float, env: Optional[Mapping[str
             stdout_tail=_tail(stdout),
             stderr_tail=_tail(stderr),
         ) from exc
-    stdout, stderr = _tail(stdout), _tail(stderr)
     if process.returncode != 0:
+        stdout, stderr = _tail(stdout), _tail(stderr)
         detail = (stderr or stdout).strip()
         raise AgentCommandError(
             "Agent command exited %d: %s" % (process.returncode, detail),

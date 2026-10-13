@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from ..models import BenchmarkCase, EvidenceEvent
-from .base import case_keys, extract_text, invoke_command, memory_events_from_diff, preflight_command, process_event, recall_from_snapshot
+from .base import AgentCommandError, case_keys, extract_text, invoke_command, memory_events_from_diff, preflight_command, process_event, recall_from_snapshot
 from .sqlite_memory import SQLiteMemorySnapshot, TextMemorySnapshot, diff_snapshots
 
 
@@ -74,13 +74,16 @@ class OpenClawAdapter:
             env = os.environ.copy()
             env["HOME"] = str(self.home)
             raw = invoke_command(command, self.timeout, env=env)
+            answer = extract_text(raw)
+            if not answer.strip():
+                raise AgentCommandError("OpenClaw response has no observable assistant payload", category="not_observable")
             after = self._snapshot()
             events.extend(memory_events_from_diff(diff_snapshots(before, after), step, keys))
             query = turn.get("query") or {}
             if query.get("key"):
                 events.append(recall_from_snapshot(after, str(query["key"]), step))
             events.append(process_event("assistant_message", {
-                "text": extract_text(raw),
+                "text": answer,
                 "source_note": "OpenClaw CLI JSON stdout observed after current turn",
             }, step))
         return events

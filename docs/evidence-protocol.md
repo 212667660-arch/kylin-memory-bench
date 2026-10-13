@@ -1,5 +1,13 @@
 # 外部 Agent 证据协议
 
+## 0.2.2 回答检查范围
+
+`answer_contains` 默认检查案例最后一个声明回合的 assistant 事件；普通 `answer_not_contains` 同样检查最后回合。boundary 类别的禁止回答规则默认检查全部回合，以保留敏感信息全程禁止泄露的约束。最后回合没有回答时，不能使用之前的确认句补位；无 turns 的旧证据案例以最后一个观测到的用户/回答回合为准。
+
+需要不同语义时，在该检查项中显式设置 `answer_scope: all` 或 `answer_scope: last`；也可使用正整数 `step: 2` 指定第 2 回合。`step` 与 `answer_scope` 不能同时设置，step 不能超过已声明的回合数。结果的 `evidence_refs` 只引用该检查实际选中的回答。
+
+CLI JSON/JSONL 应在明确的 assistant 文本字段或 payload 中提供回答；工具结果、日志和 meta 字段不视为回答。OpenClaw 输出缺少 assistant payload 时，运行应标记为不可观测而非有效分数。成功 stdout 完整解析，失败诊断仍限制尾部长度。
+
 真实 Agent 可以不暴露内部数据库，只需导出 UTF-8 JSONL。每行对应一个运行事件；当前协议同时要求来源和可观测性分类，以防把包装层操作或模型自述误认为模型原生记忆：
 
 ```json

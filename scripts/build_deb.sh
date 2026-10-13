@@ -3,7 +3,7 @@ set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 OUTPUT_DIR="${1:-$ROOT/dist}"
-VERSION="${KMB_DEB_VERSION:-$(sed -n 's/^version = "\([^"]*\)"/\1/p' "$ROOT/pyproject.toml" | head -n 1)}"
+VERSION="${KMB_DEB_VERSION:-$(sed -n 's/^version = "\([^"]*\)"/\1/p' "$ROOT/pyproject.toml" | tr -d '\r' | head -n 1)}"
 
 if ! command -v dpkg-deb >/dev/null 2>&1; then
   printf '%s\n' 'dpkg-deb is required; run this script on openKylin or another Debian build host.' >&2

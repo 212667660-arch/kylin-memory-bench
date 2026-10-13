@@ -59,19 +59,49 @@ def _action_category(check_type: str, events: List[EvidenceEvent], passed: bool)
     return "behavior_failure"
 
 
-def _evaluate(check: Dict[str, Any], events: List[EvidenceEvent]) -> CheckResult:
+def validate_answer_check(check: Dict[str, Any], turn_count: int = 0) -> None:
+    if check.get("type") not in {"answer_contains", "answer_not_contains"}:
+        return
+    if "step" in check and "answer_scope" in check:
+        raise ValueError("answer checks must select either step or answer_scope")
+    if "step" in check:
+        step = check["step"]
+        if isinstance(step, bool) or not isinstance(step, int) or step < 1:
+            raise ValueError("answer check step must be a positive integer")
+        if turn_count and step > turn_count:
+            raise ValueError("answer check step exceeds the number of case turns")
+    if "answer_scope" in check and check["answer_scope"] not in ("last", "all"):
+        raise ValueError("answer_scope must be last or all")
+
+
+def _answer_events(case: BenchmarkCase, check: Dict[str, Any], events: List[EvidenceEvent]) -> List[EvidenceEvent]:
+    validate_answer_check(check, len(case.turns))
+    assistants = _events(events, "assistant_message")
+    if "step" in check:
+        return [event for event in assistants if event.step == check["step"]]
+    # Sensitive boundary exclusions apply throughout the interaction. Other
+    # answer checks concern the final declared turn, never an earlier ack.
+    default_scope = "all" if case.capability == "boundary" and check["type"] == "answer_not_contains" else "last"
+    if check.get("answer_scope", default_scope) == "all":
+        return assistants
+    last_step = len(case.turns) or max((event.step for event in events if event.kind in {"user_message", "assistant_message"}), default=0)
+    return [event for event in assistants if event.step == last_step]
+
+
+def _evaluate(check: Dict[str, Any], events: List[EvidenceEvent], case: BenchmarkCase) -> CheckResult:
     check_type = str(check.get("type", ""))
-    assistants = [str(event.data.get("text", "")) for event in _events(events, "assistant_message")]
+    answer_events = _answer_events(case, check, events) if check_type in {"answer_contains", "answer_not_contains"} else []
+    assistants = [str(event.data.get("text", "")) for event in answer_events]
     refs: List[Dict[str, Any]] = []
     if check_type == "answer_contains":
         value = str(check.get("value", ""))
         passed = any(value in text for text in assistants)
-        refs = [_ref(event) for event in _events(events, "assistant_message") if value in str(event.data.get("text", ""))]
+        refs = [_ref(event) for event in answer_events if value in str(event.data.get("text", ""))]
         reason = "assistant output contains '%s'" % value if passed else "assistant output did not contain '%s'" % value
     elif check_type == "answer_not_contains":
         value = str(check.get("value", ""))
         passed = bool(assistants) and all(value not in text for text in assistants)
-        refs = [_ref(event) for event in _events(events, "assistant_message")]
+        refs = [_ref(event) for event in answer_events]
         if passed:
             reason = "assistant output excludes '%s'" % value
         elif not assistants:
@@ -209,7 +239,7 @@ def _evaluate(check: Dict[str, Any], events: List[EvidenceEvent]) -> CheckResult
 
 
 def score_case(case: BenchmarkCase, events: List[EvidenceEvent]) -> ScoreResult:
-    checks = [_evaluate(check, events) for check in case.checks]
+    checks = [_evaluate(check, events, case) for check in case.checks]
     passed = sum(1 for check in checks if check.passed)
     score = (passed / len(checks)) if checks else 1.0
     failures = [{"type": check.failure_type, "category": check.category, "reason": check.reason, "check": check.check} for check in checks if not check.passed]

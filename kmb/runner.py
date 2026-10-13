@@ -12,7 +12,7 @@ import yaml
 from .agents import AgentAdapter
 from .agent_adapters.base import ERROR_CATEGORIES, classify_error
 from .models import BenchmarkCase, EvidenceEvent, ScoreResult, summarize_evidence
-from .scoring import score_case, score_metamorphic_groups
+from .scoring import score_case, score_metamorphic_groups, validate_answer_check
 
 SUPPORTED_CAPABILITIES = {
     "retention", "memory_recall", "dynamic_update", "similar_distinction", "boundary", "task_reuse",
@@ -49,6 +49,7 @@ def validate_cases(cases: Iterable[BenchmarkCase], require_all_capabilities: boo
             check_type = str(check.get("type", ""))
             if check_type not in SUPPORTED_CHECKS:
                 raise ValueError("unsupported check type '%s' in case %s" % (check_type, case.id))
+            validate_answer_check(check, len(case.turns))
         for fact in case.facts:
             if not fact.get("fact_id") or not fact.get("key"):
                 raise ValueError("fact metadata requires fact_id and key in case %s" % case.id)
