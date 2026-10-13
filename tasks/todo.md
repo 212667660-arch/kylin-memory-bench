@@ -40,7 +40,7 @@
 
 - openKylin 3.0 VM（`192.168.141.128:22`）已完成离线闭环、`.deb` 包内 smoke/strict verify、工作台 HTTP 和 Agent 发现；本轮在独立 HOME 中完成 KylinBot/OpenClaw 六案例真实快速对比。
 - 最新批次：`~/kmb-agent-validation-20260923/runs/quick-compare-isolated-20260924`；KylinBot `63.89`、OpenClaw `13.89`，两侧 `score_valid=true`，strict 校验通过。Token Center `/v1/models` 返回 200，未再出现 402；结果仍按系统级外部记忆证据解释，`native_memory_events=0`。
-- 桌面演示视频仍待录；负责人暂缓录制，旧演讲稿、分镜和独立录制准备包已清理。
+- 桌面演示视频仍待录；旧稿件已清理，当前 0.2.4 网页口播与操作步骤见 `docs/demo-script-20261014.md`。最新修改版未运行真实回归，正式录制还需恢复额度并生成本次有效结果。
 - 项目级 LICENSE 已生效（MIT，2026-10-05 负责人确认）。
 
 ## 表述边界（强制）
