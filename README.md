@@ -1,6 +1,20 @@
 # KylinMemoryBench
 
+[![CI](https://github.com/212667660-arch/kylin-memory-bench/actions/workflows/verify.yml/badge.svg)](https://github.com/212667660-arch/kylin-memory-bench/actions/workflows/verify.yml)
+[![Release](https://img.shields.io/github/v/release/212667660-arch/kylin-memory-bench)](https://github.com/212667660-arch/kylin-memory-bench/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 KylinMemoryBench 是面向 openKylin 的智能体长期记忆自动化评测 Benchmark。它不是聊天机器人或 RAG 产品，而是通过统一适配器收集真实运行事件，并以可审计的确定性规则评估六类能力：长期保持、记忆调用、动态更新、相近区分、边界识别、任务复用。
+
+## 下载与评审入口
+
+| 入口 | 内容 |
+|---|---|
+| [0.2.1 发布页](https://github.com/212667660-arch/kylin-memory-bench/releases/tag/v0.2.1) | 完整非视频材料 ZIP、openKylin `.deb`、Python wheel 和验证证据 |
+| [作品介绍 PDF](https://github.com/212667660-arch/kylin-memory-bench/releases/download/v0.2.1/project-introduction-0.2.1.pdf) | 项目背景、架构、应用场景、创新点与维护规划 |
+| [完成度审计 PDF](https://github.com/212667660-arch/kylin-memory-bench/releases/download/v0.2.1/completion-audit-20261013.pdf) | 官网/PDF 对应、修复记录、验证范围与尚待交付内容 |
+| [评委复现卡](docs/judge-reproduction-card.md) | 无云凭据的离线对比、结果与雷达图 |
+| [真实 Agent 快速对比](docs/quick-start.md) | 在 openKylin 中比较已安装的 Agent |
 
 非视频赛题要求与代码/命令/证据的逐项对应见 [`docs/requirements-traceability.md`](docs/requirements-traceability.md)。
 
@@ -10,15 +24,25 @@ KylinMemoryBench 是面向 openKylin 的智能体长期记忆自动化评测 Ben
 
 ## 快速开始
 
-需要 Python 3.9+ 和 PyYAML 6。评审可先用一条命令完成无云凭据验收（说明见 [docs/official-acceptance.md](docs/official-acceptance.md)）：
+需要 Python 3.9+。首次从 GitHub 获取源码并安装（pip 会安装 PyYAML 依赖）：
+
+```bash
+git clone https://github.com/212667660-arch/kylin-memory-bench.git
+cd kylin-memory-bench
+python3 -m pip install .
+```
+
+Windows 可将 `python3` 换为 `python`。随后用一条命令完成无云凭据验收（说明见 [docs/official-acceptance.md](docs/official-acceptance.md)）：
 
 ```bash
 python3 -m kmb.cli official-acceptance --out runs/official-acceptance
 ```
 
-该入口自动生成严格校验摘要和可打开报告；不会下载 Agent、要求填写 YAML 或接收网页密钥。若要只运行离线演示脚本（约 5 分钟，说明见 [docs/judge-reproduction-card.md](docs/judge-reproduction-card.md)）：
+该入口自动生成严格校验摘要和可打开报告；不会下载 Agent、要求填写 YAML 或接收网页密钥。依赖安装完成后，离线验收不需要云凭据。
 
 如果目标是直接比较当前 openKylin 中已有的 Agent，推荐先看[快速对比](docs/quick-start.md)：工作台会自动发现 Agent，用户只需选择两个并点击一次，不需要下载 Agent、编辑 YAML 或填写套件参数。
+
+若要运行离线演示脚本（需要 Bash，约 5 分钟，说明见 [docs/judge-reproduction-card.md](docs/judge-reproduction-card.md)）：
 
 ```bash
 bash scripts/run_offline_demo.sh runs/offline-demo
