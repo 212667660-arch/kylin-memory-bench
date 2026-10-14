@@ -2,6 +2,20 @@
 
 > 路径固定：`docs/mimo.md`。面向本仓库所有 AI / 协作会话。
 
+## 2026-10-14 演示智能体切换 DeepSeek 官方 API（配置完成，未联网测试）
+
+- 意图：使用负责人提供的新 DeepSeek 密钥，为网页演示的小K/OpenClaw更换真实模型 API，并恢复已停止的工作台服务。
+- 范围：VM 当前演示私有 HOME 的小K `config.toml`（通过原生配置命令写入加密密钥）、OpenClaw `openclaw.json`、Agent `models.json`、私有 `.env`，以及工作台进程环境；工作区外 0700/0600 备份；`runs/deepseek-api-switch-20261014/` 无密钥更新脚本与脱敏状态；新增 API 修改说明、当前环境/演讲稿录制前状态和本台账，同步 VM/GitHub 文档。补充恢复此前已断开的 Windows 本地 127.0.0.1:8765 SSH 转发，不向外部网卡开放服务。
+- 配置方案：DeepSeek 官方 OpenAI 兼容接口 `https://api.deepseek.com/v1`，双方统一 `deepseek-flash`，保留 4096 输出上限；双方显式关闭思考模式，避免官方默认思考与工具历史字段要求影响旧客户端。更新实际默认模型和 provider，不只更换工作台 HTTP 档案。
+- 边界：密钥只经不回显输入到 VM，不放入命令参数、仓库、演讲稿、日志或本机报告；不修改日常 Agent 配置/记忆或原 openKylin 3.0，不清除旧失败结果，不启动评测、模型调用、余额/连接检查。保留 0.2.4 安装包与冻结 0.2.2 发行材料，换 API 不等于最新模型实测已通过。
+- 验收：本地结构校验与实际配置加载确认新 provider/model/URL、加密或环境引用、权限及未启用旧网关 fallback；核对原系统/日常配置/记忆快照和演示记忆不被修改。恢复服务后只读页面元数据，记录新 PID 与 private HOME，不宣称新密钥鉴权/余额已验证。
+- 实际结果：两款统一切换到官方 deepseek-flash，4096 输出上限、显式关闭思考；小K fallback 为 deepseek，API 密钥经原生 setter 加密；OpenClaw primary 为 deepseek/deepseek-flash、fallbacks 为空，provider 及 Agent 模型清单引用私有环境文件。五项相关配置/凭据文件权限均为 0600，工作区外备份为 0700；密钥未进入本机脚本或报告。
+- 修正与核对：小K JSON Patch 不支持创建动态 provider 容器，初次被拒绝且已回滚；随后先加入带既有加密占位的公开 provider 元数据，再通过注册表支持的 api-key 字段写入新加密密钥并切换默认。原生配置加载、OpenClaw 2026.9.5 config validate 均完成；日常配置/记忆、演示记忆及系统版本文件快照前后一致。
+- 网页与记录：此前工作台已停止，现恢复为 PID 8843，继续使用同一私有 HOME 与 OpenClaw local 模式；后端发现两款 runnable=true。状态在 `runs/deepseek-api-switch-20261014/configuration-status.json`，无密钥脚本与 VM 私有备份支持恢复。没有模型调用、鉴权/余额检查或测试套件，不把配置成功写成云端可用性已验证。
+- 独立加载核对：清除临时父进程的 DEEPSEEK_API_KEY 后，OpenClaw 仍能从私有环境文件加载配置；原生 config get 确认 primary 与 Base URL 符合新值。小K reliability fallback_providers 和 model_routes 均为空，没有配置旧网关回退。记录为 `configuration-load-check.json`，不包含密钥。
+- 本机转发限制：Windows 8765 已无监听进程；恢复本地 SSH 转发的 Start-Process 操作被自动审批审查拒绝，原因仅为 blocked by policy，未提供更具体说明。未执行被拒绝操作，未尝试绕过；VM 内工作台可直接用 127.0.0.1:8765，Windows 转发仍未恢复。
+- 文档：新增 `docs/demo-api-20261014.md`，更新当前环境和演讲稿录制前说明并同步操作版副本；口播正文未改。说明旧额度不足仍是历史、新接口结果未产生，以及以后重建空白副本应保留新 API 设置。同步 VM/GitHub 文档，原安装包与冻结标签不变。
+
 ## 2026-10-14 重新编写网页演示演讲稿（完成）
 
 - 意图：依据当前 0.2.4 自动发现及负责人直接在网页执行的要求，生成可照念口播与对应点击流程。
