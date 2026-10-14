@@ -2,6 +2,29 @@
 
 > 路径固定：`docs/mimo.md`。面向本仓库所有 AI / 协作会话。
 
+## 2026-10-14 最终参赛视频与提交材料发布（进行中）
+
+- 补充授权：负责人要求删除项目中 API 等私密信息并列出类别。本轮检查当前文件、生成的交付档案和 Git 可达历史；报告仅包含脱敏类型、位置及处置，不输出完整凭据。真实命中的私密内容删除或脱敏，可恢复备份如需保留则置于工作区外私有目录，不上传；日常 VM 外部配置仍不改。
+- 意图：按负责人“除了邮件”授权，核对当前代码与 GitHub 同步状态，检查新剪辑视频并整理作品介绍、提交清单和下载材料，发布评委可访问的视频与材料链接；不发送邮件。
+- 范围：`KylinMemoryBench介绍视频.mp4` 只读检查；`runs/submission-final-20261014/` 的视频抽帧/转写/完整性与发布核对记录；`dist/submission-final-20261014/` 的最终介绍 PDF、源码/材料包和哈希；当前介绍/README/提交说明及本台账；GitHub 当前分支、独立参赛材料 Release 与附件。
+- 边界：不修改视频内容、业务代码、评分、历史证据、原 openKylin 3.0 或 Agent 配置；不启动模型调用或测试套件。视频以 Release 附件发布，不加入 Git 源码历史；旧发行标签和附件不覆盖。正式邮件及收件人身份信息留给负责人处理。
+- 验收：记录本地与远端提交/树的比对；检查视频元数据、完整解码、展示批次与敏感信息，保留抽样/自动转写限制；最终材料只包含白名单公开文件，凭据扫描通过；PDF 逐页渲染检查；发布后匿名访问附件并核对 SHA-256、最终远端提交与本地一致。
+- 初始同步：fetch 后本地 HEAD 与 origin/main 均为 d9ae153，业务代码无差异；新视频和先前台账为本地材料。仓库公开，旧 v0.2.1/v0.2.2 发布保留。
+- 隐私处置：旧本地 `_codex_threads/01a06164_extract.txt` 中两处 API 凭据已脱敏。删除该文件被自动审批审查拒绝（blocked by policy），改为内容脱敏成功；文件继续被 Git 忽略。真实运行所需的 VM 私有配置在仓库外，未改。22 份当前文档中的账号、内网地址及真实 HOME 已匿名化；历史分数和事件不变。复扫 11661 个可读文件、472 个 Git 可达 blob，无真实凭据命中；安全测试的假字符串明确保留。报告不含完整凭据。
+- 视频核对：原文件 290.041 秒、1728×1080、H.264/AAC，全片解码通过；本地转写 85 段、36 张抽样帧及两张关键帧已核对。新任务 19:32 与结果回溯 12:40 的不一致仍存在，最新介绍、提交说明和发布注记均明确区分，不把旧有效成绩归属给新任务。原文件不编辑，未调用模型。
+- 本地材料：生成当前作品介绍 PDF 与提交/隐私说明 PDF，各两页，全页渲染检查完成；源码使用已跟踪目录白名单逐文件复制，避免修改可执行脚本中的模板正则。发现此前 0.2.4 Debian 包两份适配器落后，按当前源码重建包并检查内容/凭据，未安装或运行生命周期。wheel 同步构建；所有包在发布前再核对最终代码/哈希。0.2.4 标为预发行，保留历史验证范围。当前远端附件发布与匿名下载检查待完成。
+
+## 2026-10-14 录屏视频审阅（完成，需修正结果批次对应）
+
+- 意图：审阅负责人录制的 `<user-home>/KylinMemoryBench.mp4`，核对网页操作、口播与实际证据是否一致，并给出具体修改或补录时间点。
+- 范围：`runs/video-review-20261014/` 的原视频元数据、抽帧、检查图、音频与可用时的本地转写、审阅记录；本台账。必要时在该目录安装独立语音转写依赖，不改项目依赖或产品代码。
+- 边界：原视频只读、前后核对完整性；不剪辑原件，不修后端、不改评分或证据，不启动评测或调用 DeepSeek API，不将原视频/音频传给外部转写服务，也不自动上传比赛材料。内部检查图与转写留在本机。
+- 验收：确认媒体格式/时长/音轨与解码情况；按时间定位环境、智能体选择、真实启动与等待、本批结果、案例、双方证据和历史打开；核对口播支持范围与是否含敏感信息。区分已观察内容、抽样限制和无法核实部分，不宣称只看画面就听过全部口播。
+- 实际媒体：找到的是同名 MP4 文件，不是目录；481.9 秒，2560×1600、20 fps、H.264/AAC 立体声。全片解码退出码 0；检查 100 张全片抽样/局部加密帧及 4 张原分辨率证据帧。音频本地转写为 141 段，使用 int8、2 CPU 线程和 1 worker；保留自动转写误识边界，未声称人工逐帧或听审全部内容。
+- 核对结论：VM 桌面、双智能体选择、真实启动、六维雷达、案例和小K证据、历史打开均有展示；新任务为 `quick-20261014-193216-73367531`，但 06:00 的证据复现路径及 07:14 历史行属于 `quick-20261014-124015-11577059`。后半段口播将历史数据称为本次/刚运行结果，需补录或明确历史样例，不能用修改分数、时间或标识来消除不一致。晚间任务有效性未确认，SSH 只读连接超时后未继续干预 VM。
+- 时长与素材：已直接核对原赛题 PDF 第 2 页，3—5 分钟为建议而非硬性上限。约 8 分钟原片可保留；高级配置/API 档案浏览与重复起头可精简，最小补录方案只替换对应批次的结果、证据及历史段，不要求为了低分改数据。
+- 交付与完整性：审阅清单为 `runs/video-review-20261014/review.md`，状态为 `review-status.json`，包含具体时间点、方法及限制。原视频前后 SHA-256 均为 `417feccd50ebe45a69e0d341daf344e3ccaef3e6de522efc909fe7b6cb9aa1c5`；未剪辑、未上传视频、未调用 DeepSeek、未改产品代码、评分或历史事件。本轮检查材料仅留本机，不自动发布比赛材料。
+
 ## 2026-10-14 网页演示演讲稿 Word 文档（完成）
 
 - 意图：将最新版网页演示稿制作成可直接照读的 DOCX，保留操作提示、真实等待位置、有效结果使用条件与异常备用口播。
@@ -11,7 +34,7 @@
 - 实际结果：DOCX 已生成，十段正文与当前 Markdown 一致，共 859 汉字；黑色 12.5 pt 正文和灰色操作文字区分，备用口播与当前 API 状态位于末页。新配置未实测、独立记忆不会自动清空和结果有效性条件均保留。
 - 排版：标准渲染记录 `standard-render.log` 确认缺少 soffice.exe。改用只读隐藏 Word 实例导出，继续由打包渲染器计算 DPI 并生成 PNG，限制图像转换并发为 2。初稿出现空白页与案例单独溢出页，已去除默认文档网格并使用标题自身分页；最终 `render-v2/` 共 4 页，全部以原尺寸检查，无空白页、截断或重叠。Word 导出后实例自行退出，清理阶段 RPC 异常已捕获，不影响 PDF/PNG 完整生成，未保存对源 DOCX 的更改。
 - 记录：生成及兼容渲染脚本、内部 PDF/PNG 和无密钥内容核对位于 `runs/speech-docx-20261014/`。仅最终 DOCX 面向用户，未运行模型调用或测试套件。
-- 同步：DOCX、操作版 Markdown 和清单已复制到 VM `/home/Cisyam/KylinMemoryBench/speech-web-20261014/`；VM 与本机 DOCX SHA-256 均为 `ed5ef0d1a6520d59f4330a2cf87a54e23e6e9a306527de577f60f5d3fc2018cf`，文件大小 42297 字节。当前稿件补充 Word 入口，文档与本台账同步 GitHub。
+- 同步：DOCX、操作版 Markdown 和清单已复制到 VM `<user-home>/KylinMemoryBench/speech-web-20261014/`；VM 与本机 DOCX SHA-256 均为 `ed5ef0d1a6520d59f4330a2cf87a54e23e6e9a306527de577f60f5d3fc2018cf`，文件大小 42297 字节。当前稿件补充 Word 入口，文档与本台账同步 GitHub。
 - 演练后修订：第 6 段改为实际文本/存储规则，第 9 段明确采集范围限制，补充 OpenClaw 证据页筛选步骤与 API 本批调用成功的事实。最新版共 878 汉字，DOCX 仍为 4 页，`render-v3/` 全页检查完成；最终 SHA-256 为 `de1a30fe2f048364dd76502fd0f64281a2838422cb6d7d8aa237edfa695772ce`。TXT、操作版及清单同步更新，初稿哈希仅作为当时记录。
 
 ## 2026-10-14 按演讲流程实际对比与展示核对（核对完成，问题已记录）
@@ -60,7 +83,7 @@
 - 验收：后端真实发现与新建评测共享同一注册表，已安装但不可驱动/隔离目录未就绪明确显示并阻断启动；用户选定的 suite/seed/retries/timeout 传入现有原生适配器/runner，而不是退回固定快速套件。按负责人要求不执行测试、连接探针或模型调用，仅静态审阅/语法、构建安装和只读页面/元数据核对。
 - 实际修改：发现使用 PATH 与固定常见用户/系统目录，OS 用户 HOME 独立于隔离 HOME；安装来源、命令路径、检测时间/主机由后端返回。新建评测以已安装智能体为默认入口；高级记忆层配置保留且增加中文名称与用途。旧草稿不再把新入口带回内部 YAML；本轮保存的草稿包含来源、轨道和实际两侧标识。
 - 执行边界：原生任务收到真实 Agent id，后端重新检查可执行性并校验共享 suite/seed/retries/timeout，转入原生适配器和现有 runner。实际评分器固定 deterministic-v2；主机安装与评测目录就绪分开判断，未就绪不能启动。页面进入和可见时每 30 秒仅查询安装元数据，输入/下拉操作时避免重绘打断。
-- 部署结果：0.2.4 已构建安装，工作台 PID 28508 返回版本 0.2.4，检测主机 Cisyam-pc。小K/OpenClaw installed=true、runnable=true；Hermes 已安装但隔离目录未准备；KylinAgent 需手动观测。保留原 KMB_AGENT_HOME 与 openKylin 3.0，系统版本文件 SHA-256 前后相同。
+- 部署结果：0.2.4 已构建安装，工作台 PID 28508 返回版本 0.2.4，检测主机 <vm-host>。小K/OpenClaw installed=true、runnable=true；Hermes 已安装但隔离目录未准备；KylinAgent 需手动观测。保留原 KMB_AGENT_HOME 与 openKylin 3.0，系统版本文件 SHA-256 前后相同。
 - 静态与页面：全部 tracked Python 源仅语法解析，JavaScript `node --check` 与差异空白检查通过；七项安装后的源文件与本机 SHA-256 一致。页面已显示小K/OpenClaw、六案例 quick、42/1/180 参数及两侧最近额度不足。证据为 `runs/host-agent-discovery-20261014/new-evaluation.png`、`deployment-status.json`、`static-checks.json`；deb SHA-256 为 85d9088cdef617958401f73cfde74ec5b7b0caf0a60f8d4662cfa3dc1a692927。没有点击开始、运行测试或新的模型回合；本轮不宣称评测回归通过、不发布正式标签。
 - 交付：同步工作区文档到 VM 并提交 GitHub；旧 0.2.2 标签、发行附件、历史结果与清理记录保留。
 
@@ -71,7 +94,7 @@
 - 补充范围：`runs/video-prep-20261013/` 中旧录制、设备调查、排版脚本与排版检查图，以及 `vm-prep/` 的旧录制入口/环境说明副本；准备状态、预检证据与原界面截图保留。
 - 边界：材料移入工作区外的可恢复清理区；保留代码、安装包、冻结发行/提交快照、真实运行和审阅证据、历史台账。保留 VM 当前隔离 HOME、`prepare-gui.py`、状态引用和工作台服务。遵守 Token 用完且不需要测试的要求，不运行测试或 Agent 回合，不改 openKylin 3.0。
 - 验收：逐项检查活动路径已移出、文档当前入口无失效稿件链接、保留文件和工作台进程仍在；只做文件/进程元数据核对与文档差异检查，记录实际清理数量并同步 GitHub。
-- 实际清理：Windows 共移出 22 项路径、65 个文件；VM 共移出 19 个文件，两份 docs 源稿原本已不在 VM 工作区。全部已存在的目标路径复核后均无残留；恢复清单位于 `C:/Users/123/.codex/trash/kmb-recording-20261013-233650/cleanup-manifest.json` 和 VM `/home/Cisyam/.local/share/kmb-cleanup/recording-20261013-233748/cleanup-manifest.json`。
+- 实际清理：Windows 共移出 22 项路径、65 个文件；VM 共移出 19 个文件，两份 docs 源稿原本已不在 VM 工作区。全部已存在的目标路径复核后均无残留；恢复清单位于 `<user-home>/.codex/trash/kmb-recording-20261013-233650/cleanup-manifest.json` 和 VM `<user-home>/.local/share/kmb-cleanup/recording-20261013-233748/cleanup-manifest.json`。
 - 保留与核对：VM `prepare-gui.py`、`gui-private-home.txt`、`gui-ready.json` 和当前私有 HOME 均保留，工作台仍为 PID 22733；本机 GUI 准备脚本和评分复现探针仍在。文档活动链接不再指向已清理稿件；历史审计、台账、冻结提交包与发行包中的文档快照原样保留。未运行测试、Agent 调用或系统升级。
 - 文档交付：README、评审卡、作品介绍、任务状态与修复报告改为视频暂缓且旧稿已清理；技术审阅和审计追加历史引用说明。同步 VM 用户工作区与 GitHub 当前分支，冻结标签和发行附件不变。
 
@@ -373,7 +396,7 @@ PDF/文档要求基于**真实运行证据**自动评分，并覆盖六类记忆
   - `tasks/todo.md` — 迁入无 API 验收说明
   - `docs/mimo.md` — 本条
 - **接入层级**: 不适用（迁移验收）；非真实 API / 非 A/B 主结论
-- **SSH（脱敏）**: `Cisyam@192.168.182.129:2222`，密钥 `~/.ssh/openkylin_vm_ed25519`
+- **SSH（脱敏）**: `<vm-user>@192.168.182.129:2222`，密钥 `~/.ssh/openkylin_vm_ed25519`
 - **验收退出码**:
   - env_probe --require-openkylin：**0**，`checks.openkylin.ok=true`（openKylin 2.0 SP2）
   - install_local.sh：**0**，`.kmb-venv` 在项目内，import kmb 成功
@@ -451,7 +474,7 @@ PDF/文档要求基于**真实运行证据**自动评分，并覆盖六类记忆
 - **接入层级**: KylinBot/OpenClaw 真实系统级 Agent 行为，可观测记忆事件；不声称模型原生记忆
 - **保留/禁止**: 使用空白临时记忆库与副本配置；不修改原 Agent 记忆/配置；Token 不回显、不入库
 - **验收**: 全量 104+ unittest、隔离 VM 六案例双 Agent quick-compare、各结果 `verify_run.py --strict`；证据路径写入追踪清单
-- **结果**: VM `/home/Cisyam/kmb-agent-validation-20260923/runs/quick-compare-isolated-20260924/`；KylinBot `63.89`、OpenClaw `13.89`；两侧 `score_valid=true`，strict 退出码 0（51/34 条证据）；新 Token `/v1/models` 返回 200，未再出现 402
+- **结果**: VM `<user-home>/kmb-agent-validation-20260923/runs/quick-compare-isolated-20260924/`；KylinBot `63.89`、OpenClaw `13.89`；两侧 `score_valid=true`，strict 退出码 0（51/34 条证据）；新 Token `/v1/models` 返回 200，未再出现 402
 - **边界**: 结果为系统级外部记忆/动作控制器行为，`native_memory_events=0`；Hermes 本轮未重跑，KylinAgent 仍不可自动驱动；视频与 LICENSE 仍后置
 - **本次是否已同步本台账**: 是
 
@@ -469,7 +492,7 @@ PDF/文档要求基于**真实运行证据**自动评分，并覆盖六类记忆
   - `docs/mimo.md` — 本条
 - **门禁口径**: A 轨 = Agent 自有记忆事件（`source=process/memory_layer/wrapper` 的 memory_*）；**不要求** `native_memory_events>0`；原生轨单独记录
 - **A 轨实验**:
-  - VM openKylin 3.0 `192.168.141.128:22`；`brain.db` 真实拷贝 `_migrate_stage/kylinbot-brain.db`
+  - VM openKylin 3.0 `<vm-address>:22`；`brain.db` 真实拷贝 `_migrate_stage/kylinbot-brain.db`
   - 历史实现曾把全库行计为 **agent_owned_memory_events=3**；2026-09-21 复核后已撤销该口径，当前 case 只保留精确键的 snapshot recall
   - `native_memory_events=0`
   - overall 0.0：DB 键 `project_codename/Atals` vs 案例 `project=Atlas`（烟测数据，如实 omission）
@@ -509,7 +532,7 @@ PDF/文档要求基于**真实运行证据**自动评分，并覆盖六类记忆
   - `configs/agent-kylinbot-command.yaml` — 从只读快照 exporter 切换为真实 CLI 驱动
   - `suites/native/kylinbot-gate.yaml` — 自然语言 remember/recall 门禁
   - `README.md`、`docs/Zcode-agent对比方案.md`、`docs/native-memory-compare.md`、`docs/ecosystem-agent-export.md` — 更新当前门禁口径
-- **VM**: openKylin 3.0 (huanghe)，`Cisyam@192.168.141.128:22`；`kylin-bot` 可执行；用户级 OpenClaw 与 Kylin-Agent runtime 服务 `active`。
+- **VM**: openKylin 3.0 (huanghe)，`<vm-user>@<vm-address>:22`；`kylin-bot` 可执行；用户级 OpenClaw 与 Kylin-Agent runtime 服务 `active`。
 - **结果**: `runs/kylinbot-gate-20260922/result.json`，`overall=100.0`；`evidence.jsonl` 含 `source=process` 的 `memory_write`、精确 `memory_recall` 命中 Atlas 和两轮 assistant 输出。
 - **观测口径**: `system_level_wrapper_assisted`，`wrapper_memory_events=4`，`native_memory_events=0`；可标记 `A: ready(agent-memory-observable)`，不可宣称模型原生记忆。
 - **清理**: 仅删除本轮新增 `benchmark_alias` 与两条关联 `user_msg_*`；既有烟测数据保留。
@@ -521,7 +544,7 @@ PDF/文档要求基于**真实运行证据**自动评分，并覆盖六类记忆
 - **意图**: 将用户流程收敛为“发现已有 Agent → 选择两个 → 一次点击”，保留证据边界，不自动下载 Agent。
 - **代码**: 新增 `kmb/agent_registry.py`、四个原生 Agent 适配器、`kmb/quick_compare.py`、`suites/quick.yaml`；工作台新增 `GET /api/agents`、`POST /api/quick-compare` 和总览页快速对比面板。
 - **本地回归**: `.venv-kmb-system\\Scripts\\python.exe -m unittest discover -s tests -v`，**94 tests OK**；`node --check kmb/web/app.js` 通过；快速套件严格校验通过。
-- **VM**: openKylin 3.0 (huanghe)，`Cisyam@192.168.141.128:22`；KylinBot、Hermes、OpenClaw 自动适配可用；KylinAgent 已安装但因 GUI/服务级证据限制标记为不可自动驱动。
+- **VM**: openKylin 3.0 (huanghe)，`<vm-user>@<vm-address>:22`；KylinBot、Hermes、OpenClaw 自动适配可用；KylinAgent 已安装但因 GUI/服务级证据限制标记为不可自动驱动。
 - **VM 结果**: `~/kmb-quick-compare-20260922/runs/openkylin-validation-20260922/quick-compare/kylinbot-hermes/` 与 `kylinbot-openclaw/`；两组均生成六案例双 Agent结果、`comparison.*`、`quick-compare.json`，四份 `result/evidence` 通过 `scripts/verify_run.py --strict`。
 - **观测结论**: KylinBot + Hermes 总分分别 `63.89`、`22.22`；KylinBot + OpenClaw 分别 `41.67`、`27.78`。失败项保留为真实 omission/stale_update/confusion/runtime_error/erroneous_reuse，不把网关账单拒绝或模型文本自述计为通过。
 - **安全**: 未复制 Agent 数据库、密钥或原始凭据到仓库；VM 结果目录位于 `runs/`（gitignored），只记录脱敏路径和摘要。

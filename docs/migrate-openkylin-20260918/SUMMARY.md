@@ -3,12 +3,12 @@
 ## 通道
 - VMware: E:\VMware\vmware.exe / vmrun
 - VM: D:\openKylin-VM\openKylin.vmx（openKylin 2.0 SP2，已运行）
-- SSH: Cisyam@192.168.182.129:2222，密钥 %USERPROFILE%\.ssh\openkylin_vm_ed25519（无私钥内容入库）
+- SSH: <vm-user>@192.168.182.129:2222，密钥 %USERPROFILE%\.ssh\openkylin_vm_ed25519（无私钥内容入库）
 
 ## 远端路径
 - REMOTE_ROOT=/data/usershare/kylin-memory-bench-20260918
 - 数据盘：/dev/sda4 → /data（约 21G 可用）；/data 根目录 555，用户写入点为 /data/usershare
-- 未覆盖 /home/Cisyam/kmb-openkylin-validation-20260906
+- 未覆盖 <user-home>/kmb-openkylin-validation-20260906
 
 ## 同步
 - 宿主打包 kmb-src-20260918.tar.gz

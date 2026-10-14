@@ -563,7 +563,7 @@ python3 scripts/official_score.py \
 
 ### 第 1 步：PDF-16 真实稳定性（两轮尝试，均 partial）
 
-- VM（192.168.141.128）SSH 密钥已授权、四 Agent 预检通过、网关 `/v1/models` 200——上一轮全部外部阻断解除。
+- VM（<vm-address>）SSH 密钥已授权、四 Agent 预检通过、网关 `/v1/models` 200——上一轮全部外部阻断解除。
 - 第一轮三批（`runs/official-installed-20260927/`）全部因网关 `402 Token 余额不足`（availableTokens 12,079 < requiredTokens 37,598）计费失败，KylinBot/OpenClaw 均 0/3 有效。
 - 用户补充额度后第二轮（`runs/official-installed-20260927-r2/`）：KylinBot repeat-01 有效 **52.78 分（52 条证据）**，随后额度再度耗尽（repeat-02 起始仅余 31,269），最终 KylinBot 1/3、OpenClaw 0/3——与 20260924 基线状态一致。
 - 两轮失败批次全部保留并拷回宿主机，`scripts/official_score.py` 重评分均为 72/100（环境阻断型，不替换离线基线）。**PDF-16 维持 5/15 partial，90/100 基线与既有结论不变。**

@@ -1,12 +1,12 @@
-config=/home/Cisyam/.ssh/sshd_config_vm
-hostkey=/home/Cisyam/.ssh/ssh_host_ed25519_key
+config=<user-home>/.ssh/sshd_config_vm
+hostkey=<user-home>/.ssh/ssh_host_ed25519_key
 === config test ===
 config_test_exit=0
 === start ===
 start_exit=0
 === process ===
-Cisyam     30848  0.0  0.0   2628  1500 pts/2    Ss   01:16   0:00 /usr/bin/tini -s -g -n -u -- /usr/sbin/sshd -f /home/Cisyam/.ssh/sshd_config_vm -E /home/Cisyam/.ssh/sshd_vm_2222.log
-Cisyam     30851  0.0  0.0  12532  2820 ?        Ss   01:16   0:00 sshd: /usr/sbin/sshd -f /home/Cisyam/.ssh/sshd_config_vm -E /home/Cisyam/.ssh/sshd_vm_2222.log [listener] 0 of 10-100 startups
+<vm-user>     30848  0.0  0.0   2628  1500 pts/2    Ss   01:16   0:00 /usr/bin/tini -s -g -n -u -- /usr/sbin/sshd -f <user-home>/.ssh/sshd_config_vm -E <user-home>/.ssh/sshd_vm_2222.log
+<vm-user>     30851  0.0  0.0  12532  2820 ?        Ss   01:16   0:00 sshd: /usr/sbin/sshd -f <user-home>/.ssh/sshd_config_vm -E <user-home>/.ssh/sshd_vm_2222.log [listener] 0 of 10-100 startups
 === ports ===
 State  Recv-Q Send-Q      Local Address:Port Peer Address:PortProcess                         
 LISTEN 0      128               0.0.0.0:2222      0.0.0.0:*    users:(("sshd",pid=30851,fd=4))

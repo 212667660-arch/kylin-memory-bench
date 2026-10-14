@@ -33,14 +33,14 @@
 
 ## 稳定性证据边界
 
-**当前证据（2026-10-04，满分依据）**：`runs/official-installed-20261004/official-repeat/`（VM 原始目录 `/home/Cisyam/kmb-official-review-20260924-r2/runs/official-installed-20261004/`）。`status=completed`；KylinBot 2/2 批有效（63.89/61.11，均值 62.50、标准差 1.97）、OpenClaw 2/2 批有效（22.22/22.22，标准差 0.00）；环境指纹与 2026-10-01 采集一致（kylinbot `e943ece7…`、openclaw `b11a5e9c…`），证明跨日批次环境同一。批次失败分类纪律不变：error 级失败（若有）保留在分母。
+**当前证据（2026-10-04，满分依据）**：`runs/official-installed-20261004/official-repeat/`（VM 原始目录 `<user-home>/kmb-official-review-20260924-r2/runs/official-installed-20261004/`）。`status=completed`；KylinBot 2/2 批有效（63.89/61.11，均值 62.50、标准差 1.97）、OpenClaw 2/2 批有效（22.22/22.22，标准差 0.00）；环境指纹与 2026-10-01 采集一致（kylinbot `e943ece7…`、openclaw `b11a5e9c…`），证明跨日批次环境同一。批次失败分类纪律不变：error 级失败（若有）保留在分母。
 
 **历史证据（保留）**：早期真实 VM 重复批次 `runs/official-repeat-vm-20260924-fixed/`（KylinBot 1/3、OpenClaw 0/3 有效，billing/timeout 保留在分母）、`runs/official-installed-20260927{,-r2}/`（网关 402 余额不足）与 `runs/official-installed-20261001{,-r2}/`（429 限流与余额耗尽各一次，run-2 两批有效但批 3 402）——这些系列记录了真实的执行波动与失败分类，均不参与当前满分判定。
 
 早期 VM 重复批次原始目录为：
 
 ```text
-/home/Cisyam/kmb-agent-validation-20260923/runs/official-repeat-20260924-fixed/
+<user-home>/kmb-agent-validation-20260923/runs/official-repeat-20260924-fixed/
 ```
 
 该批次保留了 3 个重复批次、billing/timeout 失败和有效性统计：KylinBot 为 1/3 有效分数，OpenClaw 为 0/3 有效分数。失败批次不能从分母中删除，因此 PDF-16 暂定部分得分。OpenClaw 的 SQLite 隔离外键问题已修复，当前失败应按真实 billing/timeout 解释，而不是归因于隔离代码错误。

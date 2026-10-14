@@ -72,6 +72,6 @@ openKylin 3.0 VM 上的生态双 Agent（KylinBot/OpenClaw，均为系统级外�
 - OpenClaw：22.22 / 22.22（标准差 0.00）——完全一致
 - 两批双 Agent `score_valid=true`，strict verify 退出码 0；失败类型（omission/confusion/erroneous_reuse 等）与历史基线同源，无 error 级案例
 - 环境指纹（技能树/配置/二进制 SHA-256，`runs/env-fingerprint-20261001.json`）与跑批日采集一致，排除环境漂移
-- 证据：`runs/official-installed-20261004/`（VM 原始目录 `/home/Cisyam/kmb-official-review-20260924-r2/runs/official-installed-20261004/`）
+- 证据：`runs/official-installed-20261004/`（VM 原始目录 `<user-home>/kmb-official-review-20260924-r2/runs/official-installed-20261004/`）
 
 边界：本数据描述"模型后端 + Agent 外部记忆/动作控制器"的系统级稳定性；不构成模型原生长期记忆证据。执行波动史（429/402 系列）见 `runs/official-installed-20261001{,-r2}/`。

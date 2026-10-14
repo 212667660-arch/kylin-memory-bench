@@ -8,7 +8,7 @@
 
 ### 1.1 官方最终目标
 
-官方任务书（本地提取文本：`.tmp-github-research/official-taskbook.txt`，原 PDF：`C:\Users\123\Downloads\ai_open_kylin_open_kylin_benchmark_XaCQyZepC8.pdf`）要求：
+官方任务书（本地提取文本：`.tmp-github-research/official-taskbook.txt`，原 PDF：`<user-home>\Downloads\ai_open_kylin_open_kylin_benchmark_XaCQyZepC8.pdf`）要求：
 
 | 硬要求 | 对“忆衡”的约束 |
 |---|---|

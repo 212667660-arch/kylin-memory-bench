@@ -45,6 +45,9 @@ build/
 *.deb
 *.whl
 
+# Demonstration recordings are published as release assets, not source blobs.
+KylinMemoryBench介绍视频.mp4
+
 # Editor / OS
 .vscode/
 .idea/

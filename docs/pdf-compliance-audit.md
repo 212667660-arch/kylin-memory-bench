@@ -7,7 +7,7 @@
 ## 本次审计批次
 
 - 审计日期：2026-09-08
-- PDF：`C:/Users/123/Downloads/ai_open_kylin_open_kylin_benchmark_XaCQyZepC8.pdf`
+- PDF：`<user-home>/Downloads/ai_open_kylin_open_kylin_benchmark_XaCQyZepC8.pdf`
 - PDF 元信息：3 页，标题 `Docs`，未加密；逐页提取正文、交付要求和评分表。
 - 工作区：`E:/上海开源软件应用创新大赛`
 - 上下文包：`openKylin-Benchmark-项目上下文包.md`，最新历史记录为批次 106。
@@ -205,7 +205,7 @@ PDF 要求总数：**19 条**（其中 PDF-01 为背景边界，PDF-13 至 PDF-1
 
 ## 最新状态更正（2026-09-24）
 
-本节覆盖上文历史审计的“当前”措辞，不删除历史记录。最新工作区回归为本机 **104 项 unittest 通过**；openKylin 3.0 VM 在独立 HOME、空白临时记忆库中完成 KylinBot/OpenClaw 六案例真实快速对比，批次为 `/home/Cisyam/kmb-agent-validation-20260923/runs/quick-compare-isolated-20260924/`。两侧 `score_valid=true`，`verify_run.py --strict` 均退出码 0；KylinBot `63.89`、OpenClaw `13.89`，证据事件分别为 51/34 条。
+本节覆盖上文历史审计的“当前”措辞，不删除历史记录。最新工作区回归为本机 **104 项 unittest 通过**；openKylin 3.0 VM 在独立 HOME、空白临时记忆库中完成 KylinBot/OpenClaw 六案例真实快速对比，批次为 `<user-home>/kmb-agent-validation-20260923/runs/quick-compare-isolated-20260924/`。两侧 `score_valid=true`，`verify_run.py --strict` 均退出码 0；KylinBot `63.89`、OpenClaw `13.89`，证据事件分别为 51/34 条。
 
 按 PDF 交付项重新核对：
 

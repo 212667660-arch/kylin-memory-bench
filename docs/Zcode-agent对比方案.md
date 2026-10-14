@@ -21,7 +21,7 @@
 
 ### 2026-09-22 当前复核（替代门禁前快照口径）
 
-- VM：openKylin 3.0 (huanghe)，`Cisyam@192.168.141.128:22`；`kylin-bot` 可执行，用户级 `openclaw-gateway.service` 与 `kylin-agent-runtime-gateway.service` 均为 `active`。
+- VM：openKylin 3.0 (huanghe)，`<vm-user>@<vm-address>:22`；`kylin-bot` 可执行，用户级 `openclaw-gateway.service` 与 `kylin-agent-runtime-gateway.service` 均为 `active`。
 - 配置：`configs/agent-kylinbot-command.yaml` + `suites/native/kylinbot-gate.yaml`；驱动器逐轮调用 `kylin-bot agent --message`，复用临时 session state，并以前后 `brain.db` 差异生成事件。
 - 结果：`runs/kylinbot-gate-20260922/result.json`，`overall=100.0`；证据含 `source=process` 的 `memory_write`（`benchmark_alias`）、精确 `memory_recall`（命中 Atlas）和两轮 assistant 输出。
 - 口径：`observability.mode=system_level_wrapper_assisted`，`wrapper_memory_events=4`，`native_memory_events=0`；可宣称 KylinBot Agent 记忆行为门禁通过，不可宣称模型原生长期记忆。
@@ -73,7 +73,7 @@
 |---|---|
 | 虚拟机 | `E:\openkylin\Ubuntu 64-bit.vmx`（VMware；displayName 仅兼容标签） |
 | 系统 | **openKylin 3.0** Desktop（ISO `openKylin-Desktop-V3.0-20260905-x86_64.iso`） |
-| IP / SSH | `192.168.141.128:22`，用户 `Cisyam`（SSH 密钥登录已配置，可远程运维） |
+| IP / SSH | `<vm-address>:22`，用户 `<vm-user>`（SSH 密钥登录已配置，可远程运维） |
 | 内存 | 6GB |
 
 > 历史环境说明：旧 2.0 SP2 虚拟机（`D:\openKylin-VM`）已删除；D 盘 3.0 AgentOS 安装尝试（2026-09-18）已废弃；当前实机为 E 盘 3.0 Desktop。

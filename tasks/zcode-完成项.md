@@ -9,7 +9,7 @@
 - 计划任务 1–7 框架与离线部分已完成；基线 90/100（`docs/official-scorecard.md`，产物 `runs/official-final-20260925-r2/scorecard-final/`）。
 - PDF-16 稳定性 15 分只得 5 分（partial）：VM 三批重复中 KylinBot 仅 1/3 有效、OpenClaw 0/3 有效（billing/timeout），失败批次保留在分母。
 - 工作区约 1150 行未提交改动（36 文件）+ 未跟踪目录（`_migrate_stage/`、`docs/migrate-openkylin-20260918/` 等），为其他 AI 在途工作，本轮在其上继续、不回滚。
-- 上一轮阻断：VM（192.168.141.128:22）SSH 不可达、无有效 LLM 凭据、Hermes 未发现、KylinAgent 缺结构化证据。
+- 上一轮阻断：VM（<vm-address>:22）SSH 不可达、无有效 LLM 凭据、Hermes 未发现、KylinAgent 缺结构化证据。
 
 ### git status 核验（本轮开始时）
 
@@ -49,8 +49,8 @@
 
 **1. VM 可达性探测——通过（上一轮阻断已解除）**
 
-- 命令：`timeout 8 bash -c 'echo > /dev/tcp/192.168.141.128/22'` → `VM_PORT_22_OPEN`（exit=0，19:25:15）。
-- SSH 密钥预检：`ssh -i ~/.ssh/openkylin_vm_ed25519 -o BatchMode=yes Cisyam@192.168.141.128 'echo SSH_OK; hostname'` → `SSH_OK / Cisyam-pc / Cisyam`。2026-09-20 备注中"密钥尚未授权"已失效，密钥现已被 VM 授权。
+- 命令：`timeout 8 bash -c 'echo > /dev/tcp/<vm-address>/22'` → `VM_PORT_22_OPEN`（exit=0，19:25:15）。
+- SSH 密钥预检：`ssh -i ~/.ssh/openkylin_vm_ed25519 -o BatchMode=yes <vm-user>@<vm-address> 'echo SSH_OK; hostname'` → `SSH_OK / <vm-host> / <vm-user>`。2026-09-20 备注中"密钥尚未授权"已失效，密钥现已被 VM 授权。
 
 **2. VM 内只读预检——全部通过**
 
@@ -94,7 +94,7 @@
 
 **产物与证据路径**：
 
-- VM 原始目录：`/home/Cisyam/kmb-official-review-20260924-r2/runs/official-installed-20260927/`（未删除、未覆盖）。
+- VM 原始目录：`<user-home>/kmb-official-review-20260924-r2/runs/official-installed-20260927/`（未删除、未覆盖）。
 - 宿主机完整拷贝：`runs/official-installed-20260927/`（含 `official-repeat/repeat-{01,02,03}/batch.json`、`agents/*/repeat-*/result.json`、`repeat-summary.{json,md}`、`acceptance-summary.{json,md,html}`）。
 - 重新评分：`.venv-kmb-system/Scripts/python.exe scripts/official_score.py --acceptance runs/official-installed-20260927 --out runs/official-installed-20260927/scorecard` → `{"status":"ok","total":72,"max_total":100}`，PDF-16 = 5/15 partial（理由：存在 billing/timeout 或无效分数，不能宣称完整稳定）。该 72 分是"当前环境阻断"的机器评分，**不替换 90/100 离线基线**，历史结论未改动。
 
@@ -120,7 +120,7 @@
 
 ### 第 1 步再续：r2 批次跑完——KylinBot 1/3 有效后额度再度耗尽，PDF-16 维持 partial（2026-09-27 20:2x 本地；批次 UTC 11:52）
 
-**执行事实**（`runs/official-installed-20260927-r2/`，VM 原始目录 `/home/Cisyam/kmb-official-review-20260924-r2/runs/official-installed-20260927-r2/` 均保留）：
+**执行事实**（`runs/official-installed-20260927-r2/`，VM 原始目录 `<user-home>/kmb-official-review-20260924-r2/runs/official-installed-20260927-r2/` 均保留）：
 
 | 批次 | KylinBot | OpenClaw |
 |---|---|---|
@@ -206,7 +206,7 @@
 
 ### 2. VM 安装/升级/卸载矩阵——阻断（sudo 需要密码），工具链已就绪
 
-- 阻断证据：`ssh … Cisyam@192.168.141.128 'sudo -n true'` → `sudo: 需要密码`（exit 1，2026-09-27）。deb 的安装/升级/卸载需要 root（dpkg），BatchMode SSH 无法交互输密码。另 `dpkg -l | grep kylin-memory` 无输出：当前 3.0 VM 未安装 kmb deb。
+- 阻断证据：`ssh … <vm-user>@<vm-address> 'sudo -n true'` → `sudo: 需要密码`（exit 1，2026-09-27）。deb 的安装/升级/卸载需要 root（dpkg），BatchMode SSH 无法交互输密码。另 `dpkg -l | grep kylin-memory` 无输出：当前 3.0 VM 未安装 kmb deb。
 - 已有工具（无需新写）：`scripts/install_deb.sh`、`scripts/upgrade_deb.sh`、`scripts/verify_deb.sh`、`scripts/uninstall_deb.sh`（上一轮 20260908 在旧 VM 用同一套脚本跑出完整矩阵证据 `runs/deb-lifecycle-authorized-20260908-rerun6/`，含 verify-after-upgrade 与残留检查）。
 - 待执行的一键序列（新 3.0 VM，把两个 deb 拷到 VM 后）：
   ```bash
@@ -217,7 +217,7 @@
   sudo bash scripts/uninstall_deb.sh
   # 残留检查：/usr/bin/kmb 与 /usr/share/kylin-memory-bench 均不存在（rerun6 的 residual_check.command 有完整脚本）
   ```
-- 恢复条件：① 用户在 VM 上交互式执行上述序列（把每步 command/exitcode/stdout/stderr 存入 `runs/deb-lifecycle-3.0vm-<日期>/`，与 rerun6 同构）；或 ② 为 Cisyam 配置免密 sudo 后由下一轮自动执行。另一注意点：计划要求的是"**干净** VM"矩阵，当前 3.0 VM 是 Agent 验证环境（装有四只 Agent），严格口径下矩阵应在无 Agent 的干净快照上跑。
+- 恢复条件：① 用户在 VM 上交互式执行上述序列（把每步 command/exitcode/stdout/stderr 存入 `runs/deb-lifecycle-3.0vm-<日期>/`，与 rerun6 同构）；或 ② 为 <vm-user> 配置免密 sudo 后由下一轮自动执行。另一注意点：计划要求的是"**干净** VM"矩阵，当前 3.0 VM 是 Agent 验证环境（装有四只 Agent），严格口径下矩阵应在无 Agent 的干净快照上跑。
 
 ## 完成标准自查（2026-09-27 21:0x 本地）
 
@@ -263,16 +263,16 @@
 ### 步骤 0：重跑前的免费额度探测 → VM 不可达，第 1 项阻断
 
 - 计划：先用一个**注定超额的请求**触发 402 回显 `availableTokens`（被拒绝的请求不扣费），这样能在不消耗任何 token 的前提下查清余额是否已补足，再决定是否重跑三批。这是比"先跑 MAX_TOKEN=1 探针"更省的做法，因为它可以确认到底有多少余额。
-- 实际执行：`ssh … Cisyam@192.168.141.128` → `ssh: connect to host 192.168.141.128 port 22: Connection timed out`。
+- 实际执行：`ssh … <vm-user>@<vm-address>` → `ssh: connect to host <vm-address> port 22: Connection timed out`。
 - 三重诊断证据（2026-09-28 19:25）：
-  1. TCP 端口 22：`timeout 8 bash -c 'echo > /dev/tcp/192.168.141.128/22'` → 超时（exit=124）；
+  1. TCP 端口 22：`timeout 8 bash -c 'echo > /dev/tcp/<vm-address>/22'` → 超时（exit=124）；
   2. SSH 连续 3 次（ConnectTimeout=6）：全部 `Connection timed out`；
   3. ICMP：`ping -n 3` → **3 包 100% 丢失**；
-  4. ARP 表：宿主机 VMnet8 接口 192.168.141.1 在线，但表中只有 `.254` 网关，**没有 192.168.141.128** → VM 未在网络上应答。
+  4. ARP 表：宿主机 VMnet8 接口 192.168.141.1 在线，但表中只有 `.254` 网关，**没有 <vm-address>** → VM 未在网络上应答。
   5. 对照：本机到 `llm-gateway.openkylin.top:443` 连通（exit=0）→ 宿主机外网正常，问题在 VM 侧。
 - 结论：**VM 处于关机/挂起状态**（与 2026-09-27 的"已开机可达"不同，VM 状态在会话之间被外部改变）。这不是网络变更、不是密钥失效——ARP 无记录说明机器不在网。
 - 阻断影响：第 1 项（PDF-16 提 10 分）、第 2 项（deb 矩阵）、第 3 项（Hermes 真实批次）**全部依赖 VM，同时阻断**。
-- 恢复条件：**启动 VMware 中的 openKylin 3.0 VM**（配置文件 `E:\openkylin\Ubuntu 64-bit.vmx`），待其取得 192.168.141.128 后：① 用上述 402 法查余额，② 余额 ≥300 万则换新目录重跑三批，③ 再做 deb 矩阵与 Hermes 预检。
+- 恢复条件：**启动 VMware 中的 openKylin 3.0 VM**（配置文件 `E:\openkylin\Ubuntu 64-bit.vmx`），待其取得 <vm-address> 后：① 用上述 402 法查余额，② 余额 ≥300 万则换新目录重跑三批，③ 再做 deb 矩阵与 Hermes 预检。
 
 ### 步骤 1（本机替补，有实际价值）：端到端重跑离线官方验收
 
@@ -323,8 +323,8 @@
 
 ### 步骤 A：连通与预检（用户启动 VM 后立即复验，不依赖截图/口述）
 
-- TCP 22：`timeout 8 … /dev/tcp/192.168.141.128/22` → `tcp_exit=0`。
-- SSH：`ssh … Cisyam@192.168.141.128 'echo SSH_OK; hostname; uptime'` → `SSH_OK / Cisyam-pc / 19:54:09 up 2 min`（**uptime 2 分钟＝刚开机**，与用户"已启动"一致，且是实测而非仅凭截图）。
+- TCP 22：`timeout 8 … /dev/tcp/<vm-address>/22` → `tcp_exit=0`。
+- SSH：`ssh … <vm-user>@<vm-address> 'echo SSH_OK; hostname; uptime'` → `SSH_OK / <vm-host> / 19:54:09 up 2 min`（**uptime 2 分钟＝刚开机**，与用户"已启动"一致，且是实测而非仅凭截图）。
 - Agent 预检（VM `~/kmb-official-review-20260924-r2`）：`kylinbot/hermes/openclaw` 均 `runnable=True`；`kylinagent` 维持 `runnable=False`（GUI 观测，安全阻断）。磁盘余 22G。
 
 ### 步骤 B：免费查余额（关键方法，避免重蹈前两轮覆辙）

@@ -319,7 +319,7 @@ kylin-memory-bench/
 
 ### 批次 13：SSH 客户机环境取证（2026-09-06）
 
-- 实际命令：`ssh -p 2222 -i <用户 SSH 密钥> -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes Cisyam@192.168.182.129 'bash -s'`，远端执行 `whoami`、`hostname`、`cat /etc/os-release`、`uname -a`、`uname -m`、`python3 --version`、`python3 -m pip --version`、setuptools 导入、`df -h /home` 和网络探针。
+- 实际命令：`ssh -p 2222 -i <用户 SSH 密钥> -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes <vm-user>@192.168.182.129 'bash -s'`，远端执行 `whoami`、`hostname`、`cat /etc/os-release`、`uname -a`、`uname -m`、`python3 --version`、`python3 -m pip --version`、setuptools 导入、`df -h /home` 和网络探针。
 - 退出码：`0`（SSH 与探针脚本成功完成；pip/setuptools 子命令按预期报告未安装）。
 - 客户机环境：`openKylin 2.0 SP2 (nile)`，`Linux kare 6.6.0-25-generic x86_64`，Python `3.12.2`，地址 `192.168.182.129/24`，`/home` 可用约 `21G`；SSH 监听端口为 `2222`，22 端口未使用。
 - 依赖状态：`python3 -m pip --version` 输出 `/usr/bin/python3: No module named pip`；setuptools 导入返回 `ModuleNotFoundError`。需要在客户机虚拟环境中补齐安装工具。
@@ -327,11 +327,11 @@ kylin-memory-bench/
 - 已完成：取得真实 openKylin 客户机命令行证据，解除此前“无客户机通道”阻塞；未完成：项目安装、API 健康检查、双 Agent CLI、证据/评分/报告和卸载验证。
 - 客观风险：客户机基础 Python 缺少 pip/setuptools，安装脚本需验证是否能使用 `ensurepip`、系统包或离线 wheel；API 密钥仍只允许通过进程环境注入。
 - 待确认假设：客户机允许访问 PyPI 或可通过宿主机复制离线 wheel；影响依赖安装方式，不影响 SSH 取证结论。
-- 下一轮最高优先级：复制项目到 `/home/Cisyam` 下的工作目录，创建 `.kmb-venv` 并完成安装/探针批次。
+- 下一轮最高优先级：复制项目到 `<user-home>` 下的工作目录，创建 `.kmb-venv` 并完成安装/探针批次。
 
 ### 批次 14：openKylin 安装脚本首轮（2026-09-06）
 
-- 实际命令：SSH 进入 `/home/Cisyam/kmb-openkylin-validation-20260906`，执行 `python3 -m venv --help`、`python3 -m ensurepip --version`、非交互 sudo 探针和 `bash scripts/install_local.sh python3`。
+- 实际命令：SSH 进入 `<user-home>/kmb-openkylin-validation-20260906`，执行 `python3 -m venv --help`、`python3 -m ensurepip --version`、非交互 sudo 探针和 `bash scripts/install_local.sh python3`。
 - 退出码：远端安装脚本 `1`（宿主机 SSH 包装命令因 CRLF 传输导致外层返回 `2`，不影响远端安装结论）。
 - 实际结果：`venv` 模块存在，但 `ensurepip` 不可用；脚本输出系统需要 `apt install python3.12-venv`。当前用户无非交互 sudo 权限，虚拟环境未创建完成，未安装 PyYAML 或项目。
 - 结果文件：`runs/openkylin-validation-20260906/install/install.stdout.log`、`install.stderr.log`。
@@ -343,7 +343,7 @@ kylin-memory-bench/
 ### 批次 15：openKylin 安装重试成功与脚本修复记录（2026-09-06）
 
 - 修改文件：`scripts/install_local.sh`。实际修复为：`venv` 创建失败时回退到 `--without-pip`，通过 `KMB_PIP_BOOTSTRAP_URL` 或默认 PyPA `get-pip.py` 引导 pip，并补齐 setuptools；未修改评测协议、评分或 Agent 行为。
-- 实际命令：在 `/home/Cisyam/kmb-openkylin-validation-20260906` 执行 `bash scripts/install_local.sh python3`，随后检查 `.kmb-venv/bin/python --version`、`-m pip --version`、PyYAML、setuptools 和 `kmb.__file__`。
+- 实际命令：在 `<user-home>/kmb-openkylin-validation-20260906` 执行 `bash scripts/install_local.sh python3`，随后检查 `.kmb-venv/bin/python --version`、`-m pip --version`、PyYAML、setuptools 和 `kmb.__file__`。
 - 客户机内安装退出码：`0`（`install-retry.stdout.log` 中记录 `install_retry_exit=0`）。外层 SSH 包装 stderr 出现 `bash: line 13: exit: 0: numeric argument required`，属于 CRLF/包装命令噪声；远端安装本身已成功，不能将该 stderr 误判为安装失败。
 - 实际结果：pip `26.2.1`、setuptools `84.0.0`、PyYAML `6.0.1`；构建并安装 `kylin-memory-bench-0.2.0`；安装脚本内部环境探针返回 `status: ok`，openKylin 识别为 `openKylin 2.0 SP2 (nile)`，Python `3.12.2`，x86_64，工作区可用约 `20.62 GB`，核心套件识别 `6` 个案例。
 - 证据文件：`runs/openkylin-validation-20260906/install/install-retry.stdout.log`、`runs/openkylin-validation-20260906/install/install-retry.stderr.log`、`runs/openkylin-validation-20260906/install/venv-preflight.stdout.log`、`runs/openkylin-validation-20260906/install/pip-bootstrap.stdout.log`。
@@ -354,7 +354,7 @@ kylin-memory-bench/
 
 ### 批次 16：openKylin 门禁、CLI 和双套件严格校验（2026-09-06）
 
-- 实际命令：通过 `ssh -p 2222 -i <用户 SSH 密钥> -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes Cisyam@192.168.182.129` 进入客户机，在 `/home/Cisyam/kmb-openkylin-validation-20260906` 执行 `whoami`、`hostname`、`cat /etc/os-release`、`uname -a`、`uname -m`、`.kmb-venv/bin/python --version`、`.kmb-venv/bin/python -m pip --version`、关键依赖导入、`.kmb-venv/bin/kmb --help`、`.kmb-venv/bin/python scripts/env_probe.py --require-openkylin --json`、核心和对抗套件的 `kmb.cli validate --strict`。
+- 实际命令：通过 `ssh -p 2222 -i <用户 SSH 密钥> -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes <vm-user>@192.168.182.129` 进入客户机，在 `<user-home>/kmb-openkylin-validation-20260906` 执行 `whoami`、`hostname`、`cat /etc/os-release`、`uname -a`、`uname -m`、`.kmb-venv/bin/python --version`、`.kmb-venv/bin/python -m pip --version`、关键依赖导入、`.kmb-venv/bin/kmb --help`、`.kmb-venv/bin/python scripts/env_probe.py --require-openkylin --json`、核心和对抗套件的 `kmb.cli validate --strict`。
 - SSH/远端批次退出码：`0`；环境探针和两个严格校验均成功，无 stderr 输出。
 - 客户机证据：`openKylin 2.0 SP2 (nile)`，`Linux kare 6.6.0-25-generic x86_64`，Python `3.12.2`，pip `26.2.1`，setuptools `84.0.0`，PyYAML `6.0.1`，项目 CLI 入口可用；`env_probe --require-openkylin` 返回 `status: ok` 且 `openkylin.ok=true`，核心套件 `6` 个案例有效，对抗套件 `6` 个案例有效。
 - 证据文件：`runs/openkylin-validation-20260906/environment/probe-validate.stdout.log`、`runs/openkylin-validation-20260906/environment/probe-validate.stderr.log`。
@@ -365,7 +365,7 @@ kylin-memory-bench/
 
 ### 批次 17：Grok 与 DeepSeek API 健康检查（2026-09-06）
 
-- 实际命令：通过 SSH 进入 `/home/Cisyam/kmb-openkylin-validation-20260906` 的 `.kmb-venv`，以单次进程环境注入 `GROK_API_KEY`、`DEEPSEEK_API_KEY`，执行模型目录 `GET /models` 和最小 `POST /chat/completions`（`temperature=0`、`max_tokens=8`）；凭据未写入文件、stdout、stderr 或结果 JSON。
+- 实际命令：通过 SSH 进入 `<user-home>/kmb-openkylin-validation-20260906` 的 `.kmb-venv`，以单次进程环境注入 `GROK_API_KEY`、`DEEPSEEK_API_KEY`，执行模型目录 `GET /models` 和最小 `POST /chat/completions`（`temperature=0`、`max_tokens=8`）；凭据未写入文件、stdout、stderr 或结果 JSON。
 - 客户机批次退出码：`0`；结果文件：`runs/openkylin-validation-20260906/api-health/health.stdout.log`、`health.stderr.log`。
 - Grok：`https://api.wapq.cn/v1/models` 返回 `200`，模型目录包含 `grok-4.5` 和 `grok-4.6`；以 `grok-4.6` 请求返回 `200`，响应模型为 `grok-4.6`，文本预览为 `OK`，延迟约 `5943.6 ms`。
 - DeepSeek：`https://api.deepseek.com/models` 返回 `200`，模型目录包含 `deepseek-v4-flash`、`deepseek-v4-pro` 和 `deepseek-v4-flash-vision-exp`；以 `deepseek-v4-flash` 请求返回 `200`，响应模型为 `deepseek-v4-flash`，JSON 结构有效但文本预览为空，延迟约 `758.8 ms`。正式评分将按实际空文本处理，不补写回答。
@@ -386,7 +386,7 @@ kylin-memory-bench/
 
 ### 批次 19：openKylin VM 纯 HTTP 双 Agent 六案例对比（2026-09-06）
 
-- 实际命令：在 `/home/Cisyam/kmb-openkylin-validation-20260906` 的 `.kmb-venv` 中，以单次进程环境注入两款 API 凭据，执行 `python -m kmb.cli compare --agents configs/agent-grok.yaml configs/agent-deepseek.yaml --suite suites/core-zh.yaml --out runs/openkylin-validation-20260906/compare-plain/results --run-id openkylin-plain-20260906 --seed 42 --retries 1 --timeout 180`。
+- 实际命令：在 `<user-home>/kmb-openkylin-validation-20260906` 的 `.kmb-venv` 中，以单次进程环境注入两款 API 凭据，执行 `python -m kmb.cli compare --agents configs/agent-grok.yaml configs/agent-deepseek.yaml --suite suites/core-zh.yaml --out runs/openkylin-validation-20260906/compare-plain/results --run-id openkylin-plain-20260906 --seed 42 --retries 1 --timeout 180`。
 - 客户机 CLI 退出码：`0`；总耗时约 `277487.7 ms`；SSH 包装退出码：`0`。VM 原始日志：`runs/openkylin-validation-20260906/compare-plain/compare.stdout.log`、`compare.stderr.log`；宿主机复制日志：`runs/openkylin-validation-20260906/compare-plain/ssh-status.stdout.log`、`ssh-status.stderr.log`。
 - 结果已复制到宿主机：`runs/openkylin-validation-20260906/compare-plain/results/`，包含 `comparison.json`、`comparison.md`、`comparison.html`、两个 SVG 雷达图以及两个 Agent 的 `result.json`/`evidence.jsonl`。
 - Grok 4.6：6 案例、28 条证据，总分 `30.56`；六维 `retention=50.00`、`memory_recall=0.00`、`dynamic_update=33.33`、`similar_distinction=50.00`、`boundary=50.00`、`task_reuse=0.00`；观测模式 `memory_state_unobservable`。
@@ -415,7 +415,7 @@ kylin-memory-bench/
 
 ### 批次 21：openKylin VM 正式验收脚本（2026-09-06）
 
-- 实际命令：通过 SSH 在 `/home/Cisyam/kmb-openkylin-validation-20260906` 设置 `KMB_PYTHON=.kmb-venv/bin/python`、`KMB_TIMEOUT=180`，仅在进程环境注入两款 API 凭据，执行 `bash scripts/run_acceptance.sh configs/agent-grok.yaml configs/agent-deepseek.yaml suites/core-zh.yaml runs/openkylin-validation-20260906/formal-acceptance/results`。
+- 实际命令：通过 SSH 在 `<user-home>/kmb-openkylin-validation-20260906` 设置 `KMB_PYTHON=.kmb-venv/bin/python`、`KMB_TIMEOUT=180`，仅在进程环境注入两款 API 凭据，执行 `bash scripts/run_acceptance.sh configs/agent-grok.yaml configs/agent-deepseek.yaml suites/core-zh.yaml runs/openkylin-validation-20260906/formal-acceptance/results`。
 - 客户机脚本退出码：`0`；完整脚本耗时约 `196370.4 ms`；SSH 包装退出码：`0`。日志：`runs/openkylin-validation-20260906/formal-acceptance/acceptance.stdout.log`、`acceptance.stderr.log`，宿主机同步副本另有 `ssh-status.stdout.log`、`ssh-status.stderr.log`。
 - 实际步骤均通过：`env_probe --require-openkylin` 返回 `status=ok/openkylin.ok=true`；核心套件严格校验 `6 cases valid`；compare 输出 `grok-api` 与 `deepseek-api`；两个 `verify_run --strict` 均为 `6 cases/28 evidence_events/exit=0`。
 - 正式结果已复制到宿主机 `runs/openkylin-validation-20260906/formal-acceptance/results/`，包含双 Agent `result.json`、`evidence.jsonl`、`comparison.json`、`comparison.md`、`comparison.html` 和两个 SVG 雷达图。
@@ -428,8 +428,8 @@ kylin-memory-bench/
 
 ### 批次 22：openKylin VM 卸载验证（2026-09-06）
 
-- 实际命令：通过 SSH 执行 `cd /home/Cisyam/kmb-openkylin-validation-20260906 && bash scripts/uninstall_local.sh`；随后再次执行同一命令确认幂等性。
-- 第一次远端动作实际删除 `.kmb-venv`，输出 `venv_before=present`、`removed environment: /home/Cisyam/kmb-openkylin-validation-20260906/.kmb-venv`、`venv_after=absent`、`source_after=present`、`remote_evidence_after=present`；由于外层变量转义错误，SSH 包装退出码为 `2`（`bash: exit: \\` numeric argument required），不代表卸载动作失败。原始日志：`runs/openkylin-validation-20260906/uninstall/uninstall.stdout.log`、`uninstall.stderr.log`。
+- 实际命令：通过 SSH 执行 `cd <user-home>/kmb-openkylin-validation-20260906 && bash scripts/uninstall_local.sh`；随后再次执行同一命令确认幂等性。
+- 第一次远端动作实际删除 `.kmb-venv`，输出 `venv_before=present`、`removed environment: <user-home>/kmb-openkylin-validation-20260906/.kmb-venv`、`venv_after=absent`、`source_after=present`、`remote_evidence_after=present`；由于外层变量转义错误，SSH 包装退出码为 `2`（`bash: exit: \\` numeric argument required），不代表卸载动作失败。原始日志：`runs/openkylin-validation-20260906/uninstall/uninstall.stdout.log`、`uninstall.stderr.log`。
 - 第二次直接执行退出码：`0`；输出 `environment not present: .../.kmb-venv`，证明卸载脚本幂等。日志：`runs/openkylin-validation-20260906/uninstall/uninstall-rerun.stdout.log`、`uninstall-rerun.stderr.log`。
 - 实际结果：客户机虚拟环境已移除；客户机项目源码和 `runs/openkylin-validation-20260906` 证据目录仍存在；宿主机已保存安装、环境、API 健康检查、纯 HTTP 对比、包装层对比、正式验收和严格校验产物。
 - 已完成：安装/运行/报告/严格校验/卸载完整链路；卸载验证本身已获得直接 `exit=0` 证据。
@@ -441,7 +441,7 @@ kylin-memory-bench/
 
 ### 12.1 来源与核验范围
 
-- 来源文件：`C:\Users\123\Downloads\ai_open_kylin_open_kylin_benchmark_XaCQyZepC8.pdf`。
+- 来源文件：`<user-home>\Downloads\ai_open_kylin_open_kylin_benchmark_XaCQyZepC8.pdf`。
 - PDF 元信息：3 页、A4、未加密；创建工具元信息为 Chromium/pdfcpu。文本已使用本机 PDF 文本解析工具提取，并将页面渲染为 PNG 进行人工可读性核对。
 - 核验产物：`runs/pdf-review-20260906.txt`、`runs/pdf-review-20260906/official-brief-1.png`、`official-brief-2.png`、`official-brief-3.png`。
 - 本节只记录 PDF 中可以直接确认的命题内容；项目实现状态仍以各批次真实命令、退出码和结果文件为准。
@@ -511,7 +511,7 @@ kylin-memory-bench/
 ### 批次 23：双 Agent 对比前的 VM 必要环境恢复（2026-09-06）
 
 - 前置状态：上一个批次执行卸载后，客户机 `.kmb-venv` 不存在；项目源码和历史运行证据仍保留。
-- 实际命令：通过 SSH 在 `/home/Cisyam/kmb-openkylin-validation-20260906` 执行 `bash scripts/install_local.sh python3`。
+- 实际命令：通过 SSH 在 `<user-home>/kmb-openkylin-validation-20260906` 执行 `bash scripts/install_local.sh python3`。
 - 客户机退出码：`0`；日志：`runs/openkylin-validation-20260906/reinstall/install.stdout.log`、`install.stderr.log`。
 - 实际结果：使用 `venv --without-pip` 回退和 PyPA 引导流程恢复 `.kmb-venv`；pip `26.2.1`、setuptools `84.0.0`、PyYAML `6.0.1`，`kylin-memory-bench-0.2.0` 构建并安装成功，安装后探针返回 `status=ok`。
 - 状态：已完成本轮双 Agent 对比所需的最小环境恢复；未重复无关基础测试或历史环境验证。
@@ -521,7 +521,7 @@ kylin-memory-bench/
 
 ### 批次 24：本轮最终 Grok/DeepSeek 包装层双 Agent 对比（2026-09-06）
 
-- 实际命令：在客户机 `/home/Cisyam/kmb-openkylin-validation-20260906` 的 `.kmb-venv` 中，以单次进程环境注入 `GROK_API_KEY`、`DEEPSEEK_API_KEY`，执行 `python -m kmb.cli compare --agents configs/agent-grok-memory.yaml configs/agent-deepseek-memory.yaml --suite suites/core-zh.yaml --out runs/openkylin-validation-20260906/final-compare/results --run-id final-wrapper-20260906 --seed 42 --retries 1 --timeout 180`。
+- 实际命令：在客户机 `<user-home>/kmb-openkylin-validation-20260906` 的 `.kmb-venv` 中，以单次进程环境注入 `GROK_API_KEY`、`DEEPSEEK_API_KEY`，执行 `python -m kmb.cli compare --agents configs/agent-grok-memory.yaml configs/agent-deepseek-memory.yaml --suite suites/core-zh.yaml --out runs/openkylin-validation-20260906/final-compare/results --run-id final-wrapper-20260906 --seed 42 --retries 1 --timeout 180`。
 - 客户机 CLI 退出码：`0`；运行耗时约 `285543.0 ms`；SSH 包装退出码：`0`。日志：`runs/openkylin-validation-20260906/final-compare/compare.stdout.log`、`compare.stderr.log`、`ssh-status.stdout.log`、`ssh-status.stderr.log`。
 - 结果已复制到宿主机 `runs/openkylin-validation-20260906/final-compare/results/`，包含 `comparison.json`、`comparison.md`、`comparison.html`、两个 SVG 雷达图以及两个 Agent 的 `result.json`/`evidence.jsonl`。
 - Grok 4.6 + wrapper：6 案例、69 条证据，总分 `86.11`；六维 `retention=100.00`、`memory_recall=100.00`、`dynamic_update=66.67`、`similar_distinction=100.00`、`boundary=50.00`、`task_reuse=100.00`；观测模式 `system_level_wrapper_assisted`。
@@ -552,7 +552,7 @@ kylin-memory-bench/
 
 ### 批次 26：对抗套件运行前 VM/凭据可用性探测（2026-09-06）
 
-- 实际命令：宿主机使用 `ssh -p 2222 -i "$env:USERPROFILE\\.ssh\\openkylin_vm_ed25519" -o IdentitiesOnly=yes -o BatchMode=yes Cisyam@192.168.182.129`，在客户机检查项目目录、`.kmb-venv/bin/python`、`GROK_API_KEY` 和 `DEEPSEEK_API_KEY` 是否存在；只输出 `present/absent`，未读取或输出任何密钥值。
+- 实际命令：宿主机使用 `ssh -p 2222 -i "$env:USERPROFILE\\.ssh\\openkylin_vm_ed25519" -o IdentitiesOnly=yes -o BatchMode=yes <vm-user>@192.168.182.129`，在客户机检查项目目录、`.kmb-venv/bin/python`、`GROK_API_KEY` 和 `DEEPSEEK_API_KEY` 是否存在；只输出 `present/absent`，未读取或输出任何密钥值。
 - 实际结果：SSH 连接成功，客户机返回 `venv=present`、`grok_key=absent`、`deepseek_key=absent`、`Python 3.12.2`；探测退出码 `0`。宿主机当前进程环境检查同样为 `host_grok_key_present=False`、`host_deepseek_key_present=False`。
 - 已完成：确认 VM 通道和评测虚拟环境仍可用；未启动对抗套件，避免在缺少凭据时伪造或误报真实 Agent 结果。
 - 未完成：`suites/adversarial/core.yaml` 的 Grok/DeepSeek 真实双 Agent 运行、证据导出和评分尚未执行。
@@ -588,7 +588,7 @@ kylin-memory-bench/
 
 - 前置状态：用户在 openKylin VM 本地终端完成隐藏输入；截图只展示了权限和格式检查结果，不包含密钥内容。
 - 实际命令：通过 SSH 检查 `$HOME/.config/kmb/credentials.env` 存在性、`stat` 权限/所有者，以及 Grok/DeepSeek 的非敏感 base URL 和模型格式；未读取或输出 API 密钥值。
-- 实际结果：`credentials_present=true mode=600 owner=Cisyam`、`nonsecret_config=valid`；SSH 元数据检查退出码 `0`。
+- 实际结果：`credentials_present=true mode=600 owner=<vm-user>`、`nonsecret_config=valid`；SSH 元数据检查退出码 `0`。
 - 凭据保存方式：客户机用户级文件 `~/.config/kmb/credentials.env`，上级目录应为用户私有目录；完整密钥不写入项目、日志、报告或上下文包。已通过本地隐藏输入保存；本批次未记录密钥指纹，避免派生标识不必要地扩散。
 - 已完成：凭据文件存在、权限和非敏感配置格式通过；可以在同一客户机进程中以 `set -a; . "$HOME/.config/kmb/credentials.env"; set +a` 加载后调用后端。
 - 未完成：两后端健康检查、对抗套件双 Agent 运行、严格校验、证据和报告生成。
@@ -597,7 +597,7 @@ kylin-memory-bench/
 
 ### 批次 30：Grok/DeepSeek API 健康检查（2026-09-06）
 
-- 前置状态：客户机 `~/.config/kmb/credentials.env` 已由用户在本地隐藏输入创建，权限元数据为 `600`、所有者 `Cisyam`；本批次只在客户机进程中加载，不读取或输出密钥值。
+- 前置状态：客户机 `~/.config/kmb/credentials.env` 已由用户在本地隐藏输入创建，权限元数据为 `600`、所有者 `<vm-user>`；本批次只在客户机进程中加载，不读取或输出密钥值。
 - 实际命令：在 openKylin VM 通过 SSH 执行 `.kmb-venv/bin/python` 健康检查脚本；从凭据文件加载 `GROK_BASE_URL/GROK_MODEL` 和 `DEEPSEEK_BASE_URL/DEEPSEEK_MODEL`，分别请求 `/models` 与 `/chat/completions`，最小提示为 `Reply with OK only.`；输出仅包含端点、模型 ID、HTTP 状态、延迟、响应 ID 和短文本预览。
 - 实际结果：Grok `grok-4.6` 的 `/models` 与最小对话均 HTTP `200`，延迟约 `580.1 ms/5044.9 ms`；DeepSeek `deepseek-v4-flash` 的 `/models` 与最小对话均 HTTP `200`，延迟约 `201.4 ms/561.8 ms`；健康检查 SSH 退出码 `0`。Grok 模型列表实际包含 `grok-4.5`、`grok-4.6`；DeepSeek 模型列表实际包含 `deepseek-v4-flash`、`deepseek-v4-pro`、`deepseek-v4-flash-vision-exp`。
 - 结果与日志：脱敏摘要已保存为 `runs/openkylin-validation-20260906/api-health/adversarial-health.stdout.log`；未写入完整密钥、请求头或凭据文件内容。
@@ -659,7 +659,7 @@ kylin-memory-bench/
 
 ### 批次 35：openKylin VM 发布前置可用性检查（2026-09-06）
 
-- 实际命令：宿主机通过 SSH 执行 `test -d /home/Cisyam/kmb-openkylin-validation-20260906`、检查 `.kmb-venv/bin/python` 可执行，随后执行 `uname -srmo` 与 `command -v dpkg-deb`。
+- 实际命令：宿主机通过 SSH 执行 `test -d <user-home>/kmb-openkylin-validation-20260906`、检查 `.kmb-venv/bin/python` 可执行，随后执行 `uname -srmo` 与 `command -v dpkg-deb`。
 - 实际结果：SSH 退出码 `0`；远端项目目录与 `.kmb-venv` 均存在；内核标识为 `Linux 6.6.0-25-generic x86_64 GNU/Linux`；`dpkg-deb` 路径为 `/usr/bin/dpkg-deb`。
 - 已完成：确认 VM 可承载本轮 Debian 构建与安装验证。
 - 未完成：源码同步、`.deb` 构建/内容审计、安装/真实运行/卸载验证尚未开始。
@@ -668,7 +668,7 @@ kylin-memory-bench/
 
 ### 批次 36：无记忆基线/发布脚本同步至 openKylin VM 与回归测试（2026-09-06）
 
-- 实际命令：通过 SCP 仅同步本轮修改或新增的 `kmb/agents.py`、`kmb/models.py`、`kmb/runner.py`、`kmb/report.py`、两份 no-memory 配置、相关测试、`packaging/deb/`、五个 Debian 生命周期脚本和 `docs/deb-release.md` 至 `/home/Cisyam/kmb-openkylin-validation-20260906`；未同步或删除 `runs/`、用户凭据、虚拟环境或历史证据。随后在远端执行 `.kmb-venv/bin/python -m unittest tests.test_agents tests.test_runner` 和 `bash -n` 检查五个发布脚本。
+- 实际命令：通过 SCP 仅同步本轮修改或新增的 `kmb/agents.py`、`kmb/models.py`、`kmb/runner.py`、`kmb/report.py`、两份 no-memory 配置、相关测试、`packaging/deb/`、五个 Debian 生命周期脚本和 `docs/deb-release.md` 至 `<user-home>/kmb-openkylin-validation-20260906`；未同步或删除 `runs/`、用户凭据、虚拟环境或历史证据。随后在远端执行 `.kmb-venv/bin/python -m unittest tests.test_agents tests.test_runner` 和 `bash -n` 检查五个发布脚本。
 - 实际结果：SSH/SCP 批次退出码 `0`；openKylin VM 适配器与运行器相关 `17` 项测试通过，Bash 语法检查通过。
 - 已完成：无记忆基线和 `.deb` 构建链已进入实际 openKylin VM 源码树。
 - 未完成：尚未构建包、安装包、执行安装后 smoke/真实 Agent 对比或卸载。
@@ -677,7 +677,7 @@ kylin-memory-bench/
 
 ### 批次 37：openKylin VM Debian 包构建与 payload 审计（2026-09-06）
 
-- 实际命令：在 `/home/Cisyam/kmb-openkylin-validation-20260906` 执行 `bash scripts/build_deb.sh dist`，将构建 stdout/stderr、`dpkg-deb --info`、`dpkg-deb --contents` 和 SHA-256 写入 `runs/openkylin-validation-20260906/deb-release/`；随后对包清单扫描 `/runs/`、`credentials.env`、`.kmb-venv`、`.venv-*`、pip 缓存、研究缓存和 `.env`。
+- 实际命令：在 `<user-home>/kmb-openkylin-validation-20260906` 执行 `bash scripts/build_deb.sh dist`，将构建 stdout/stderr、`dpkg-deb --info`、`dpkg-deb --contents` 和 SHA-256 写入 `runs/openkylin-validation-20260906/deb-release/`；随后对包清单扫描 `/runs/`、`credentials.env`、`.kmb-venv`、`.venv-*`、pip 缓存、研究缓存和 `.env`。
 - 实际结果：命令退出码 `0`；生成 `dist/kylin-memory-bench_0.2.0_all.deb`；payload 审计输出 `deb_payload_audit=clean`。日志/产物位于 `runs/openkylin-validation-20260906/deb-release/build.stdout.log`、`build.stderr.log`、`package-info.txt`、`package-contents.txt`、`package.sha256`。
 - 已完成：真实 openKylin VM `.deb` 构建、Debian metadata/contents 导出和敏感/无关内容排除核查。
 - 未完成：安装、升级、安装后 CLI smoke、真实双 Agent wrapper/no-memory 对照、可重复性与卸载验证。
@@ -688,7 +688,7 @@ kylin-memory-bench/
 
 - 实际修改：`scripts/run_acceptance.sh` 允许 `memory_disabled` 真实后端基线参与正式流程，并在 stderr 明确提示其应与 wrapper/native 结果分层报告；更新 `README.md`、`docs/demo-script.md`、`docs/solution.md`、`CHANGELOG.md`，增加无记忆对照、Debian 生命周期、openKylin 3-5 分钟录屏命令和未完成边界。
 - 实际命令：宿主机重新执行 `python -m unittest discover -s tests -v`，退出码 `0`，`36` 项通过。该批不调用云模型 API。
-- 实际命令：通过 SSH 执行 `id` 和 `sudo -n true`。远端用户为 `uid=1000(Cisyam)`，`sudo -n` 输出 `sudo_noninteractive=unavailable`；SSH 探测命令退出码 `0`，代表检查完成而非获得 sudo 权限。
+- 实际命令：通过 SSH 执行 `id` 和 `sudo -n true`。远端用户为 `uid=1000(<vm-user>)`，`sudo -n` 输出 `sudo_noninteractive=unavailable`；SSH 探测命令退出码 `0`，代表检查完成而非获得 sudo 权限。
 - 已完成：无记忆基线可以进入统一正式验收入口；README、发布说明和录屏脚本已准备且未声称视频已录制。
 - 客观阻塞：自动化 SSH 会话没有无交互 sudo，不能实际执行系统级 `dpkg -i`/`dpkg -r`。必须在 openKylin 桌面或终端中由可提权用户执行 `bash scripts/install_deb.sh ...` 和 `bash scripts/uninstall_deb.sh`；不能用无权限用户态解包冒充系统安装。
 - 待确认假设：VM 本地操作员具有 sudo 权限且可在录屏时执行这两条命令；影响 `.deb` 系统级安装/升级/卸载验收，不影响已完成的包构建与源码级 VM 验证。
@@ -840,7 +840,7 @@ kylin-memory-bench/
 
 ### 批次 54：发布收尾前置探测与许可证库存（2026-09-06）
 
-- 实际命令：通过 SSH 连接 `Cisyam@192.168.182.129:2222` 执行 `id -u; id -nG`、读取 `/etc/os-release`、`uname -m`、`python3 --version`、`python3 -m pip --version`、setuptools 导入检查、桌面变量/录屏工具探测、`df -h /home`、项目/虚拟环境存在性检查和凭据文件元数据检查；另执行 `timeout -k 1s 4s sudo -n true` 复核非交互 sudo。
+- 实际命令：通过 SSH 连接 `<vm-user>@192.168.182.129:2222` 执行 `id -u; id -nG`、读取 `/etc/os-release`、`uname -m`、`python3 --version`、`python3 -m pip --version`、setuptools 导入检查、桌面变量/录屏工具探测、`df -h /home`、项目/虚拟环境存在性检查和凭据文件元数据检查；另执行 `timeout -k 1s 4s sudo -n true` 复核非交互 sudo。
 - 实际结果：VM 为 openKylin 2.0 SP2、x86_64、Python 3.12.2；系统 `/usr/bin/python3` 未提供 pip/setuptools，但项目 `.kmb-venv` 存在；`~/.config/kmb/credentials.env` 权限为 `600` 且未读取内容；`ffmpeg=/usr/bin/ffmpeg`，`obs`、`gnome-screenshot`、`wf-recorder` 不存在；SSH 会话无 `DISPLAY`/Wayland 变量；`/home` 约剩余 21 GB。sudo 探测退出码 `137`（4 秒强制终止），结论为自动化 SSH 用户无法执行非交互 sudo，不能据此声称完成系统级 dpkg 安装/升级/卸载。
 - 实际命令：宿主机执行 `python scripts/audit_reference_licenses.py --out runs/license-audit-20260906/inventory.json`。
 - 实际结果：许可证库存生成命令退出码 `0`，结果文件为 `runs/license-audit-20260906/inventory.json`；脚本明确为文件库存而非法律分类，参考仓库数据/Prompt/传递依赖仍标记 `needs_manual_review=true`。
@@ -986,7 +986,7 @@ kylin-memory-bench/
 
 ### 批次 68：Debian 生命周期执行通道连接复核（2026-09-07）
 
-- 实际命令：宿主机尝试通过 `scp` 同步修正后的 `record_deb_lifecycle.sh`、`install_deb.sh`、`uninstall_deb.sh`、`upgrade_deb.sh` 到 `Cisyam@192.168.182.129:2222`；传输阶段 SSH 返回 `Connection closed`，外层命令退出码 `1`。随后执行 `ssh -o BatchMode=yes -o ConnectTimeout=8 ... 'echo connected; id'`，返回 `Connection timed out`；宿主机对该地址执行两次 `ping`，均超时（100% 丢包）。
+- 实际命令：宿主机尝试通过 `scp` 同步修正后的 `record_deb_lifecycle.sh`、`install_deb.sh`、`uninstall_deb.sh`、`upgrade_deb.sh` 到 `<vm-user>@192.168.182.129:2222`；传输阶段 SSH 返回 `Connection closed`，外层命令退出码 `1`。随后执行 `ssh -o BatchMode=yes -o ConnectTimeout=8 ... 'echo connected; id'`，返回 `Connection timed out`；宿主机对该地址执行两次 `ping`，均超时（100% 丢包）。
 - 实际结果：本批没有在 VM 执行 `record_deb_lifecycle.sh`，没有安装、升级、卸载或生成系统级生命周期结果；不得把连接失败写成步骤成功。当前工作区脚本和包文件保持不变，未删除 VM/宿主机用户文件。
 - 已完成：确认生命周期修正尚未同步到 VM，且当前 VM 网络/进程不可达；此前 openKylin 2.0 SP2 环境信息仍以批次 54 及历史记录为准，不用本批替代环境验证。
 - 未完成：`.deb` 系统级安装、版本/CLI 验证、升级、升级后运行、卸载及残留检查仍未执行；本轮图像、截图、视频和桌面演示继续暂缓；项目级 LICENSE 仍待负责人/法律确认。
@@ -1008,9 +1008,9 @@ kylin-memory-bench/
 
 ### 批次 71：openKylin VM `.deb` 生命周期实际执行（2026-09-07）
 
-- 实际环境：VMware 现有 `D:\openKylin-VM\openKylin.vmx` 启动后，通过 `Cisyam@192.168.182.129:2222` SSH 进入；历史环境为 openKylin 2.0 SP2、x86_64、Python 3.12.2。VM 项目目录为 `/home/Cisyam/kmb-openkylin-validation-20260906`。
-- 实际命令：`cd /home/Cisyam/kmb-openkylin-validation-20260906 && bash scripts/record_deb_lifecycle.sh runs/deb-lifecycle dist/kylin-memory-bench_0.2.0_all.deb dist/kylin-memory-bench_0.2.0+test1_all.deb`；SSH 外层退出码 `1`，脚本输出 `lifecycle_status=failed`。
-- 逐步退出码：`preflight=0`、`install=1`、`version=1`、`verify=2`、`build_upgrade=0`、`upgrade=126`、`verify_after_upgrade=2`、`uninstall=0`、`residual_check=0`。结果目录为 VM `/home/Cisyam/kmb-openkylin-validation-20260906/runs/deb-lifecycle/`，含每步 `.command`、`.stdout.log`、`.stderr.log` 和 `.exitcode`。
+- 实际环境：VMware 现有 `D:\openKylin-VM\openKylin.vmx` 启动后，通过 `<vm-user>@192.168.182.129:2222` SSH 进入；历史环境为 openKylin 2.0 SP2、x86_64、Python 3.12.2。VM 项目目录为 `<user-home>/kmb-openkylin-validation-20260906`。
+- 实际命令：`cd <user-home>/kmb-openkylin-validation-20260906 && bash scripts/record_deb_lifecycle.sh runs/deb-lifecycle dist/kylin-memory-bench_0.2.0_all.deb dist/kylin-memory-bench_0.2.0+test1_all.deb`；SSH 外层退出码 `1`，脚本输出 `lifecycle_status=failed`。
+- 逐步退出码：`preflight=0`、`install=1`、`version=1`、`verify=2`、`build_upgrade=0`、`upgrade=126`、`verify_after_upgrade=2`、`uninstall=0`、`residual_check=0`。结果目录为 VM `<user-home>/kmb-openkylin-validation-20260906/runs/deb-lifecycle/`，含每步 `.command`、`.stdout.log`、`.stderr.log` 和 `.exitcode`。
 - 实际结果：基础包未完成系统安装，版本查询和安装后包 smoke/CLI 校验因此失败；升级命令因候选包未能执行而返回 126；升级后校验失败。`build_upgrade=0` 仅表示在 VM 重建 `0.2.0+test1` 包成功，不代表安装成功。卸载步骤返回 0 是因为包未安装并完成了“无命令/无 `/usr/share/kylin-memory-bench`”残留检查，不代表执行过 dpkg removal。
 - 客观原因（待日志复核）：VM 自动化账户的非交互 sudo 仍不可用，安装脚本的受限 sudo 路径返回 1；系统级 dpkg 安装、升级和卸载成功验收尚未满足。
 - 已完成：在真实 openKylin VM 执行完整生命周期脚本并保存逐步退出码；重建升级候选包成功；卸载后命令和 payload 路径残留检查通过。
@@ -1034,13 +1034,13 @@ kylin-memory-bench/
 ### 批次 73：openKylin VM 生命周期重试（升级脚本修复后，2026-09-07）
 
 - 实际准备：将修复后的 `scripts/upgrade_deb.sh` 同步到 VM，并执行 `chmod 0755 scripts/record_deb_lifecycle.sh scripts/install_deb.sh scripts/uninstall_deb.sh scripts/upgrade_deb.sh`；远端 `bash -n` 退出码 `0`，四个脚本均为 0755，`upgrade_deb.sh` SHA-256 为 `9fc1564c258e74ae96fc400cafc9d02700f9f77ddbbf5edaf021e300d974e9f9`。
-- 实际命令：`cd /home/Cisyam/kmb-openkylin-validation-20260906 && bash scripts/record_deb_lifecycle.sh runs/deb-lifecycle-20260907-02 dist/kylin-memory-bench_0.2.0_all.deb dist/kylin-memory-bench_0.2.0+test1_all.deb`；SSH 外层退出码 `1`，脚本输出 `lifecycle_status=failed`。
-- 逐步退出码：`preflight=0`、`install=1`、`version=1`、`verify=2`、`build_upgrade=0`、`upgrade=1`、`verify_after_upgrade=2`、`uninstall=0`、`residual_check=0`。结果目录为 VM `/home/Cisyam/kmb-openkylin-validation-20260906/runs/deb-lifecycle-20260907-02/`。
+- 实际命令：`cd <user-home>/kmb-openkylin-validation-20260906 && bash scripts/record_deb_lifecycle.sh runs/deb-lifecycle-20260907-02 dist/kylin-memory-bench_0.2.0_all.deb dist/kylin-memory-bench_0.2.0+test1_all.deb`；SSH 外层退出码 `1`，脚本输出 `lifecycle_status=failed`。
+- 逐步退出码：`preflight=0`、`install=1`、`version=1`、`verify=2`、`build_upgrade=0`、`upgrade=1`、`verify_after_upgrade=2`、`uninstall=0`、`residual_check=0`。结果目录为 VM `<user-home>/kmb-openkylin-validation-20260906/runs/deb-lifecycle-20260907-02/`。
 - 实际结果：升级步骤不再出现 126/Permission denied；`install=1` 和 `upgrade=1` 均为非交互 sudo 不可用导致，版本/verify/verify_after_upgrade 因包未安装而失败。`build_upgrade=0` 只证明候选包重建成功；`uninstall=0` 仅验证未安装状态和无 payload 残留。
 - 已完成：真实 openKylin VM 重试、脚本 mode 修复验证、逐步日志和退出码生成；未覆盖批次 71 目录。
 - 未完成：系统级 `dpkg -i` 安装、安装后双 Agent/证据/评分/报告、升级后运行和实际 dpkg 卸载；仍需 root 或已认证 sudo。
 - 暂缓：本轮图像、截图、视频和桌面演示任务不执行。
-- 客观阻塞：SSH 用户 `Cisyam` 的 `sudo -n` 实际报“a password is required”并被 8 秒保护终止；当前自动化通道不能代填密码，不能声称系统包生命周期成功。
+- 客观阻塞：SSH 用户 `<vm-user>` 的 `sudo -n` 实际报“a password is required”并被 8 秒保护终止；当前自动化通道不能代填密码，不能声称系统包生命周期成功。
 - 待确认假设：在 VM 桌面终端执行一次 `sudo -v` 后，使用同一脚本和新结果目录可完成剩余生命周期；需要保留本批失败证据用于验收审计。
 - 下一轮最高优先级：由具备 sudo/root 的 openKylin 终端运行 `record_deb_lifecycle.sh`，确认安装、升级、验证和 dpkg 卸载的真实成功退出码。
 
@@ -1052,7 +1052,7 @@ kylin-memory-bench/
 - 已完成：失败生命周期批次安全归档和无密钥复核；所有失败结论均有 VM 命令、退出码和日志文件支撑。
 - 未完成：系统级安装、安装后真实双 Agent/证据/评分/报告、升级后运行和 dpkg 卸载；仍需 root 或已认证 sudo。
 - 暂缓：本轮图像、截图、视频和桌面演示任务不执行。
-- 客观阻塞：`Cisyam` 自动化 SSH 账号没有 sudo 密码授权；当前不能通过自动化通道完成 dpkg 系统变更。
+- 客观阻塞：`<vm-user>` 自动化 SSH 账号没有 sudo 密码授权；当前不能通过自动化通道完成 dpkg 系统变更。
 - 待确认假设：项目负责人可在 VM 桌面终端授权 sudo 后重跑，且允许使用新的唯一结果目录；历史失败目录需作为验收审计证据保留。
 - 下一轮最高优先级：在已授权 sudo/root 的 openKylin 终端重新执行生命周期脚本，并将成功/失败的每一步结果追加到上下文包。
 
@@ -1122,7 +1122,7 @@ kylin-memory-bench/
 
 - 实际命令：宿主机执行 `python scripts/audit_reference_licenses.py --out runs/license-audit-20260907/inventory.json`，退出码 `0`；审计结果明确为文件库存而非法律分类，参考仓库代码、数据集、Prompt、直接/传递依赖仍需逐项人工许可证审查。另执行项目源码精确引用扫描（排除文档和审计脚本），输出 `release_source_reference_scan=clean`。
 - 实际结果：许可证库存文件为 `runs/license-audit-20260907/inventory.json`；当前根目录没有 `LICENSE`，`NOTICE` 明确不授予权利，`docs/license-decision.md` 仍为候选决策，`packaging/deb/copyright` 为 `pending-project-owner-selection`。未新增或复制第三方代码、数据集或 Prompt，也未修改最终许可证结论。
-- 实际命令：宿主机使用 `ssh -i C:\Users\123\.ssh\openkylin_vm_ed25519 -p 2222 -o BatchMode=yes -o ConnectTimeout=10 Cisyam@192.168.182.129 ...` 重试 VM 环境命令，返回 `Connection timed out`，退出码 `255`；本批未执行 `scp`、`dpkg -i`、`dpkg -r` 或生命周期脚本。
+- 实际命令：宿主机使用 `ssh -i <user-home>\.ssh\openkylin_vm_ed25519 -p 2222 -o BatchMode=yes -o ConnectTimeout=10 <vm-user>@192.168.182.129 ...` 重试 VM 环境命令，返回 `Connection timed out`，退出码 `255`；本批未执行 `scp`、`dpkg -i`、`dpkg -r` 或生命周期脚本。
 - 已完成：本地许可证库存与源码引用审计复核；确认系统级生命周期脚本仍保持真实失败语义，未将连接失败误记为成功。
 - 部分完成：宿主机包文件仍存在（基础包和 `+test1` 候选包），可在 VM 恢复后继续；历史 openKylin 2.0 SP2/x86_64 环境记录沿用批次 54，不被本批替代。
 - 未完成：`.deb` 安装、安装后 CLI/评测、升级、升级后运行、卸载和残留检查；最终项目级 LICENSE 选择。
@@ -1150,7 +1150,7 @@ kylin-memory-bench/
 - 暂缓：图像、截图、视频和桌面演示任务不执行。
 - 客观阻塞：SSH 账户的无交互 sudo 两种会话形式均在 8 秒受控超时内失败。
 - 待确认假设：VM 本地 root shell 可直接执行现有生命周期脚本并保留结果目录权限，供后续 SSH 归档。
-- 下一轮唯一最高优先级：在 VM 本地终端以 `sudo bash scripts/record_deb_lifecycle.sh ...` 执行授权生命周期批次，并确保结果目录回归 `Cisyam` 用户可读。
+- 下一轮唯一最高优先级：在 VM 本地终端以 `sudo bash scripts/record_deb_lifecycle.sh ...` 执行授权生命周期批次，并确保结果目录回归 `<vm-user>` 用户可读。
 
 ### 批次 82：KARE shadow 验证脚本错误传播修正与本地回归（2026-09-07）
 
@@ -1166,8 +1166,8 @@ kylin-memory-bench/
 
 ### 批次 83：修正后已安装包严格验证（2026-09-07）
 
-- 实际环境：openKylin VM（历史环境记录：2.0 SP2、x86_64、Python 3.12.2）；SSH 项目目录 `/home/Cisyam/kmb-openkylin-validation-20260906`。当前 `dpkg -s kylin-memory-bench` 显示 `install ok installed`、版本 `0.2.0+test1`，`/usr/bin/kmb` 存在。
-- 实际命令：`cd /home/Cisyam/kmb-openkylin-validation-20260906; bash scripts/verify_deb.sh runs/deb-lifecycle-authorized-20260907/verify-after-script-fix-rerun`；VM/SSH 外层退出码 `0`。
+- 实际环境：openKylin VM（历史环境记录：2.0 SP2、x86_64、Python 3.12.2）；SSH 项目目录 `<user-home>/kmb-openkylin-validation-20260906`。当前 `dpkg -s kylin-memory-bench` 显示 `install ok installed`、版本 `0.2.0+test1`，`/usr/bin/kmb` 存在。
+- 实际命令：`cd <user-home>/kmb-openkylin-validation-20260906; bash scripts/verify_deb.sh runs/deb-lifecycle-authorized-20260907/verify-after-script-fix-rerun`；VM/SSH 外层退出码 `0`。
 - 实际结果：修正后的 `verify_deb.sh` 启用 `pipefail` 并等待 payload 后，包内 smoke 2 项通过；`core-zh.yaml` 六案例校验通过；离线 compare JSON/HTML 生成通过；`verify_run.py` 对 reference/flawed smoke 结果分别确认 6 cases、34 evidence events，均退出码 `0`。该 smoke 仅验证已安装包的离线机制，不是 Grok/DeepSeek 新调用或真实 Agent 结论。
 - 结果与证据：VM 与宿主机均保留 `runs/deb-lifecycle-authorized-20260907/verify-after-script-fix-rerun/`，含 smoke 输出、compare 目录和结构校验结果；宿主机通过 `scp -r` 归档退出码 `0`。本批次未写入凭据，未发现密钥输出。
 - 已完成：最新验证脚本的错误传播、KARE payload 等待和已安装包离线链路得到真实退出码 `0`。
@@ -1180,14 +1180,14 @@ kylin-memory-bench/
 
 ### 批次 84：SSH 自动化 sudo 状态复核（2026-09-07）
 
-- 实际环境：同一 openKylin VM（历史记录：2.0 SP2、x86_64、Python 3.12.2），SSH 用户 `Cisyam`；未读取或传递任何密码/API 密钥。
-- 实际命令：`ssh -i <脱敏私钥路径> -p 2222 -o BatchMode=yes -o ConnectTimeout=10 Cisyam@192.168.182.129 "sudo -n -v"`；SSH 外层退出码 `1`。
+- 实际环境：同一 openKylin VM（历史记录：2.0 SP2、x86_64、Python 3.12.2），SSH 用户 `<vm-user>`；未读取或传递任何密码/API 密钥。
+- 实际命令：`ssh -i <脱敏私钥路径> -p 2222 -o BatchMode=yes -o ConnectTimeout=10 <vm-user>@192.168.182.129 "sudo -n -v"`；SSH 外层退出码 `1`。
 - 实际输出（已脱敏）：`sudo: unable to resolve host kare: Name or service not known`、`sudo: unable to send audit message: Operation not permitted`、`sudo: a password is required`。该会话没有获得无交互 sudo，未执行 dpkg 变更。
 - 已完成：确认当前 SSH 自动化通道仍不能代表 VM 本地终端的 sudo 授权；保留批次 83 严格包验证证据和历史失败生命周期证据。
 - 未完成：系统级 `.deb` 安装、版本/安装后严格验证、升级、升级后运行、真正 `dpkg -r` 和残留检查仍未取得成功退出码。
 - 暂缓：图像、截图、视频和桌面演示任务本轮不执行。
 - 客观阻塞：SSH 会话的 sudo 需要密码且 KARE 审计插件返回权限警告；当前自动化工具无法代填密码或复用本地终端授权。
-- 待确认假设：VM 本地终端仍可直接运行 `sudo bash scripts/record_deb_lifecycle.sh ...`；执行后结果目录可由 `Cisyam` 读取并通过 SSH 归档。
+- 待确认假设：VM 本地终端仍可直接运行 `sudo bash scripts/record_deb_lifecycle.sh ...`；执行后结果目录可由 `<vm-user>` 读取并通过 SSH 归档。
 - 下一轮最高优先级：在 VM 本地 root/已认证 sudo 终端运行 `record_deb_lifecycle.sh`（新唯一目录），再通过 SSH 读取并归档真实 install/upgrade/uninstall 退出码。
 
 ### 批次 85：已安装包非 root 只读 CLI 核对（2026-09-07）
@@ -1216,7 +1216,7 @@ kylin-memory-bench/
 
 ### 批次 87：候选 Debian 包元数据核对（2026-09-07）
 
-- 实际环境：openKylin VM 项目目录 `/home/Cisyam/kmb-openkylin-validation-20260906`；未执行系统写入。
+- 实际环境：openKylin VM 项目目录 `<user-home>/kmb-openkylin-validation-20260906`；未执行系统写入。
 - 实际命令：`dpkg-deb --info dist/rebuild-20260907/kylin-memory-bench_0.2.0_all.deb` 与 `dpkg-deb --info dist/rebuild-20260907/kylin-memory-bench_0.2.0+test1_all.deb`；两次元数据读取及组合 SSH 命令退出码 `0`。
 - 实际结果：基础包版本 `0.2.0`、候选升级包版本 `0.2.0+test1`，均为 `Architecture: all`，依赖 `python3 (>= 3.9), python3-yaml`；描述包含 CLI、六能力套件、证据和离线 JSON/Markdown/HTML/SVG 报告。没有凭据、私有数据或模型权重进入包元数据。
 - 已完成：候选包版本、架构、依赖和发布描述在真实 openKylin VM 内可读并与构建产物一致。
@@ -1241,7 +1241,7 @@ kylin-memory-bench/
 
 - 实际环境：openKylin 2.0 SP2、x86_64、Python 3.12.2；项目负责人在 VM 本地桌面终端执行 `sudo -v` 后启动 root 生命周期，未向对话传递密码。
 - 实际命令：`sudo bash scripts/record_deb_lifecycle.sh runs/deb-lifecycle-authorized-20260907-rerun dist/rebuild-20260907/kylin-memory-bench_0.2.0_all.deb dist/rebuild-20260907/kylin-memory-bench_0.2.0+test1_all.deb`；脚本进程以 root 运行并完成，最终生命周期脚本退出码为非零。
-- 实际逐步退出码：`preflight=0`、`install=1`、`version=1`、`verify=1`、`build_upgrade=0`、`upgrade=1`、`verify_after_upgrade=1`、`uninstall=0`、`residual_check=0`。结果目录为 VM `/home/Cisyam/kmb-openkylin-validation-20260906/runs/deb-lifecycle-authorized-20260907-rerun/`，通过 `scp -r` 归档到宿主机 `runs/deb-lifecycle-authorized-20260907-rerun/`，复制退出码 `0`。
+- 实际逐步退出码：`preflight=0`、`install=1`、`version=1`、`verify=1`、`build_upgrade=0`、`upgrade=1`、`verify_after_upgrade=1`、`uninstall=0`、`residual_check=0`。结果目录为 VM `<user-home>/kmb-openkylin-validation-20260906/runs/deb-lifecycle-authorized-20260907-rerun/`，通过 `scp -r` 归档到宿主机 `runs/deb-lifecycle-authorized-20260907-rerun/`，复制退出码 `0`。
 - 实际观察：安装和升级 stdout 由 KARE 报告 `progress=100, status=0, errinfo=安装成功`；但 KARE shadow 的包状态和 payload 挂载在脚本立即检查时尚未可见，导致 `version/verify/verify_after_upgrade` 失败。卸载 stdout 为 `kylin-memory-bench is not installed`，没有证明执行了 dpkg removal；批次结束后只读核对显示 `dpkg -s` 为 `install ok installed`、版本 `0.2.0+test1`，`/usr/bin/kmb` 和 payload 仍存在。因此不得把本批次写成安装/升级/卸载成功。
 - 实际修改：`scripts/install_deb.sh`、`scripts/uninstall_deb.sh`、`scripts/verify_deb.sh`、`scripts/record_deb_lifecycle.sh` 增加 KARE 异步状态等待；生命周期默认导出 `KMB_PACKAGE_WAIT=600`、`KMB_PAYLOAD_WAIT=600`，安装/卸载等待包状态与残留路径收敛，version 使用 POSIX `date` 计时。未改变评测、评分或 Agent 逻辑。
 - 实际验证：宿主机 `bash -n` 退出码 `0`；`python -m unittest discover -s tests -v` 退出码 `0`，40 项通过；修正脚本经 `scp` 同步后 VM `bash -n` 退出码 `0`。未执行新的 root 生命周期，避免覆盖本批失败证据。
@@ -1292,7 +1292,7 @@ kylin-memory-bench/
 
 ### 批次 93：第三次生命周期进行中、KARE namespace 排查与脚本最小修正（2026-09-07）
 
-- 实际环境：同一 openKylin VM；通过工作区已有 SSH 私钥只读连接 `Cisyam@192.168.182.129:2222`，未读取或输出任何凭据内容。
+- 实际环境：同一 openKylin VM；通过工作区已有 SSH 私钥只读连接 `<vm-user>@192.168.182.129:2222`，未读取或输出任何凭据内容。
 - 实际启动命令（由 VM 本地已授权 root 终端启动）：`sudo bash scripts/record_deb_lifecycle.sh runs/deb-lifecycle-authorized-20260907-rerun3 dist/rebuild-20260907/kylin-memory-bench_0.2.0_all.deb dist/rebuild-20260907/kylin-memory-bench_0.2.0+test1_all.deb`。
 - 已观察结果：`preflight.exitcode=0`；安装日志包含 KARE `progress=100, status=0, errinfo=安装成功`，SSH 只读视图中 `dpkg-query` 显示 `kylin-memory-bench 0.2.0 install ok installed`，且 `/usr/bin/kmb` 与 `/usr/share/kylin-memory-bench/kmb/__init__.py` 存在。由于 root 生命周期进程与 SSH 会话处于不同 mount namespace，安装步骤最终写入 `install.exitcode=1`，版本步骤随后写入 `version.exitcode=1`，当前已进入旧 `verify-before-upgrade` 等待，完整生命周期尚未完成。不得将该批次写成成功。
 - 实际错误/阻塞证据：SSH 普通用户执行 `nsenter -t <sshd-pid> -m` 返回 `Operation not permitted`；root 生命周期进程可见能力与普通 SSH 会话不同。KARE 日志还记录 `fix_depends.py` 缺少 `elftools`、若干资源目录不存在和安全库缺失，但 KARE 最终记录安装退出码 `0`。
@@ -1307,8 +1307,8 @@ kylin-memory-bench/
 
 ### 批次 94：第三次生命周期失败证据归档与本地回归（2026-09-07）
 
-- 实际环境：宿主机工作区 `E:\上海开源软件应用创新大赛`；openKylin VM `/home/Cisyam/kmb-openkylin-validation-20260906`。VM 只读最终状态为 `kylin-memory-bench 0.2.0 install ok installed`，`/usr/bin/kmb` 和 `/usr/share/kylin-memory-bench` 仍存在；生命周期进程已结束。
-- 实际命令：`scp -r -i ~/.ssh/openkylin_vm_ed25519 -P 2222 Cisyam@192.168.182.129:/home/Cisyam/kmb-openkylin-validation-20260906/runs/deb-lifecycle-authorized-20260907-rerun3/. runs/deb-lifecycle-authorized-20260907-rerun3/`；复制退出码 `0`。
+- 实际环境：宿主机工作区 `E:\上海开源软件应用创新大赛`；openKylin VM `<user-home>/kmb-openkylin-validation-20260906`。VM 只读最终状态为 `kylin-memory-bench 0.2.0 install ok installed`，`/usr/bin/kmb` 和 `/usr/share/kylin-memory-bench` 仍存在；生命周期进程已结束。
+- 实际命令：`scp -r -i ~/.ssh/openkylin_vm_ed25519 -P 2222 <vm-user>@192.168.182.129:<user-home>/kmb-openkylin-validation-20260906/runs/deb-lifecycle-authorized-20260907-rerun3/. runs/deb-lifecycle-authorized-20260907-rerun3/`；复制退出码 `0`。
 - 实际退出码：`preflight=0`、`install=1`、`version=1`、`verify=1`；`build_upgrade`、`upgrade`、`verify_after_upgrade`、`uninstall`、`residual_check` 没有生成步骤文件。`install.stderr.log` 和 `version.stderr.log` 均为 `dpkg did not report kylin-memory-bench as installed within 600s.`；`verify.stderr.log` 为 `installed payload is not ready: /usr/share/kylin-memory-bench`。
 - 结果路径：宿主机 `runs/deb-lifecycle-authorized-20260907-rerun3/`，VM 原始目录同路径；已保留命令、退出码、stdout/stderr 日志。该批次不是完整生命周期成功，不得用于证明升级或卸载完成。
 - 实际本地验证：`bash -n scripts/kare_namespace.sh scripts/install_deb.sh scripts/verify_deb.sh scripts/uninstall_deb.sh scripts/record_deb_lifecycle.sh` 退出码 `0`；`python -m unittest discover -s tests -v` 退出码 `0`，40 项通过；敏感令牌扫描输出 `secret_scan=clean`；对归档文件执行 SHA-256 计算。
@@ -1332,7 +1332,7 @@ kylin-memory-bench/
 
 ### 批次 96：KARE upper payload 包内 smoke 验证（2026-09-07）
 
-- 实际环境：openKylin VM `/home/Cisyam/kmb-openkylin-validation-20260906`；通过 SSH 普通用户只读访问 KARE upper overlay，未使用或输出任何 API 凭据。
+- 实际环境：openKylin VM `<user-home>/kmb-openkylin-validation-20260906`；通过 SSH 普通用户只读访问 KARE upper overlay，未使用或输出任何 API 凭据。
 - 实际发现：`bash scripts/kare_namespace.sh --upper` 返回 `/opt/kare-applications/shadow/upper`；`dpkg-query --admindir=/opt/kare-applications/shadow/upper/var/lib/dpkg -W -f='${Package} ${Version} ${Status}\\n' kylin-memory-bench` 返回 `kylin-memory-bench 0.2.0 install ok installed`；upper payload 中存在 `/usr/bin/kmb`、`/usr/share/kylin-memory-bench` 和包内测试/脚本。
 - 实际命令：`bash scripts/verify_deb.sh runs/kare-upper-verify-20260907`，退出码 `0`；另以 `KMB_HOME=/opt/kare-applications/shadow/upper/usr/share/kylin-memory-bench PATH=/opt/kare-applications/shadow/upper/usr/bin:$PATH bash scripts/verify_deb.sh runs/kare-upper-forced-verify-20260907` 执行，退出码 `0`。
 - 实际结果：两项包内 smoke 测试通过；六案例 `core-zh.yaml` 校验通过；包内离线 `reference/flawed` smoke compare 生成 JSON/证据/报告并通过 `verify_run --strict`。这些是包机制验证，不是真实 Agent 结果，未纳入真实 Agent 结论。
@@ -1359,7 +1359,7 @@ kylin-memory-bench/
 
 ### 批次 98：第四次 `.deb` 生命周期验证与卸载残留定位（2026-09-08）
 
-- 实际环境：openKylin 2.0 SP2 VM，项目目录 `/home/Cisyam/kmb-openkylin-validation-20260906`；宿主机通过 `vmrun -T ws list` 确认 VM 正在运行，`getGuestIPAddress` 返回 `192.168.182.129`。
+- 实际环境：openKylin 2.0 SP2 VM，项目目录 `<user-home>/kmb-openkylin-validation-20260906`；宿主机通过 `vmrun -T ws list` 确认 VM 正在运行，`getGuestIPAddress` 返回 `192.168.182.129`。
 - 实际启动命令（VM 本地授权终端）：`sudo bash scripts/record_deb_lifecycle.sh runs/deb-lifecycle-authorized-20260907-rerun4 dist/rebuild-20260907/kylin-memory-bench_0.2.0_all.deb dist/rebuild-20260907/kylin-memory-bench_0.2.0+test1_all.deb`。
 - 实际退出码：`preflight=0`、`install=0`、`version=0`、`verify=0`、`build_upgrade=0`、`upgrade=0`、`verify_after_upgrade=0`、`uninstall=1`、`residual_check=1`。结果目录已通过 `scp -r` 退出码 `0` 归档到宿主机 `runs/deb-lifecycle-authorized-20260907-rerun4/`。
 - 安装/升级/验证结果：基础包安装、版本检查、包内 smoke、六案例校验、升级构建、升级和升级后包验证均有命令、日志及结果文件支撑，均为真实退出码 `0`。包内 smoke 使用 `reference/flawed` 仅验证发布包机制，不能作为真实 Agent 参评结果。
@@ -1409,20 +1409,20 @@ kylin-memory-bench/
 
 ### 批次 102：修正脚本 VM 端最终语法复核（2026-09-08）
 
-- 实际命令：通过现有 SSH 私钥只读连接执行 `cd /home/Cisyam/kmb-openkylin-validation-20260906; for f in scripts/kare_namespace.sh scripts/install_deb.sh scripts/verify_deb.sh scripts/uninstall_deb.sh scripts/record_deb_lifecycle.sh; do bash -n "$f"; rc=$?; printf "%s=%s\\n" "$f" "$rc"; done`。
+- 实际命令：通过现有 SSH 私钥只读连接执行 `cd <user-home>/kmb-openkylin-validation-20260906; for f in scripts/kare_namespace.sh scripts/install_deb.sh scripts/verify_deb.sh scripts/uninstall_deb.sh scripts/record_deb_lifecycle.sh; do bash -n "$f"; rc=$?; printf "%s=%s\\n" "$f" "$rc"; done`。
 - 实际结果：五个 VM 脚本语法检查均输出 `=0`；未执行系统写入、dpkg 操作或残留清理。
 - 已完成：确认宿主机和 VM 同步脚本语法一致可解析。
 - 未完成：`rerun5` 完整生命周期仍未执行；卸载和残留检查仍未取得成功退出码。
 - 暂缓：本轮未执行图像、截图、视频或桌面环境配置。
 - 客观阻塞：SSH 用户无可用非交互 sudo，VMware `vmrun` 访客命令需要未提供的访客密码；只能由 VM 本地已认证 root/sudo 终端启动生命周期。
-- 待确认假设：VM 本地终端仍可访问 `/home/Cisyam/kmb-openkylin-validation-20260906` 和 `dist/rebuild-20260907`，且新脚本已覆盖到该目录。
+- 待确认假设：VM 本地终端仍可访问 `<user-home>/kmb-openkylin-validation-20260906` 和 `dist/rebuild-20260907`，且新脚本已覆盖到该目录。
 - 下一轮最高优先级：在 VM 本地 root/sudo 终端执行 `rerun5`，并将结果归档回宿主机后再报告最终生命周期状态。
 
 ### 批次 103：`rerun5` 本地 sudo 认证等待状态（2026-09-08）
 
-- 实际环境：openKylin 2.0 SP2、x86_64；VMX `D:\openKylin-VM\openKylin.vmx` 正在运行；SSH 只读入口为 `Cisyam@192.168.182.129:2222`。
+- 实际环境：openKylin 2.0 SP2、x86_64；VMX `D:\openKylin-VM\openKylin.vmx` 正在运行；SSH 只读入口为 `<vm-user>@192.168.182.129:2222`。
 - 实际命令：VM 本地终端已输入 `sudo bash scripts/record_deb_lifecycle.sh runs/deb-lifecycle-authorized-20260908-rerun5 dist/rebuild-20260907/kylin-memory-bench_0.2.0_all.deb dist/rebuild-20260907/kylin-memory-bench_0.2.0+test1_all.deb`。
-- 实际观察：通过 SSH 观察到外层进程 `sudo bash ...rerun5` 仍存在，VM 截图显示终端停在 `[sudo] Cisyam 的密码:` 提示；`runs/deb-lifecycle-authorized-20260908-rerun5` 尚未在 SSH 普通用户视图中出现，未生成可读取的步骤退出码、日志或结果文件。因此本批次尚未开始可验收的生命周期步骤。
+- 实际观察：通过 SSH 观察到外层进程 `sudo bash ...rerun5` 仍存在，VM 截图显示终端停在 `[sudo] <vm-user> 的密码:` 提示；`runs/deb-lifecycle-authorized-20260908-rerun5` 尚未在 SSH 普通用户视图中出现，未生成可读取的步骤退出码、日志或结果文件。因此本批次尚未开始可验收的生命周期步骤。
 - 安全边界：未读取、回显、记录或传输 sudo 密码；未启动第二个生命周期批次；未删除或覆盖任何项目/用户文件。
 - 已完成：确认当前阻塞是 VM 本地 sudo 认证等待，而不是安装、升级或卸载结果；保留现有进程和历史证据。
 - 未完成：`rerun5` 的安装、版本检查、包内验证、升级、升级后验证、卸载和残留检查均无退出码，不能报告任何一步成功。
@@ -1433,12 +1433,12 @@ kylin-memory-bench/
 
 ### 批次 104：`rerun5` openKylin `.deb` 生命周期实际执行与归档（2026-09-08）
 
-- 实际环境：openKylin 2.0 SP2、x86_64；VMX `D:\openKylin-VM\openKylin.vmx`；项目目录 `/home/Cisyam/kmb-openkylin-validation-20260906`；Python 3.12.2、pip 26.2.1。sudo 由项目负责人在 VM 本地终端完成隐藏输入，密码未传入对话、日志或文件。
+- 实际环境：openKylin 2.0 SP2、x86_64；VMX `D:\openKylin-VM\openKylin.vmx`；项目目录 `<user-home>/kmb-openkylin-validation-20260906`；Python 3.12.2、pip 26.2.1。sudo 由项目负责人在 VM 本地终端完成隐藏输入，密码未传入对话、日志或文件。
 - 实际命令：`sudo bash scripts/record_deb_lifecycle.sh runs/deb-lifecycle-authorized-20260908-rerun5 dist/rebuild-20260907/kylin-memory-bench_0.2.0_all.deb dist/rebuild-20260907/kylin-memory-bench_0.2.0+test1_all.deb`；VM 本地 root 生命周期脚本最终自然结束，宿主机通过 `scp -r -i ~/.ssh/openkylin_vm_ed25519 -P 2222` 归档，scp 退出码 `0`。
 - 实际逐步退出码：`preflight=0`、`install=0`、`version=0`、`verify=0`、`build_upgrade=0`、`upgrade=0`、`verify_after_upgrade=0`、`uninstall=1`、`residual_check=1`；生命周期总体为失败，不能报告完整安装/升级/卸载验收通过。
 - 安装与升级证据：KARE stdout 实际报告 `progress=100, status=0, errinfo=安装成功`，脚本随后确认 upper payload；版本日志为 `kylin-memory-bench 0.2.0 install ok installed`；升级包为 `0.2.0+test1`，升级后包内 smoke 验证和六案例 suite 校验均通过。包内 smoke 仅使用 `reference/flawed` 验证 CLI/报告机制，不是真实 Agent 结果，也未用于真实 Agent 结论。
 - 卸载与残留事实：卸载 stdout 实际报告 KARE shadow 移除成功，但脚本 stderr 为 `package payload remains after removal: /usr/share/kylin-memory-bench`；SSH 只读核对显示 KARE upper dpkg 状态和 `/usr/bin/kmb` 已移除，但 root/upper 仍仅剩 `kmb/__pycache__/*.pyc`、`tests/__pycache__/*.pyc` 及目录。因此卸载和残留检查分别为 `1`，未删除项目目录外文件。
-- 结果路径：VM 原始目录 `/home/Cisyam/kmb-openkylin-validation-20260906/runs/deb-lifecycle-authorized-20260908-rerun5/`；宿主机归档目录 `runs/deb-lifecycle-authorized-20260908-rerun5/`，包含命令、stdout/stderr、逐步退出码、verify 前后 smoke 结果和 `SHA256SUMS.txt`。宿主机清单包含 64 个文件，实际校验输出 `manifest_entries=64`、`manifest_verify=ok`。
+- 结果路径：VM 原始目录 `<user-home>/kmb-openkylin-validation-20260906/runs/deb-lifecycle-authorized-20260908-rerun5/`；宿主机归档目录 `runs/deb-lifecycle-authorized-20260908-rerun5/`，包含命令、stdout/stderr、逐步退出码、verify 前后 smoke 结果和 `SHA256SUMS.txt`。宿主机清单包含 64 个文件，实际校验输出 `manifest_entries=64`、`manifest_verify=ok`。
 - 实际安全检查：对本批次日志和证据执行密钥/令牌模式扫描，输出 `secret_scan=clean`；未记录完整 API 密钥、密码或令牌。
 - 已完成：在真实 openKylin VM 中完成 `.deb` 安装、版本检查、包内验证、升级构建、升级和升级后验证；全部证据已归档并生成哈希清单。
 - 部分完成：KARE 包状态和命令卸载成功，但包外验证生成的字节码残留未被当前 root/KARE 清理路径移除，导致严格卸载验收失败。
@@ -1463,12 +1463,12 @@ kylin-memory-bench/
 
 ### 批次 106：第六次 `.deb` 生命周期验证通过（2026-09-08）
 
-- 实际环境：openKylin 2.0 SP2、x86_64；VM 项目目录 `/home/Cisyam/kmb-openkylin-validation-20260906`；sudo 由项目负责人在 VM 本地终端完成，密码未传入对话、日志或文件。
+- 实际环境：openKylin 2.0 SP2、x86_64；VM 项目目录 `<user-home>/kmb-openkylin-validation-20260906`；sudo 由项目负责人在 VM 本地终端完成，密码未传入对话、日志或文件。
 - 实际命令：`sudo bash scripts/record_deb_lifecycle.sh runs/deb-lifecycle-authorized-20260908-rerun6 dist/rebuild-20260907/kylin-memory-bench_0.2.0_all.deb dist/rebuild-20260907/kylin-memory-bench_0.2.0+test1_all.deb`；VM 批次自然结束；通过 `scp -r -i ~/.ssh/openkylin_vm_ed25519 -P 2222` 归档，scp 退出码 `0`。
 - 实际逐步退出码：`preflight=0`、`install=0`、`version=0`、`verify=0`、`build_upgrade=0`、`upgrade=0`、`verify_after_upgrade=0`、`uninstall=0`、`residual_check=0`；生命周期总体成功。
 - 修复验证：卸载 stdout 实际包含 `卸载成功，软件包已从kare shadow环境中移除` 和 `package removal verified`；卸载后 KARE upper `dpkg-query` 未找到 `kylin-memory-bench`，`/opt/kare-applications/shadow/upper/usr/share/kylin-memory-bench`、`/usr/share/kylin-memory-bench` 和 `kmb` 命令均不存在；未发现 `__pycache__` 或 `.pyc`。
 - 包内验证：安装和升级后包内 smoke 测试各 2 项通过；六案例 suite 校验通过。包内 smoke 使用 `reference/flawed` 仅验证 CLI/报告机制，不是真实 Agent 结果，也未用于真实 Agent 结论。
-- 结果路径：VM 原始目录 `/home/Cisyam/kmb-openkylin-validation-20260906/runs/deb-lifecycle-authorized-20260908-rerun6/`；宿主机归档目录 `runs/deb-lifecycle-authorized-20260908-rerun6/`，包含命令、stdout/stderr、逐步退出码、验证子目录和 `SHA256SUMS.txt`。
+- 结果路径：VM 原始目录 `<user-home>/kmb-openkylin-validation-20260906/runs/deb-lifecycle-authorized-20260908-rerun6/`；宿主机归档目录 `runs/deb-lifecycle-authorized-20260908-rerun6/`，包含命令、stdout/stderr、逐步退出码、验证子目录和 `SHA256SUMS.txt`。
 - 证据完整性与安全：归档清单包含 64 个文件，实际输出 `manifest_entries=64`、`manifest_verify=ok`；批次文件敏感令牌扫描输出 `secret_scan=clean`。
 - 已完成：第六次真实 openKylin 生命周期的安装、版本检查、CLI/六案例验证、升级包构建、升级、升级后验证、卸载和严格残留检查全部通过；此前字节码残留修复得到真实验证。
 - 部分完成：本批次证明 `.deb` 生命周期和包内离线报告机制可验收；包内 smoke 仍不等同于 Grok/DeepSeek 真实 Agent 评测。
@@ -1480,7 +1480,7 @@ kylin-memory-bench/
 
 ### 批次 107：PDF 要求完成度审计（2026-09-08）
 
-- 审计对象：`C:\Users\123\Downloads\ai_open_kylin_open_kylin_benchmark_XaCQyZepC8.pdf`；使用 PDF 文本提取逐页读取 3 页正文、命题目标、交付要求和评分表，未把示例命令/历史计划当作完成事实。
+- 审计对象：`<user-home>\Downloads\ai_open_kylin_open_kylin_benchmark_XaCQyZepC8.pdf`；使用 PDF 文本提取逐页读取 3 页正文、命题目标、交付要求和评分表，未把示例命令/历史计划当作完成事实。
 - 审计文档：`docs/pdf-compliance-audit.md`；保留既有文件/历史记录，本次为新增审计文档。
 - PDF 要求总数：19 条（背景/目标、六类能力、交付要求、评审维度和评审重点均编号追踪）。按 PDF 条目统计：已完成 11 条（含范围有限项）、部分完成 7 条、明确未完成 1 条；独立列出的证据不足项为 0，但 wrapper 原生归因、稳定性和跨环境兼容性均在矩阵中标为有限/谨慎证据；许可证与发布决策另标待确认。
 - 实际检查文件：`README.md`、`docs/solution.md`、`docs/evidence-protocol.md`、`docs/openkylin-validation-runbook.md`、`docs/deb-release.md`、`docs/demo-script.md`、`docs/agent-candidates.md`、`docs/dataset-provenance.md`、`docs/license-audit.md`、`docs/license-decision.md`、`NOTICE`、`CONTRIBUTING.md`、`kmb/`、`configs/`、`suites/`、`scripts/`、`tests/`、`dist/`、`runs/`。
@@ -1540,7 +1540,7 @@ kylin-memory-bench/
 ### 批次 111：openKylin 发布候选 `.deb` 构建与包内容审计（2026-09-08）
 
 - 本轮范围：不重复第六批已通过的 `.deb` 安装/升级/卸载生命周期；仅在同一 openKylin VM 构建新的发布候选并审计包内容，未执行视频、截图或图像任务。
-- 实际环境：openKylin 2.0 SP2、x86_64；VM 项目目录 `/home/Cisyam/kmb-openkylin-validation-20260906`；通过已有 SSH 用户通道执行，无需 sudo/root。
+- 实际环境：openKylin 2.0 SP2、x86_64；VM 项目目录 `<user-home>/kmb-openkylin-validation-20260906`；通过已有 SSH 用户通道执行，无需 sudo/root。
 - 实际命令：`KMB_DEB_VERSION=0.2.0+release1 bash scripts/build_deb.sh dist/release-20260908`；随后执行 `dpkg-deb --info dist/release-20260908/kylin-memory-bench_0.2.0+release1_all.deb`、`dpkg-deb --contents ...` 和包内容禁止项扫描；构建日志、命令退出码和源文件哈希写入 `runs/openkylin-validation-20260908/release-build/`，并通过 `scp` 归档到宿主机。
 - 实际退出码：VM 构建 `0`；`dpkg-deb --info` `0`；`dpkg-deb --contents` `0`；禁止内容审计 `0`；日志复制 `0`；`.deb` 文件复制首次因宿主机目标目录不存在返回 `1`，创建目标目录后重试复制返回 `0`，未影响构建结果。
 - 发布产物：`dist/release-20260908/kylin-memory-bench_0.2.0+release1_all.deb`，包版本 `0.2.0+release1`，架构 `all`，依赖 `python3 (>= 3.9), python3-yaml`，本地 SHA-256 `E5C0991E7641B6A92A4A71AF667F5E7592D3D1FC67F6305B900A349D8D1E8BAC`；包清单 68 行。
@@ -1676,7 +1676,7 @@ kylin-memory-bench/
 
 ### 批次 121：openKylin VM Grok 创新套件真实运行（2026-09-08）
 
-- 环境：openKylin 2.0 SP2 x86_64 VM，项目目录 `/home/Cisyam/kmb-openkylin-validation-20260906`，`.kmb-venv`；凭据文件仅确认存在且权限为 `600`，通过本地 shell 加载，未读取、回显或写入上下文包。
+- 环境：openKylin 2.0 SP2 x86_64 VM，项目目录 `<user-home>/kmb-openkylin-validation-20260906`，`.kmb-venv`；凭据文件仅确认存在且权限为 `600`，通过本地 shell 加载，未读取、回显或写入上下文包。
 - 同步：`scp` 同步 `kmb/models.py`、`kmb/scoring.py`、`kmb/runner.py`、`kmb/agents.py`、`kmb/report.py` 和 `suites/lifecycle/innovation.yaml`；六个文件 SHA256 与宿主工作区一致；VM 套件严格校验 `0`（15 cases），Python 编译 `0`。
 - 安全处理：一次同步命令误将本地私钥路径列入 `scp` 源参数，可能创建 VM 项目内同名副本；已立即执行 `rm -f` 删除并验证 `private_key_copy_absent`，未读取或输出私钥内容。该安全事件不影响项目凭据文件，后续同步命令已移除该参数。
 - 实际运行命令（VM）：加载 `~/.config/kmb/credentials.env` 后执行 `.kmb-venv/bin/python -m kmb.cli run --agent configs/agent-grok-memory.yaml --suite suites/lifecycle/innovation.yaml --out runs/openkylin-validation-20260908/innovation-grok-wrapper --run-id innovation-grok-wrapper-20260908 --seed 42 --retries 1 --timeout 180`。CLI stdout 返回 `agent=grok-memory-controller`、`overall=97.78`、退出路径生成完整结果；严格校验命令 `.kmb-venv/bin/python scripts/verify_run.py ... --strict` 退出 `0`。
@@ -1711,7 +1711,7 @@ kylin-memory-bench/
 ### 批次 123：纳入创新层的 openKylin `.deb` 重建与包内容审计（2026-09-08）
 
 - 本批次范围：将当前 `kmb/`、四类套件、`suites/lifecycle/innovation.yaml`、文档和打包脚本同步到已有 openKylin VM，构建新的发布候选并执行包内容、创新套件和离线 smoke 审计；不重复第六批安装/升级/卸载生命周期，不执行视频或媒体任务。
-- VM 环境：openKylin 2.0 SP2、x86_64；项目 `/home/Cisyam/kmb-openkylin-validation-20260906`；通过用户 SSH `192.168.182.129:2222` 访问；未读取或输出凭据。
+- VM 环境：openKylin 2.0 SP2、x86_64；项目 `<user-home>/kmb-openkylin-validation-20260906`；通过用户 SSH `192.168.182.129:2222` 访问；未读取或输出凭据。
 - 实际同步：`scp -P 2222` 同步 `kmb configs suites docs scripts packaging pyproject.toml setup.py README.md CHANGELOG.md NOTICE THIRD_PARTY_NOTICES.md LICENSE-MIT-CANDIDATE.txt`，退出码 `0`；同步内容不含 `runs`、虚拟环境或凭据文件。
 - 构建命令：`KMB_DEB_VERSION=0.2.0+release2 bash scripts/build_deb.sh dist/release-20260908-release2`，VM 退出码 `0`；日志和退出码见 `runs/openkylin-validation-20260908/release-build-innovation/build.stdout.log`、`build.stderr.log`、`build.exitcode`。
 - 发布产物：`dist/release-20260908-release2/kylin-memory-bench_0.2.0+release2_all.deb`，大小 `78036` bytes，SHA-256 `ef3e308a135351099f527d1d3d379c86e15fc2ad95e31fb378563a9c4ca911c1`。
@@ -1827,12 +1827,12 @@ kylin-memory-bench/
 
 ### 批次 132：openKylin 系统级场景能力探针（2026-09-08）
 
-- 实际命令：通过 SSH `ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=10 -i C:\\Users\\123\\.ssh\\openkylin_vm_ed25519 Cisyam@192.168.182.129` 执行只读能力探针，检查 `id`、`sudo -n -v`、`uname -a`、`/etc/os-release`、Python/pip/setuptools、`systemd-detect-virt`、`loginctl list-users`、`getent passwd`、`ip netns list`、`unshare --user --mount --net true`、命令可用性和 `df -h`；SSH 命令退出码 `0`。
-- 环境事实：openKylin `2.0 SP2 (nile)`，内核 `6.6.0-25-generic`，`x86_64`，VMware；SSH 用户 `Cisyam`（uid 1000），仅发现一个活动用户；根分区可用约 `8.2G`。
-- 权限事实：`sudo -n -v` 失败并输出 `sudo_noninteractive=no`；不能由当前自动化通道执行 root 级 dpkg、系统重启或系统权限变更。`systemctl`、`ip`、`nsenter`、`loginctl` 命令存在；`unshare --user --mount --net true` 用户级网络 namespace 探针成功。SSH 默认目录 `/home/Cisyam`，项目目录和 `.kmb-venv` 未在该目录中发现；凭据文件存在且权限 `600`，未读取内容。
+- 实际命令：通过 SSH `ssh -p 2222 -o BatchMode=yes -o ConnectTimeout=10 -i C:\\Users\\123\\.ssh\\openkylin_vm_ed25519 <vm-user>@192.168.182.129` 执行只读能力探针，检查 `id`、`sudo -n -v`、`uname -a`、`/etc/os-release`、Python/pip/setuptools、`systemd-detect-virt`、`loginctl list-users`、`getent passwd`、`ip netns list`、`unshare --user --mount --net true`、命令可用性和 `df -h`；SSH 命令退出码 `0`。
+- 环境事实：openKylin `2.0 SP2 (nile)`，内核 `6.6.0-25-generic`，`x86_64`，VMware；SSH 用户 `<vm-user>`（uid 1000），仅发现一个活动用户；根分区可用约 `8.2G`。
+- 权限事实：`sudo -n -v` 失败并输出 `sudo_noninteractive=no`；不能由当前自动化通道执行 root 级 dpkg、系统重启或系统权限变更。`systemctl`、`ip`、`nsenter`、`loginctl` 命令存在；`unshare --user --mount --net true` 用户级网络 namespace 探针成功。SSH 默认目录 `<user-home>`，项目目录和 `.kmb-venv` 未在该目录中发现；凭据文件存在且权限 `600`，未读取内容。
 - 未执行：本批次尚未触发系统重启、用户切换、离线阻断或权限修改；没有可恢复的外部控制通道和 root 授权证据，不能把普通用户探针当成这些场景的成功验证。
-- 客观阻塞：当前 SSH 自动化用户无非交互 sudo，且 `loginctl list-users` 仅有 `Cisyam`；系统重启跨会话证明、跨用户隔离和 root 权限变化需 VM 控制器/本地已认证终端或额外专用测试用户。
-- 待确认假设：项目实际路径仍为 `/home/Cisyam/kmb-openkylin-validation-20260906`；需在该路径内继续执行用户级探针。用户级 `unshare` 仅证明可探测隔离能力，不代表已完成离线 API 评测。
+- 客观阻塞：当前 SSH 自动化用户无非交互 sudo，且 `loginctl list-users` 仅有 `<vm-user>`；系统重启跨会话证明、跨用户隔离和 root 权限变化需 VM 控制器/本地已认证终端或额外专用测试用户。
+- 待确认假设：项目实际路径仍为 `<user-home>/kmb-openkylin-validation-20260906`；需在该路径内继续执行用户级探针。用户级 `unshare` 仅证明可探测隔离能力，不代表已完成离线 API 评测。
 - 下一轮最高优先级：在项目路径内保存系统级场景执行器与恢复模板，完成可安全执行的 Agent 进程重启、专用目录权限变化和用户级网络 namespace 离线能力验证；对系统重启/跨用户场景保留未执行证据，随后补足创新套件双 Agent memory-enabled 多批统计。
 
 ### 批次 133：受控系统级场景执行与 Grok 创新稳定性第 1 批（2026-09-08）
@@ -1948,7 +1948,7 @@ kylin-memory-bench/
 ### 批次 143：最终非视频回归与创新证据归档复核（2026-09-09）
 
 - 本批次范围：在宿主工作区建立新的 `runs/final-nonvideo-20260909-b143/`，对当前代码、套件和已归档的 openKylin 真实运行结果做只读最终复核；未调用云 API，未重复 `.deb` 第六批生命周期，未执行视频、截图或图像任务。
-- 验收机环境：宿主机 Python `3.9.5`、PyYAML `6.0.3`、pip `21.1.1`；被复核的 openKylin 环境事实来自真实归档：openKylin `2.0 SP2 (nile)`、x86_64、VM 项目 `/home/Cisyam/kmb-openkylin-validation-20260906`、Python `3.12.2`。宿主复核不替代 VM 运行。
+- 验收机环境：宿主机 Python `3.9.5`、PyYAML `6.0.3`、pip `21.1.1`；被复核的 openKylin 环境事实来自真实归档：openKylin `2.0 SP2 (nile)`、x86_64、VM 项目 `<user-home>/kmb-openkylin-validation-20260906`、Python `3.12.2`。宿主复核不替代 VM 运行。
 - 全量测试：`python -m unittest discover -s tests -v` 退出码 `0`，`48` 项通过；日志 `runs/final-nonvideo-20260909-b143/tests.stdout.log`、`tests.stderr.log`、`tests.exitcode`。
 - 套件与编译：`python -m kmb.cli validate --strict --suite suites/core-zh.yaml`（6 cases）、`core-en.yaml`（6）、`adversarial/core.yaml`（12）、`adversarial/core-en.yaml`（6）、`lifecycle/innovation.yaml`（15）均退出码 `0`；`python -m compileall -q kmb scripts tests` 退出码 `0`。各命令的 stdout/stderr/exitcode 在 `runs/final-nonvideo-20260909-b143/` 对应文件中。
 - CLI 兼容检查：`python -m kmb.cli --help` 和 `python -m kmb.cli list-cases --suite suites/lifecycle/innovation.yaml` 均退出码 `0`；命令与输出分别归档为 `cli-help.*`、`cli-list-cases-innovation.*`。
@@ -1967,7 +1967,7 @@ kylin-memory-bench/
 ### 批次 144：当前源码的 release3 技术包构建与中间审计（2026-09-09）
 
 - 本批次范围：同步批次 143 后的当前源码到 openKylin VM，先构建 `0.2.0+release3` 作为 release4 前的中间候选；未执行系统安装/升级/卸载，不调用云 API。
-- 实际同步：`scp -P 2222 -r kmb configs suites docs scripts pyproject.toml setup.py README.md CHANGELOG.md NOTICE THIRD_PARTY_NOTICES.md LICENSE-MIT-CANDIDATE.txt Cisyam@192.168.182.129:/home/Cisyam/kmb-openkylin-validation-20260906/` 退出码 `0`，日志 `runs/openkylin-validation-20260909/release3-sync/`。
+- 实际同步：`scp -P 2222 -r kmb configs suites docs scripts pyproject.toml setup.py README.md CHANGELOG.md NOTICE THIRD_PARTY_NOTICES.md LICENSE-MIT-CANDIDATE.txt <vm-user>@192.168.182.129:<user-home>/kmb-openkylin-validation-20260906/` 退出码 `0`，日志 `runs/openkylin-validation-20260909/release3-sync/`。
 - 实际构建：VM 执行 `KMB_DEB_VERSION=0.2.0+release3 bash scripts/build_deb.sh dist/release-20260909-release3`，远端 `build.exitcode=0`，日志 `runs/openkylin-validation-20260909/release3-build/vm-build.stdout.log`、`vm-build.stderr.log`、`vm-build.exitcode`；包大小 `81576` bytes，SHA-256 `8385d1d...1ba07a1e`，本地副本为 `dist/kylin-memory-bench_0.2.0+release3_all.deb`。
 - 中间审计：对 release3 包执行 `dpkg-deb --info/--contents`、禁止内容扫描、核心/创新套件校验、解包入口和包内 smoke，审计退出码均为 `0`；因随后发现打包脚本尚未纳入 `system_scenarios.py`，该包仅作为中间证据保留，审计日志目录暂记为 `runs/openkylin-validation-20260909/release4-audit/`，不作为最终冻结包。
 - 已完成：release3 技术构建可复现，凭据/缓存/运行产物未进入 staging。
@@ -2001,7 +2001,7 @@ kylin-memory-bench/
 ### 批次 147：release4 文档状态修正后的最终 VM 包重建与审计（2026-09-09）
 
 - 本批次原因：`docs/release-freeze.md` 状态文字从“待审计”修正为“已通过 VM 包审计”，为避免包内文档与包内容不一致，重新同步该文档并重建同版本 release4；不执行系统安装/升级/卸载、不调用云 API。
-- 实际同步：`scp -P 2222 -i ... docs/release-freeze.md Cisyam@192.168.182.129:/home/Cisyam/kmb-openkylin-validation-20260906/docs/` 退出码 `0`，证据 `runs/openkylin-validation-20260909/release4-final2-sync/`。
+- 实际同步：`scp -P 2222 -i ... docs/release-freeze.md <vm-user>@192.168.182.129:<user-home>/kmb-openkylin-validation-20260906/docs/` 退出码 `0`，证据 `runs/openkylin-validation-20260909/release4-final2-sync/`。
 - 实际构建：VM 执行 `KMB_DEB_VERSION=0.2.0+release4 bash scripts/build_deb.sh dist/release-20260909-release4`，远端 `build.exitcode=0`；最终包复制退出码 `0`，日志 `runs/openkylin-validation-20260909/release4-final2-build/`。
 - VM 包审计：`dpkg-deb --info`、`dpkg-deb --contents`、禁止内容扫描、核心/创新套件严格校验、解包入口和包内 smoke 均退出码 `0`；`forbidden_payload=none`，`system_scenarios.py`、`aggregate_repeats.py`、`aggregate_stability.py` 均在 payload。审计证据 `runs/openkylin-validation-20260909/release4-final2-audit/vm/`。
 - 最终包哈希：`dist/release-20260909-release4/kylin-memory-bench_0.2.0+release4_all.deb`，大小 `85364` bytes，SHA-256 `fc91cb76a18751ed88a50f5db96cd0edf86be21287437b73848031ced470050c`。此前 `605c...` 包作为中间产物保留，不再作为最终候选。
@@ -2056,7 +2056,7 @@ kylin-memory-bench/
 ### 批次 152：innovation no-memory 远端预检（2026-09-09）
 
 - 本批次范围：为补齐当前未执行的 innovation no-memory 对照，在 openKylin VM 通过 SSH 仅检查项目路径、凭据文件存在性/权限、no-memory 配置、innovation 套件和运行时版本；未输出或读取凭据内容，未调用模型 API。
-- 实际命令：`ssh -o BatchMode=yes -i ~/.ssh/openkylin_vm_ed25519 -p 2222 Cisyam@192.168.182.129 "cd /home/Cisyam/kmb-openkylin-validation-20260906 && ..."`；退出码 `0`。脱敏输出为 `vm_project=/home/Cisyam/kmb-openkylin-validation-20260906`、`credentials_present=true`、`configs_and_suite_present=true`、`pyyaml=6.0.1`、`python=3.12.2`。
+- 实际命令：`ssh -o BatchMode=yes -i ~/.ssh/openkylin_vm_ed25519 -p 2222 <vm-user>@192.168.182.129 "cd <user-home>/kmb-openkylin-validation-20260906 && ..."`；退出码 `0`。脱敏输出为 `vm_project=<user-home>/kmb-openkylin-validation-20260906`、`credentials_present=true`、`configs_and_suite_present=true`、`pyyaml=6.0.1`、`python=3.12.2`。
 - 证据路径：`runs/openkylin-validation-20260909/innovation-no-memory-preflight/command.txt`、`stdout.log`、`stderr.log`、`exitcode`；退出码文件为 `0`。
 - 已完成：确认可在真实 openKylin VM 中使用已有安全凭据配置执行 innovation no-memory 对照，且项目、配置和套件均可用。
 - 部分完成：尚未执行 Grok/DeepSeek no-memory innovation 批次、聚合统计和报告；本预检不构成模型调用或行为结果证据。
@@ -2258,7 +2258,7 @@ kylin-memory-bench/
 ### 批次 169：release5 VM 技术包构建与内容审计（2026-09-09）
 
 - 本批次范围：同步批次 168 后的当前源码到同一 openKylin VM，构建新版本 `0.2.0+release5` 以纳入 no-memory 报告套件字段修复和 final3 文档路径修正；未执行系统安装/升级/卸载，不调用模型 API，不执行视频、截图或图像任务。
-- 实际同步：`scp -q -r -o BatchMode=yes -i ~/.ssh/openkylin_vm_ed25519 -P 2222 kmb configs suites docs scripts pyproject.toml setup.py README.md CHANGELOG.md NOTICE THIRD_PARTY_NOTICES.md LICENSE-MIT-CANDIDATE.txt packaging Cisyam@192.168.182.129:/home/Cisyam/kmb-openkylin-validation-20260906/`；退出码 `0`，证据 `runs/openkylin-validation-20260909/release5-sync/`。
+- 实际同步：`scp -q -r -o BatchMode=yes -i ~/.ssh/openkylin_vm_ed25519 -P 2222 kmb configs suites docs scripts pyproject.toml setup.py README.md CHANGELOG.md NOTICE THIRD_PARTY_NOTICES.md LICENSE-MIT-CANDIDATE.txt packaging <vm-user>@192.168.182.129:<user-home>/kmb-openkylin-validation-20260906/`；退出码 `0`，证据 `runs/openkylin-validation-20260909/release5-sync/`。
 - 实际构建：VM 执行 `KMB_DEB_VERSION=0.2.0+release5 bash scripts/build_deb.sh dist/release-20260909-release5`；构建退出码 `0`，包为 `dist/release-20260909-release5/kylin-memory-bench_0.2.0+release5_all.deb`，大小 `85524` bytes。构建证据 `runs/openkylin-validation-20260909/release5-build/`；首次复制因本地目标目录不存在退出码 `1`，创建目标目录后的复制重试退出码 `0`，两次记录均保留。
 - 实际 VM 审计：`dpkg-deb --info`、`dpkg-deb --contents`、禁止内容扫描、innovation `15 cases` 严格校验、core `6 cases` 严格校验、解包入口和包内 smoke 均退出码 `0`；`forbidden_payload=none`。审计证据 `runs/openkylin-validation-20260909/release5-audit/`，总审计退出码 `0`。
 - 当前包哈希：本地复制包 SHA-256 为 `e8a555c01dee5721b8665c61e45ec5820dbafe33643151b47a75b6506f4e4fc9`；完整哈希将在 manifest 刷新批次再次独立校验。
@@ -2296,7 +2296,7 @@ kylin-memory-bench/
 ### 批次 172：release6 openKylin SSH 通道探针（2026-09-09）
 
 - 本批次范围：在不调用模型 API、不读取凭据内容、不执行生命周期或媒体任务的前提下，确认 release6 构建所需的现有 openKylin VM SSH 通道。
-- 实际命令：`ssh -o BatchMode=yes -o ConnectTimeout=10 -i C:\\Users\\123\\.ssh\\openkylin_vm_ed25519 -p 2222 Cisyam@192.168.182.129 "printf openkylin_ssh_ok"`；退出码 `0`，输出 `openkylin_ssh_ok`。
+- 实际命令：`ssh -o BatchMode=yes -o ConnectTimeout=10 -i C:\\Users\\123\\.ssh\\openkylin_vm_ed25519 -p 2222 <vm-user>@192.168.182.129 "printf openkylin_ssh_ok"`；退出码 `0`，输出 `openkylin_ssh_ok`。
 - 证据路径：`runs/openkylin-validation-20260909/release6-ssh-probe/command.txt`、`stdout.log`、`stderr.log`、`exitcode`。
 - 环境信息：目标通道为既有 openKylin 2.0 SP2 (nile) VM，x86_64；本批次仅执行 SSH 可达性探针。
 - 已完成：确认可继续同步源码并在目标 VM 构建 release6。
@@ -2308,9 +2308,9 @@ kylin-memory-bench/
 ### 批次 173：release6 源码与文档同步（2026-09-09）
 
 - 本批次范围：将批次 171 修订后的源码、套件、脚本、文档和打包配置同步到既有 openKylin VM 项目目录；未同步 `runs/`、虚拟环境或凭据文件，未调用模型 API，未执行安装/卸载或媒体任务。
-- 实际命令：`scp -q -o BatchMode=yes -o ConnectTimeout=10 -i C:\\Users\\123\\.ssh\\openkylin_vm_ed25519 -P 2222 -r kmb configs suites docs scripts pyproject.toml setup.py README.md CHANGELOG.md NOTICE THIRD_PARTY_NOTICES.md LICENSE-MIT-CANDIDATE.txt packaging Cisyam@192.168.182.129:/home/Cisyam/kmb-openkylin-validation-20260906/`；退出码 `0`。
+- 实际命令：`scp -q -o BatchMode=yes -o ConnectTimeout=10 -i C:\\Users\\123\\.ssh\\openkylin_vm_ed25519 -P 2222 -r kmb configs suites docs scripts pyproject.toml setup.py README.md CHANGELOG.md NOTICE THIRD_PARTY_NOTICES.md LICENSE-MIT-CANDIDATE.txt packaging <vm-user>@192.168.182.129:<user-home>/kmb-openkylin-validation-20260906/`；退出码 `0`。
 - 证据路径：`runs/openkylin-validation-20260909/release6-sync/command.txt`、`stdout.log`、`stderr.log`、`exitcode`。
-- 环境信息：目标为 openKylin 2.0 SP2 (nile)、x86_64 VM；同步目标 `/home/Cisyam/kmb-openkylin-validation-20260906/`。
+- 环境信息：目标为 openKylin 2.0 SP2 (nile)、x86_64 VM；同步目标 `<user-home>/kmb-openkylin-validation-20260906/`。
 - 已完成：当前文档状态、聚合器修复和发布配置已同步到 VM，可开始 release6 构建。
 - 部分完成/未完成：release6 尚未构建或审计；项目级 LICENSE、云 API 条款、OS 重启/跨用户和视频仍未完成或暂缓。
 - 客观阻塞：无同步阻塞。
@@ -2320,7 +2320,7 @@ kylin-memory-bench/
 ### 批次 174：release6 openKylin VM 构建（2026-09-09）
 
 - 本批次范围：在目标 openKylin VM 使用同步后的当前源码构建 `0.2.0+release6`；未执行系统安装/升级/卸载、模型 API 调用或媒体任务。
-- 实际命令：`cd /home/Cisyam/kmb-openkylin-validation-20260906 && KMB_DEB_VERSION=0.2.0+release6 bash scripts/build_deb.sh dist/release-20260909-release6`；SSH 远程命令退出码 `0`。
+- 实际命令：`cd <user-home>/kmb-openkylin-validation-20260906 && KMB_DEB_VERSION=0.2.0+release6 bash scripts/build_deb.sh dist/release-20260909-release6`；SSH 远程命令退出码 `0`。
 - 实际产物：VM 构建输出 `dist/release-20260909-release6/kylin-memory-bench_0.2.0+release6_all.deb`，构建 stdout/stderr 和退出码归档在 `runs/openkylin-validation-20260909/release6-build/command.txt`、`stdout.log`、`stderr.log`、`exitcode`；构建清单包含当前 release5 后修订的 README、稳定性报告、release freeze、复现清单和 deb 文档。
 - 环境信息：openKylin 2.0 SP2 (nile)、x86_64、Python 3.12.2、PyYAML 6.0.1；构建通过 VM SSH 通道完成。
 - 已完成：release6 `.deb` 构建成功，构建脚本输出完整包清单且未报告禁止内容。
@@ -2332,8 +2332,8 @@ kylin-memory-bench/
 ### 批次 175：release6 包复制与 VM 内容审计（2026-09-09）
 
 - 本批次范围：将 VM 构建的 release6 包复制到本地，并在目标 openKylin VM 对包执行元数据、完整清单、禁止内容、五套件严格校验、解包入口和包内 smoke 审计；不执行安装/升级/卸载、模型 API 调用或媒体任务。
-- 实际命令：`scp -q -o BatchMode=yes -o ConnectTimeout=10 -i C:\\Users\\123\\.ssh\\openkylin_vm_ed25519 -P 2222 Cisyam@192.168.182.129:/home/Cisyam/kmb-openkylin-validation-20260906/dist/release-20260909-release6/kylin-memory-bench_0.2.0+release6_all.deb dist/release-20260909-release6/kylin-memory-bench_0.2.0+release6_all.deb`；复制退出码 `0`，本地包 SHA-256 `6a50e18388fe09ff61cc8e8bb619a6ff383adb6733d6abf85b8f1a7ea5f7eb92`。
-- VM 审计命令：在 `/home/Cisyam/kmb-openkylin-validation-20260906` 执行 `dpkg-deb --info`、`dpkg-deb --contents`、禁止内容 grep、五个 `python -m kmb.cli validate --strict`、`dpkg-deb -x`、包内入口检查和 `tests/smoke_test.py`；SSH 退出码 `0`，各步骤退出码均为 `0`，`forbidden_payload=none`。
+- 实际命令：`scp -q -o BatchMode=yes -o ConnectTimeout=10 -i C:\\Users\\123\\.ssh\\openkylin_vm_ed25519 -P 2222 <vm-user>@192.168.182.129:<user-home>/kmb-openkylin-validation-20260906/dist/release-20260909-release6/kylin-memory-bench_0.2.0+release6_all.deb dist/release-20260909-release6/kylin-memory-bench_0.2.0+release6_all.deb`；复制退出码 `0`，本地包 SHA-256 `6a50e18388fe09ff61cc8e8bb619a6ff383adb6733d6abf85b8f1a7ea5f7eb92`。
+- VM 审计命令：在 `<user-home>/kmb-openkylin-validation-20260906` 执行 `dpkg-deb --info`、`dpkg-deb --contents`、禁止内容 grep、五个 `python -m kmb.cli validate --strict`、`dpkg-deb -x`、包内入口检查和 `tests/smoke_test.py`；SSH 退出码 `0`，各步骤退出码均为 `0`，`forbidden_payload=none`。
 - 证据路径：`runs/openkylin-validation-20260909/release6-audit/`，包含审计脚本、各步骤 stdout/stderr/exitcode、解包目录和复制日志；构建日志见 `runs/openkylin-validation-20260909/release6-build/`。
 - 环境信息：openKylin 2.0 SP2 (nile)、x86_64、Python 3.12.2、PyYAML 6.0.1；目标包版本 `0.2.0+release6`。
 - 已完成：release6 包复制、内容/敏感/套件/入口/smoke 审计全部通过；包未包含凭据、运行结果、虚拟环境或字节码。
@@ -2404,7 +2404,7 @@ kylin-memory-bench/
 ### 批次 181：release7 首次源码同步失败（2026-09-09）
 
 - 本批次范围：尝试将 release7 当前源码、套件、脚本、文档和打包配置一次性同步到既有 openKylin VM；未调用模型 API、未执行构建/安装/卸载或媒体任务。
-- 实际命令：`scp -q -o BatchMode=yes -o ConnectTimeout=10 -i C:\\Users\\123\\.ssh\\openkylin_vm_ed25519 -P 2222 -r kmb configs suites docs scripts pyproject.toml setup.py README.md CHANGELOG.md NOTICE THIRD_PARTY_NOTICES.md LICENSE-MIT-CANDIDATE.txt packaging Cisyam@192.168.182.129:/home/Cisyam/kmb-openkylin-validation-20260906/`；退出码 `5`。
+- 实际命令：`scp -q -o BatchMode=yes -o ConnectTimeout=10 -i C:\\Users\\123\\.ssh\\openkylin_vm_ed25519 -P 2222 -r kmb configs suites docs scripts pyproject.toml setup.py README.md CHANGELOG.md NOTICE THIRD_PARTY_NOTICES.md LICENSE-MIT-CANDIDATE.txt packaging <vm-user>@192.168.182.129:<user-home>/kmb-openkylin-validation-20260906/`；退出码 `5`。
 - 实际错误：`C:\\WINDOWS\\System32\\OpenSSH\\scp.exe: Connection closed`；未据此声称同步成功。证据 `runs/openkylin-validation-20260909/release7-sync/command.txt`、`stdout.log`、`stderr.log`、`exitcode`。
 - 已完成：失败命令和错误已保留；工作区文件未被删除或覆盖。
 - 部分完成：release7 尚未确认完整同步到 VM；需分路径重试并逐项核验。
@@ -2415,7 +2415,7 @@ kylin-memory-bench/
 ### 批次 182：release7 分路径同步脚本变量错误（2026-09-09）
 
 - 本批次范围：执行分路径 SCP 重试前的 SSH 探针和传输脚本；未调用模型 API、未构建/安装/卸载或执行媒体任务。
-- 实际命令：分路径同步脚本原计划逐项执行 `scp -q ... -r <path> Cisyam@192.168.182.129:/home/Cisyam/kmb-openkylin-validation-20260906/`；脚本先将 `$host` 作为变量名赋值，触发 PowerShell 保留变量错误 `Cannot overwrite variable Host because it is read-only or constant.`。
+- 实际命令：分路径同步脚本原计划逐项执行 `scp -q ... -r <path> <vm-user>@192.168.182.129:<user-home>/kmb-openkylin-validation-20260906/`；脚本先将 `$host` 作为变量名赋值，触发 PowerShell 保留变量错误 `Cannot overwrite variable Host because it is read-only or constant.`。
 - 实际结果：脚本探针退出码 `255`，未把路径同步结果写成成功；证据 `runs/openkylin-validation-20260909/release7-sync-retry/`，其中 `probe.exitcode=255`。
 - 已完成：错误已定位为本地 PowerShell 变量命名，不是 SSH/VM 能力结论；原始日志保留。
 - 部分完成：release7 同步仍未确认完成。
@@ -2437,7 +2437,7 @@ kylin-memory-bench/
 ### 批次 184：release7 VM 通道恢复探针（2026-09-09）
 
 - 本批次范围：用户重新打开 VM 后，重新执行 TCP 端口和 SSH 轻量探针；未调用模型 API、未同步/构建/安装/卸载或执行媒体任务。
-- 实际命令：`Test-NetConnection -ComputerName 192.168.182.129 -Port 2222 -InformationLevel Detailed`；输出 `TcpTestSucceeded : True`，记录退出码 `0`。随后执行 `ssh -o BatchMode=yes -o ConnectTimeout=5 -i C:\\Users\\123\\.ssh\\openkylin_vm_ed25519 -p 2222 Cisyam@192.168.182.129 "printf channel_ok"`，输出 `channel_ok`，退出码 `0`。
+- 实际命令：`Test-NetConnection -ComputerName 192.168.182.129 -Port 2222 -InformationLevel Detailed`；输出 `TcpTestSucceeded : True`，记录退出码 `0`。随后执行 `ssh -o BatchMode=yes -o ConnectTimeout=5 -i C:\\Users\\123\\.ssh\\openkylin_vm_ed25519 -p 2222 <vm-user>@192.168.182.129 "printf channel_ok"`，输出 `channel_ok`，退出码 `0`。
 - 证据路径：`runs/openkylin-validation-20260909/release7-channel-probe-open/command.txt`、`tcp.stdout.log`、`tcp.exitcode`、`ssh.stdout.log`、`ssh.stderr.log`、`ssh.exitcode`。
 - 已完成：确认 VM 打开后网络和 SSH 通道恢复可达；之前批次 183 的连接超时仍保留为历史时点事实，不再作为当前通道状态。
 - 部分完成：release7 仍未确认同步/构建；需重新执行同步和远端构建。
@@ -2447,8 +2447,8 @@ kylin-memory-bench/
 
 ### 批次 185：release7 源码分路径同步成功（2026-09-09）
 
-- 本批次范围：在 VM 通道恢复后，将 release7 当前源码、套件、脚本、文档、配置和打包文件分路径同步到 `/home/Cisyam/kmb-openkylin-validation-20260906/`；未同步 `runs/`、虚拟环境或凭据文件，未调用模型 API、未构建/安装/卸载或执行媒体任务。
-- 实际命令：对 `kmb configs suites docs scripts pyproject.toml setup.py README.md CHANGELOG.md NOTICE THIRD_PARTY_NOTICES.md LICENSE-MIT-CANDIDATE.txt packaging` 逐项执行 `scp -q -o BatchMode=yes -o ConnectTimeout=15 -i C:\\Users\\123\\.ssh\\openkylin_vm_ed25519 -P 2222 -r <path> Cisyam@192.168.182.129:/home/Cisyam/kmb-openkylin-validation-20260906/`；13 项退出码全部为 `0`，总退出码 `0`。
+- 本批次范围：在 VM 通道恢复后，将 release7 当前源码、套件、脚本、文档、配置和打包文件分路径同步到 `<user-home>/kmb-openkylin-validation-20260906/`；未同步 `runs/`、虚拟环境或凭据文件，未调用模型 API、未构建/安装/卸载或执行媒体任务。
+- 实际命令：对 `kmb configs suites docs scripts pyproject.toml setup.py README.md CHANGELOG.md NOTICE THIRD_PARTY_NOTICES.md LICENSE-MIT-CANDIDATE.txt packaging` 逐项执行 `scp -q -o BatchMode=yes -o ConnectTimeout=15 -i C:\\Users\\123\\.ssh\\openkylin_vm_ed25519 -P 2222 -r <path> <vm-user>@192.168.182.129:<user-home>/kmb-openkylin-validation-20260906/`；13 项退出码全部为 `0`，总退出码 `0`。
 - 证据路径：`runs/openkylin-validation-20260909/release7-sync-retry3/`，每项含 command/stdout/stderr/exitcode 和 `overall.exitcode`。
 - 环境信息：目标 openKylin 2.0 SP2 (nile)、x86_64、Python 3.12.2、PyYAML 6.0.1；SSH 通道 `192.168.182.129:2222`。
 - 已完成：release7 当前源码和文档已完整同步到 VM，未携带本地运行目录或凭据。
@@ -2470,7 +2470,7 @@ kylin-memory-bench/
 ### 批次 187：release7 openKylin VM 构建成功（2026-09-09）
 
 - 本批次范围：在已同步 release7 文档状态的 openKylin VM 构建 `0.2.0+release7`；未执行系统安装/升级/卸载、模型 API 调用或视频/媒体任务。
-- 实际命令：`cd /home/Cisyam/kmb-openkylin-validation-20260906 && KMB_DEB_VERSION=0.2.0+release7 bash scripts/build_deb.sh dist/release-20260909-release7`；SSH 远程构建退出码 `0`。
+- 实际命令：`cd <user-home>/kmb-openkylin-validation-20260906 && KMB_DEB_VERSION=0.2.0+release7 bash scripts/build_deb.sh dist/release-20260909-release7`；SSH 远程构建退出码 `0`。
 - 实际产物：VM `dist/release-20260909-release7/kylin-memory-bench_0.2.0+release7_all.deb`；构建 stdout/stderr/exitcode 见 `runs/openkylin-validation-20260909/release7-build-retry/`，包清单显示当前 README、release freeze、复现清单、稳定性和 Debian 文档。
 - 环境信息：openKylin 2.0 SP2 (nile)、x86_64、Python 3.12.2、PyYAML 6.0.1。
 - 已完成：release7 技术包构建成功，构建脚本输出无禁止内容错误。
@@ -2482,7 +2482,7 @@ kylin-memory-bench/
 ### 批次 188：release7 包复制回本地（2026-09-09）
 
 - 本批次范围：将 VM 构建完成的 release7 `.deb` 复制回本地，未执行安装/升级/卸载、模型 API 调用或媒体任务。
-- 实际命令：`scp -q -o BatchMode=yes -o ConnectTimeout=15 -i C:\\Users\\123\\.ssh\\openkylin_vm_ed25519 -P 2222 Cisyam@192.168.182.129:/home/Cisyam/kmb-openkylin-validation-20260906/dist/release-20260909-release7/kylin-memory-bench_0.2.0+release7_all.deb dist/release-20260909-release7/kylin-memory-bench_0.2.0+release7_all.deb`；退出码 `0`。
+- 实际命令：`scp -q -o BatchMode=yes -o ConnectTimeout=15 -i C:\\Users\\123\\.ssh\\openkylin_vm_ed25519 -P 2222 <vm-user>@192.168.182.129:<user-home>/kmb-openkylin-validation-20260906/dist/release-20260909-release7/kylin-memory-bench_0.2.0+release7_all.deb dist/release-20260909-release7/kylin-memory-bench_0.2.0+release7_all.deb`；退出码 `0`。
 - 实际结果：本地包存在，大小和哈希已记录；SHA-256 `89ce1e7e7f9b80af92585299f0418b15aa147de6b4ddfd19bc686555f0a5aaf2`。
 - 证据路径：`runs/openkylin-validation-20260909/release7-audit/copy.command.txt`、`copy.stdout.log`、`copy.stderr.log`、`copy.exitcode`、`local.sha256`。
 - 环境信息：目标 openKylin 2.0 SP2 (nile)、x86_64 VM；本地工作区 Windows。
@@ -2552,7 +2552,7 @@ kylin-memory-bench/
 ### 批次 194：openKylin 工作台同步与 VM 启动验证（2026-09-09）
 
 - 本批次范围：将本地新增工作台源码同步到已建立 SSH 通道的 openKylin VM，并在 VM 的现有 `.kmb-venv` 中启动本地回环服务、读取真实配置/套件/历史结果、触发一次离线双 Agent 工作台烟测；未调用 Grok/DeepSeek API，未录制视频、截图或其他媒体。
-- 环境信息：openKylin 2.0 SP2 (nile)，Linux 6.6.0-25-generic，x86_64，Python 3.12.2，PyYAML 6.0.1；SSH `192.168.182.129:2222`，项目目录 `/home/Cisyam/kmb-openkylin-validation-20260906`。
+- 环境信息：openKylin 2.0 SP2 (nile)，Linux 6.6.0-25-generic，x86_64，Python 3.12.2，PyYAML 6.0.1；SSH `192.168.182.129:2222`，项目目录 `<user-home>/kmb-openkylin-validation-20260906`。
 - 实际命令和退出码：SSH 环境探针（`uname -a`、`python3 --version`、项目目录检查）`0`；远端目录准备 `0`；首次多源同步 `0`，首次路径校验因 `scp` 多源目标目录语义错误退出 `1`（无远端代码损坏）；按 `kmb/`、`docs/` 分目录纠正同步 `0`；纠正后 VM `sha256sum`、`py_compile` 和 `python -m kmb.cli --help` `0`，确认出现 `serve/workbench`。
 - 工作台启动：VM 执行 `.kmb-venv/bin/python -m kmb.cli serve --host 127.0.0.1 --port 18765 --root .`，服务日志 `runs/openkylin-validation-20260909/workbench-vm-194/server.log`，监听确认成功；首次 PID 重定向记录因后台 shell 优先级未写入预期文件，后续探针已修正 `server.pid`，最终探针退出码 `0`。
 - API 验证：VM 回环请求 `/`、`/api/system`、`/api/configs`、`/api/suites`、`/api/runs` 均 HTTP `200`，探针退出码 `0`。`api-system.json` 明确返回 `openKylin 2.0 SP2`、`x86_64`、Python `3.12.2`、CLI `0.2.0`，并返回系统级测试能力矩阵。
@@ -2587,10 +2587,10 @@ kylin-memory-bench/
 ### 批次 196：本地工作台修改同步到 openKylin 后的哈希与服务复核（2026-09-09）
 
 - 本批次范围：复核上一批已同步到 openKylin VM 的工作台后端、CLI、静态前端、文档和测试文件；未同步 `runs/`、虚拟环境或凭据文件，未录制视频、截图或其他媒体。
-- 实际同步后的 VM 文件：`kmb/workbench.py`、`kmb/cli.py`、`kmb/web/index.html`、`kmb/web/app.js`、`kmb/web/styles.css`、`docs/workbench.md`、`README.md`、`tests/test_workbench.py`；VM 项目目录 `/home/Cisyam/kmb-openkylin-validation-20260906`。
+- 实际同步后的 VM 文件：`kmb/workbench.py`、`kmb/cli.py`、`kmb/web/index.html`、`kmb/web/app.js`、`kmb/web/styles.css`、`docs/workbench.md`、`README.md`、`tests/test_workbench.py`；VM 项目目录 `<user-home>/kmb-openkylin-validation-20260906`。
 - 实际命令与退出码：SSH 远端复核（`sha256sum`、`.kmb-venv/bin/python -m py_compile kmb/workbench.py kmb/cli.py`、`.kmb-venv/bin/python -m kmb.cli --help`、`curl /api/system`、`curl /api/configs`、服务进程和临时文件检查）退出码 `0`；本地/VM 逐文件 SHA-256 对比退出码 `0`，`8/8` 文件匹配。
 - 实际结果：VM 仍为 openKylin 2.0 SP2、x86_64、Python 3.12.2、CLI `0.2.0`；工作台服务进程继续监听 `127.0.0.1:18765`；`/api/system` 和 `/api/configs` 返回 `200`；系统状态显示凭据 `secure`、权限 `0600`，响应未包含密钥值；配置列表按 Grok/DeepSeek 和运行模式提供真实元数据。VM 项目根目录未发现误同步的 `cli.py`、`workbench.py` 或 `workbench.md` 临时文件。
-- 环境信息：SSH `Cisyam@192.168.182.129:2222`；工作台仅绑定 VM 回环地址，需受控 SSH 隧道或 VM 本地浏览器访问。
+- 环境信息：SSH `<vm-user>@192.168.182.129:2222`；工作台仅绑定 VM 回环地址，需受控 SSH 隧道或 VM 本地浏览器访问。
 - 证据路径：`runs/openkylin-validation-20260909/workbench-sync-196/remote-check.log`、`remote-check.exitcode`、`local.sha256.json`、`hash-compare.json`、`hash-compare.exitcode`。
 - 已完成：本地修改已同步到 VM；8 个目标文件哈希一致；VM Python 语法、CLI 帮助、工作台服务、系统和配置 API 复核通过；未复制 API 凭据。
 - 部分完成：本批次未重新构建 release8 `.deb`，未进行新的安装/升级/卸载生命周期；浏览器页面交互和窄窗口验证仍待后续单独批次。

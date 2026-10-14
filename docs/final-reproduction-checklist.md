@@ -14,7 +14,7 @@
 ## 命令顺序
 
 ```bash
-cd /home/Cisyam/kmb-openkylin-validation-20260906
+cd <user-home>/kmb-openkylin-validation-20260906
 test "$(stat -c '%a' ~/.config/kmb/credentials.env)" = 600
 . .kmb-venv/bin/activate
 python scripts/env_probe.py --require-openkylin --json

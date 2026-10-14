@@ -233,8 +233,8 @@ KylinBot 已作为首个候选。2026-09-22 在 openKylin 3.0 VM 通过真实 CL
 
 | 项 | 结果 |
 |----|------|
-| VM | `E:\openkylin\Ubuntu 64-bit.vmx`，openKylin **3.0 (huanghe)**，`Cisyam@192.168.141.128:22` |
-| 记忆库 | `/home/Cisyam/.kylinbot/workspace/memory/brain.db`（只读拷贝至宿主 `_migrate_stage/kylinbot-brain.db`） |
+| VM | `E:\openkylin\Ubuntu 64-bit.vmx`，openKylin **3.0 (huanghe)**，`<vm-user>@<vm-address>:22` |
+| 记忆库 | `<user-home>/.kylinbot/workspace/memory/brain.db`（只读拷贝至宿主 `_migrate_stage/kylinbot-brain.db`） |
 | DB 内容 | 门禁前已有烟测数据保留；门禁新增的 `benchmark_alias` 与两条关联 `user_msg_*` 已在门禁后清理 |
 | 驱动与导出 | `configs/agent-kylinbot-command.yaml` + `scripts/kylinbot_command_agent.py`；逐轮调用 `kylin-bot agent --message` 并观察 `brain.db` 差异 |
 | 评分 | `runs/kylinbot-gate-20260922/result.json`，overall **100.0**；套件为单案例最小门禁，不替代完整六维套件 |

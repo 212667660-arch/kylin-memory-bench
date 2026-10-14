@@ -9,8 +9,8 @@
 /bin/sh: 1: sshd: not found
 EXIT:0
 ===PROC===
-Cisyam     29805  0.0  0.0   2720  1836 ?        S    01:06   0:00 /bin/sh -c (systemctl status ssh --no-pager -l; echo ===JOURNAL===; journalctl -u ssh -n 80 --no-pager 2>&1; echo ===CONFIG===; sshd -t 2>&1; echo EXIT:0; echo ===PROC===; ps aux | grep [s]shd; echo ===FILES===; ls -l /etc/ssh/sshd_config /etc/ssh/ssh_host_* 2>&1) > /tmp/codex_vm_ssh_diag.txt 2>&1
-Cisyam     29806  0.0  0.0   2720  1164 ?        S    01:06   0:00 /bin/sh -c (systemctl status ssh --no-pager -l; echo ===JOURNAL===; journalctl -u ssh -n 80 --no-pager 2>&1; echo ===CONFIG===; sshd -t 2>&1; echo EXIT:0; echo ===PROC===; ps aux | grep [s]shd; echo ===FILES===; ls -l /etc/ssh/sshd_config /etc/ssh/ssh_host_* 2>&1) > /tmp/codex_vm_ssh_diag.txt 2>&1
+<vm-user>     29805  0.0  0.0   2720  1836 ?        S    01:06   0:00 /bin/sh -c (systemctl status ssh --no-pager -l; echo ===JOURNAL===; journalctl -u ssh -n 80 --no-pager 2>&1; echo ===CONFIG===; sshd -t 2>&1; echo EXIT:0; echo ===PROC===; ps aux | grep [s]shd; echo ===FILES===; ls -l /etc/ssh/sshd_config /etc/ssh/ssh_host_* 2>&1) > /tmp/codex_vm_ssh_diag.txt 2>&1
+<vm-user>     29806  0.0  0.0   2720  1164 ?        S    01:06   0:00 /bin/sh -c (systemctl status ssh --no-pager -l; echo ===JOURNAL===; journalctl -u ssh -n 80 --no-pager 2>&1; echo ===CONFIG===; sshd -t 2>&1; echo EXIT:0; echo ===PROC===; ps aux | grep [s]shd; echo ===FILES===; ls -l /etc/ssh/sshd_config /etc/ssh/ssh_host_* 2>&1) > /tmp/codex_vm_ssh_diag.txt 2>&1
 ===FILES===
 ls: 无法访问 '/etc/ssh/sshd_config': 没有那个文件或目录
 ls: 无法访问 '/etc/ssh/ssh_host_*': 没有那个文件或目录

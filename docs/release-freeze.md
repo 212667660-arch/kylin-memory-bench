@@ -66,7 +66,7 @@
 - `.deb` 最新生命周期（2026-10-04，openKylin 3.0 VM）：`runs/deb-lifecycle-3.0vm-20261004/`——preflight/install(release6)/verify_before/upgrade(release7)/verify_after/uninstall/residual_check 七步全部退出码 0，升级路径 release6→release7 经 dpkg 确认，卸载后 `/usr/bin/kmb` 与 `/usr/share/kylin-memory-bench` 残留检查通过；此前第六批 `runs/deb-lifecycle-authorized-20260908-rerun6/` 保留
 - 发布候选包：`dist/release-20260909-release7/kylin-memory-bench_0.2.0+release7_all.deb`；最终 SHA-256 以 `runs/openkylin-validation-20260909/release-manifest-release7/release-manifest-release7.json` 为准；构建/内容审计记录见 `runs/openkylin-validation-20260909/release7-build/` 和 `runs/openkylin-validation-20260909/release7-audit/`
 - 最终非视频检查：`runs/final-nonvideo-20260909-b143/`（逐项退出码见 `batch-summary.json`）
-- **最新真实双 Agent 批次（2026-09-24）**：VM `/home/Cisyam/kmb-agent-validation-20260923/runs/quick-compare-isolated-20260924/`；KylinBot `63.89`、OpenClaw `13.89`，六案例双侧 `score_valid=true`；`verify_run.py --strict` 分别校验 51/34 条证据并退出 0。该批次使用独立 HOME/空白记忆库，属于系统级外部记忆/动作控制器观测，`native_memory_events=0`。
+- **最新真实双 Agent 批次（2026-09-24）**：VM `<user-home>/kmb-agent-validation-20260923/runs/quick-compare-isolated-20260924/`；KylinBot `63.89`、OpenClaw `13.89`，六案例双侧 `score_valid=true`；`verify_run.py --strict` 分别校验 51/34 条证据并退出 0。该批次使用独立 HOME/空白记忆库，属于系统级外部记忆/动作控制器观测，`native_memory_events=0`。
 - 最终复现清单：`docs/final-reproduction-checklist.md`
 - 机器可读发布 manifest：`runs/openkylin-validation-20260909/release-manifest-release7/release-manifest-release7.json`
 

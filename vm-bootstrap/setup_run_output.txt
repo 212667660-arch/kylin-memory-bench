@@ -2,7 +2,7 @@
 [Desktop Entry]
 Type=Application
 Name=openKylin SSH (VM)
-Exec=/home/Cisyam/.local/bin/openkylin-user-ssh-start
+Exec=<user-home>/.local/bin/openkylin-user-ssh-start
 Terminal=false
 X-GNOME-Autostart-enabled=true
 ===launcher===
