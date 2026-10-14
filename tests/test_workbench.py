@@ -12,7 +12,7 @@ from urllib.request import Request, urlopen
 
 from kmb.agent_registry import AgentProfile
 from kmb.agents import build_agent_from_config
-from kmb.workbench import WorkbenchHandler, WorkbenchState, load_credentials_file
+from kmb.workbench import WorkbenchHandler, WorkbenchState, _redact_text, load_credentials_file
 
 
 class WorkbenchTests(unittest.TestCase):
@@ -75,6 +75,53 @@ class WorkbenchTests(unittest.TestCase):
                 with urlopen(base + "/api/agents", timeout=3) as response:
                     payload = json.loads(response.read().decode("utf-8"))
             self.assertEqual(payload["agents"][0]["id"], "kylinbot")
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+    def test_native_api_does_not_confuse_host_config_with_isolated_home(self):
+        host = self.root / "host-user"
+        isolated = self.root / "isolated-user"
+        (host / ".openclaw").mkdir(parents=True)
+        isolated.mkdir()
+        secret = "synthetic-native-api-private-987654"
+        config = {"agents": {"defaults": {"model": "deepseek/model-demo"}}, "models": {"providers": {"deepseek": {"apiKey": secret}}}}
+        (host / ".openclaw/openclaw.json").write_text(json.dumps(config), encoding="utf-8")
+        current = [AgentProfile("openclaw", "OpenClaw", False, False, "openclaw")]
+        installed = [AgentProfile("openclaw", "OpenClaw", True, True, "openclaw")]
+        with patch.dict(os.environ, {"KMB_AGENT_HOME": str(isolated)}, clear=True), patch("kmb.workbench.host_home", return_value=host), patch("kmb.workbench.discover_agents", side_effect=[current, installed]):
+            agent = self.state.list_agents()[0]
+        self.assertTrue(agent["host_installed"])
+        self.assertFalse(agent["runnable"])
+        self.assertEqual(agent["execution_scope"], "isolated")
+        self.assertEqual(agent["host_native_api"]["status"], "configured")
+        self.assertEqual(agent["native_api"]["status"], "not_configured")
+        self.assertNotIn(secret, json.dumps(_redact_text(agent)))
+        self.assertFalse(agent["connection_checked"])
+
+    def test_safe_api_env_reference_survives_json_redaction_but_actual_secret_does_not(self):
+        with patch.dict(os.environ, {"KMB_TEST_API_KEY": "synthetic-private-987654"}, clear=True):
+            result = _redact_text({"api_key_env": "KMB_TEST_API_KEY", "api_key": "synthetic-private-987654", "model": "model-demo"})
+            unsafe = _redact_text({"api_key_env": "not-a-variable-secret-value"})
+        self.assertEqual(result["api_key_env"], "KMB_TEST_API_KEY")
+        self.assertEqual(result["api_key"], "[REDACTED]")
+        self.assertEqual(unsafe["api_key_env"], "[REDACTED]")
+
+    def test_profiles_http_response_has_editable_env_reference_without_key(self):
+        self.state.create_api_profile({"profile_id": "native-test", "name": "Test API", "base_url": "https://api.example.test/v1", "model": "model-demo", "api_key_env": "KMB_TEST_API_KEY"})
+        server = ThreadingHTTPServer(("127.0.0.1", 0), WorkbenchHandler)
+        server.workbench_state = self.state
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            with patch.dict(os.environ, {"KMB_TEST_API_KEY": "synthetic-private-987654"}, clear=True):
+                with urlopen("http://127.0.0.1:%d/api/profiles" % server.server_address[1], timeout=3) as response:
+                    body = response.read().decode("utf-8")
+            self.assertNotIn("synthetic-private-987654", body)
+            profile = json.loads(body)["profiles"][0]
+            self.assertEqual(profile["api_key_env"], "KMB_TEST_API_KEY")
+            self.assertEqual(profile["credential"], "configured")
         finally:
             server.shutdown()
             server.server_close()

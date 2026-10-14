@@ -51,6 +51,18 @@ class AgentRegistryTests(unittest.TestCase):
             self.assertTrue(all(not profile.installed for profile in profiles))
             self.assertTrue(all(profile.reason for profile in profiles))
 
+    def test_kylinbot_toml_only_installation_is_detected_without_reading_it(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            (home / ".kylinbot").mkdir()
+            path = home / ".kylinbot/config.toml"
+            path.write_text("native-private-config-not-to-read", encoding="utf-8")
+            with patch.object(Path, "read_text", side_effect=AssertionError("Installation detection reads only metadata")):
+                profile = discover_agents(home=home, path_lookup=lambda _: None)[0]
+            self.assertTrue(profile.installed)
+            self.assertFalse(profile.runnable)
+            self.assertIn("configuration_file", profile.detection_sources)
+
     def test_serialization_exposes_metadata_only(self):
         tmp, home = self._home()
         try:

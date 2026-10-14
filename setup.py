@@ -21,7 +21,7 @@ setup(
     packages=find_packages(),
     package_data={"kmb": ["web/*.html", "web/*.js", "web/*.css"]},
     data_files=data_files,
-    install_requires=["PyYAML>=6.0"],
+    install_requires=["PyYAML>=6.0", "tomli>=2.0; python_version < '3.11'"],
     entry_points={"console_scripts": ["kmb=kmb.cli:main"]},
     python_requires=">=3.9",
 )

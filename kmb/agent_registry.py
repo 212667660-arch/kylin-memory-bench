@@ -162,7 +162,7 @@ def discover_agents(root: Optional[Path] = None, path_lookup: Optional[PathLooku
         command_names=["kylin-bot"],
         path_lookup=lookup,
         evidence_mode="agent_memory_observed",
-        installation_paths=[home / ".kylinbot/config.json", home / ".kylinbot/config.yaml"],
+        installation_paths=[home / ".kylinbot/config.toml", home / ".kylinbot/config.json", home / ".kylinbot/config.yaml"],
         required_memory_path=home / ".kylinbot/workspace/memory/brain.db",
     )
     hermes = _profile(

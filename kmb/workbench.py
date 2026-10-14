@@ -1,9 +1,9 @@
 """Small, local-only web workbench for KylinMemoryBench.
 
 The workbench is intentionally a thin adapter over the existing CLI data model.
-It never accepts an API key from a browser and only reads or writes paths inside
-the project workspace.  The browser is therefore a view and a controlled job
-launcher, not a second benchmark implementation.
+It never accepts an API key from a browser. It reads workspace artifacts and
+bounded native configuration metadata, and writes only workspace configs and
+run artifacts. The browser is a view and a controlled job launcher.
 """
 
 from __future__ import annotations
@@ -34,6 +34,7 @@ import yaml
 from . import __version__
 from .agent_registry import discover_agents, host_home, profiles_to_dicts
 from .agents import build_agent_from_config, load_agent_config, resolve_api_profile
+from .native_api import INSPECTION_REVISION, inspect_native_api
 from .report import radar_svg, write_compare, write_html_report, write_markdown
 from .runner import load_suite, run_suite, validate_cases
 
@@ -223,7 +224,10 @@ def _redact_text(value: Any) -> Any:
     if isinstance(value, dict):
         output = {}
         for key, item in value.items():
-            if SENSITIVE_ENV_NAMES.search(str(key)):
+            if str(key) == "api_key_env" and isinstance(item, str) and _is_credential_name(item):
+                # A validated variable name is public metadata, not its secret value.
+                output[str(key)] = _redact_text(item)
+            elif SENSITIVE_ENV_NAMES.search(str(key)):
                 output[str(key)] = "[REDACTED]"
             else:
                 output[str(key)] = _redact_text(item)
@@ -417,15 +421,17 @@ class WorkbenchState:
     def list_agents(self) -> List[Dict[str, Any]]:
         """Discover host installation and evaluation readiness independently.
 
-        This reads path metadata and existing result summaries only. It does not
-        read credentials, start Agents, or probe a model provider.
+        Reads bounded native configuration metadata and existing run summaries.
+        Credentials are never returned, decrypted, or checked against a provider.
         """
         profiles = discover_agents(self.root)
         host = {profile.id: profile for profile in discover_agents(self.root, home=host_home())}
         payload = profiles_to_dicts(profiles)
         runs = self.list_runs()
         configured_home = os.environ.get("KMB_AGENT_HOME")
-        isolated = bool(configured_home and Path(configured_home).expanduser().resolve() != host_home().resolve())
+        evaluation_home = Path(configured_home).expanduser() if configured_home else Path.home()
+        installation_home = host_home()
+        isolated = evaluation_home.resolve() != installation_home.resolve()
         detected_at = _utc_now()
         for profile, item in zip(profiles, payload):
             installed_on_host = bool(host.get(profile.id) and host[profile.id].installed)
@@ -440,6 +446,8 @@ class WorkbenchState:
             item["credential"] = "agent_managed" if item["installed"] else "not_detected"
             item["credential_source"] = "agent_configuration"
             item["connection_checked"] = False
+            item["native_api"] = inspect_native_api(profile.id, evaluation_home)
+            item["host_native_api"] = inspect_native_api(profile.id, installation_home) if isolated else item["native_api"]
             item["readiness"] = "ready" if profile.runnable else ("manual" if item["installed"] and profile.id == "kylinagent" else "blocked")
             item["fix_hint"] = _fix_hint(profile)
             if installed_on_host and not profile.runnable and profile.id != "kylinagent":
@@ -901,6 +909,7 @@ class WorkbenchState:
             "system": platform.system(),
             "machine": platform.machine(),
             "agent_discovery": {"scope": "backend_host", "hostname": platform.node(), "automatic": True, "checks": ["executable", "memory_store", "configuration_file_metadata"], "starts_agents": False},
+            "native_api_inspection": {"supported": True, "schema_version": 1, "implementation_revision": INSPECTION_REVISION, "read_only": True, "starts_agents": False, "connection_checked": False},
             "python": platform.python_version(),
             "python_executable": str(Path(os.sys.executable).resolve()),
             "pyyaml": yaml_version,

@@ -581,7 +581,22 @@
   }
   function nativeMetaHtml(agent) {
     if (!agent) return '<div class="agent-meta"><span>请选择后端自动发现的智能体</span></div>';
-    return '<div class="agent-meta"><span>' + (agent.host_installed ? '本机已安装' : agent.installed ? '当前评测目录中已发现' : '本机未检测到安装') + '</span><span class="' + (agent.runnable ? 'credential-safe' : 'credential-missing') + '">' + escapeHtml(nativeReadinessLabel(agent)) + '</span></div><div class="field"><label>API / 模型</label><span class="field-help">使用智能体自身的模型与凭据配置。</span></div><div class="field-help">' + escapeHtml(agent.runnable ? (agent.execution_scope === 'isolated' ? '本次使用独立记忆副本。' : '本次使用当前用户目录。') : agent.reason || '运行条件尚未就绪') + '</div><div class="agent-pane-footer"><span class="' + (agent.last_run?.runtime_error ? 'credential-missing' : 'health-state') + '">' + escapeHtml(nativeRuntimeLabel(agent)) + '</span></div>';
+    return '<div class="agent-meta"><span>' + (agent.host_installed ? '本机已安装' : agent.installed ? '当前评测目录中已发现' : '本机未检测到安装') + '</span><span class="' + (agent.runnable ? 'credential-safe' : 'credential-missing') + '">' + escapeHtml(nativeReadinessLabel(agent)) + '</span></div><div class="field"><label>智能体自身 API / 模型</label><span class="field-help">' + escapeHtml(nativeApiSummary(agent)) + '</span></div><div class="field-help">' + escapeHtml(agent.native_api?.reason || '后端尚未返回配置状态；更新后请重启服务。') + ' 工作台 API 档案不会覆盖这里的原生配置。</div><div class="field-help">' + escapeHtml(agent.runnable ? (agent.execution_scope === 'isolated' ? '本次使用独立记忆副本，请确认副本中的 API 配置。' : '本次使用当前用户目录。') : agent.reason || '运行条件尚未就绪') + '</div><div class="agent-pane-footer"><span class="' + (agent.last_run?.runtime_error ? 'credential-missing' : 'health-state') + '">' + escapeHtml(nativeRuntimeLabel(agent)) + '</span></div>';
+  }
+  function nativeApiStateLabel(api) {
+    if (!api) return '配置状态待检测（后端需更新）';
+    const labels = {configured: '配置与凭据已发现 · 未联网验证', missing_credentials: '已发现配置 · 凭据缺失', not_configured: '当前目录未发现 API 配置', local: '本地模型 · 服务未验证', managed: '外部凭据引用 · 未验证', unknown: '配置状态未确认', unsupported: '尚不支持读取该配置'};
+    return labels[api.status] || '配置状态未确认';
+  }
+  function nativeApiSummary(agent) {
+    const api = agent?.native_api;
+    const model = [api?.provider, api?.model].filter(Boolean).join(' · ');
+    return (model ? model + '；' : '') + nativeApiStateLabel(api);
+  }
+  function nativeApiDetailsHtml(api, scope) {
+    const sources = {agent_configuration: '智能体配置文件', encrypted_agent_configuration: '原生加密配置（未解密）', process_environment: '当前进程环境', agent_env_file: '智能体私有环境文件', agent_auth_store: '智能体凭据存储', agent_database_not_inspected: '原生数据库（未读取凭据）', environment_reference: '环境变量引用尚未找到', external_reference: '外部引用（未执行）', invalid_reference: '引用格式未识别'};
+    const fields = [[scope + ' API 状态', nativeApiStateLabel(api)], [scope + ' 服务商', api?.provider || '未识别'], [scope + ' 默认模型', api?.model || '未识别'], [scope + ' 接口', api?.base_url || '未读取或由智能体决定'], [scope + ' 配置来源', api?.config_source || '未发现'], [scope + ' 凭据来源', sources[api?.credential_source] || '未确认']];
+    return fields.map(([label, value]) => '<div><span>' + escapeHtml(label) + '</span><strong>' + escapeHtml(value) + '</strong></div>').join('');
   }
   function formCanStart() {
     const pair = currentFormPair();
@@ -600,7 +615,7 @@
     return "A";
   }
   function needsLlm(config) { return Boolean(config && (typeof config.requires_api === "boolean" ? config.requires_api : ["memory_tool", "http"].includes(String(config.type)))); }
-  const credentialLabel = (config) => !config ? "未配置 API 凭据" : config.credential === "configured" ? "凭据已加载" : config.credential === "not_required" ? "无需云凭据" : config.credential === "agent_managed" ? "智能体自行管理" : "未配置 API 凭据";
+  const credentialLabel = (config) => !config ? "未配置 API 凭据" : config.native_api ? nativeApiStateLabel(config.native_api) : config.credential === "configured" ? "本机凭据已加载 · 未验证" : config.credential === "not_required" ? "无需云凭据" : config.credential === "agent_managed" ? "智能体自行管理（API 未检测）" : "未配置 API 凭据";
   function credentialReady(config) { return Boolean(config && ["configured", "not_required", "agent_managed"].includes(config.credential)); }
   function nativeRuntimeLabel(agent) {
     const recent = agent && agent.last_run;
@@ -740,6 +755,7 @@
       const status = !agent.installed ? "未安装" : runnable ? "命令/存储就绪" : agent.readiness === "manual" || agent.id === "kylinagent" ? "需手动观测" : "当前目录未就绪";
       const fixHint = !runnable && agent.fix_hint ? (agent.reason ? "；" + agent.fix_hint : agent.fix_hint) : "";
       let detail = runnable ? "运行命令与记忆存储就绪；云端连接以实际结果为准" : (agent.reason || "当前适配器不能自动驱动") + fixHint;
+      if (agent.installed) detail += '；' + nativeApiSummary(agent);
       if (!registry && agent.last_run && agent.last_run.runtime_error) detail += "；" + nativeRuntimeLabel(agent);
       const row = '<label class="quick-agent-row ' + (!runnable ? "unavailable" : "") + '"><input type="checkbox" data-quick-agent value="' + escapeHtml(agent.id) + '"' + (checked ? " checked" : "") + (!runnable || active ? " disabled" : "") + '><span class="quick-agent-copy"><strong>' + escapeHtml(agent.display_name || displayAgentName(agent.id)) + '</strong><small>' + escapeHtml(detail) + '</small></span><span class="status-pill ' + (runnable ? "completed" : "partial") + '">' + escapeHtml(status) + '</span></label>';
       if (!registry) return row;
@@ -771,7 +787,7 @@
     const agent = state.agents.find((item) => item.id === state.nativeAgentDetailId);
     if (!agent) return '';
     const recent = agent.last_run;
-    return '<section class="workspace-surface agent-detail-panel"><div class="surface-toolbar"><h3>' + escapeHtml(agent.display_name || displayAgentName(agent.id)) + '</h3>' + (recent && recent.path ? '<button class="button small" data-open-run="' + escapeHtml(recent.path) + '" type="button">打开最近运行</button>' : '') + '</div><div class="agent-detail-grid"><div><span>本机安装</span><strong>' + (agent.installed ? '已安装' : '未安装') + '</strong></div><div><span>当前评测目录</span><strong>' + (agent.execution_scope === 'isolated' ? '独立记忆副本' : '当前用户目录') + '</strong></div><div><span>凭据来源</span><strong>' + escapeHtml(credentialLabel(agent)) + '</strong></div><div><span>最近运行</span><strong>' + escapeHtml(nativeRuntimeLabel(agent)) + '</strong></div><div><span>记忆存储路径</span><strong>' + escapeHtml((agent.memory_paths || []).join('；') || '尚未发现') + '</strong></div><div><span>评测就绪</span><strong>' + escapeHtml(agent.runnable ? '运行命令与记忆存储可用；云端连接未做新检查' : agent.reason || '尚未就绪') + '</strong></div></div></section>';
+    return '<section class="workspace-surface agent-detail-panel"><div class="surface-toolbar"><h3>' + escapeHtml(agent.display_name || displayAgentName(agent.id)) + '</h3>' + (recent && recent.path ? '<button class="button small" data-open-run="' + escapeHtml(recent.path) + '" type="button">打开最近运行</button>' : '') + '</div><div class="agent-detail-grid"><div><span>本机安装</span><strong>' + (agent.installed ? '已安装' : '未安装') + '</strong></div><div><span>当前评测目录</span><strong>' + (agent.execution_scope === 'isolated' ? '独立记忆副本' : '当前用户目录') + '</strong></div><div><span>最近运行</span><strong>' + escapeHtml(nativeRuntimeLabel(agent)) + '</strong></div><div><span>记忆存储路径</span><strong>' + escapeHtml((agent.memory_paths || []).join('；') || '尚未发现') + '</strong></div><div><span>评测就绪</span><strong>' + escapeHtml(agent.runnable ? '运行命令与记忆存储可用；云端连接未做新检查' : agent.reason || '尚未就绪') + '</strong></div>' + nativeApiDetailsHtml(agent.native_api, '当前目录') + (agent.execution_scope === 'isolated' ? nativeApiDetailsHtml(agent.host_native_api, '宿主机') : '') + '</div><p class="field-help">' + escapeHtml(agent.native_api?.reason || '配置状态尚未检测') + ' 原生命令使用当前评测目录中的配置；密钥不会显示、导出或被工作台 API 档案替换。</p></section>';
   }
 
   function renderNew() {
@@ -985,7 +1001,7 @@
     function renderConfigs() {
     const credentials = (state.system || {}).credentials || {};
     const notice = credentials.api_ready
-      ? '<div class="credential-notice ok"><strong>工作台 API 凭据已加载</strong><span>至少一个 API 档案已从安全凭据文件或进程环境变量获得凭据；页面只展示状态，不显示密钥。是否能调用仍取决于实际连接与额度。</span></div>'
+      ? '<div class="credential-notice ok"><strong>工作台 API：本机凭据已加载，尚未验证</strong><span>凭据来自此后端用户的私有文件或启动环境，不保存在这些档案中。别人下载公开源码或安装包不会获得你的密钥；在同一用户环境运行则使用本机凭据。这里只配置工作台评测，不修改已安装智能体自身的 API。</span></div>'
       : '<div class="credential-notice warn"><strong>' + (credentials.status === "insecure" ? "凭据文件权限不安全" : "工作台 API 凭据未配置") + '</strong><span>' + escapeHtml(credentials.status === "insecure" ? "凭据文件权限不安全，服务拒绝加载。请将 ~/.config/kmb/credentials.env 权限设为 600。" : "工作台 API 档案尚未加载凭据，可通过 ~/.config/kmb/credentials.env 或进程环境变量提供。独立智能体使用自身配置；离线方案无需云凭据。") + '</span></div>';
     const profiles = state.profiles || [];
     const groups = [];
@@ -998,7 +1014,7 @@
     const editing = state.editingProfileId;
     const poolCards = groups.length
       ? groups.map((group) => '<div class="provider-group"><div class="provider-name">' + escapeHtml(group.provider) + '</div>' + group.items.map(profileCard).join("") + '</div>').join("")
-      : '<div class="empty-state"><strong>尚无 API 档案</strong><p>使用下方表单新增；新增后所有需要 LLM 的智能体立即可选用。</p></div>';
+      : '<div class="empty-state"><strong>尚无工作台 API 档案</strong><p>新增后可供工作台 HTTP 与记忆层评测配置选用。已安装智能体使用自身配置。</p></div>';
         if (editing) {
       const profile = (state.profiles || []).find((item) => item.id === editing) || {};
       state.configDraft = {
@@ -1008,10 +1024,12 @@
         temperature: profile.temperature || 0, description: profile.description || "",
       };
     }
-    return '<section class="panel"><div class="panel-header"><div><h3>API 档案池（全局）</h3><p>' + profiles.length + ' 个 API 档案；一处定义，所有需要 LLM 的智能体共用。修改后对所有引用它的评测立即生效。</p></div></div><div class="panel-body">' + notice + poolCards + '</div></section>' + configWizardMarkup() + (editing ? '<div class="edit-banner"><button class="link-button" data-cancel-edit type="button">取消编辑，返回新增</button></div>' : '');
+    const native = state.agents.filter((agent) => agent.installed);
+    const nativeCards = native.length ? native.map((agent) => '<article class="agent-registry-row"><div class="agent-registry-main"><strong>' + escapeHtml(agent.display_name) + '</strong><span>' + escapeHtml(nativeApiSummary(agent)) + '</span></div><span class="mode-pill">智能体自身配置</span><button class="button small" data-native-agent-detail="' + escapeHtml(agent.id) + '" type="button">查看原生配置状态</button></article>').join('') : '<p class="field-help">当前后端所在主机未检测到支持的智能体安装。Windows 后端不会读取 VM 内的配置。</p>';
+    return '<section class="panel"><div class="panel-header"><div><h3>工作台 API 档案（高级评测）</h3><p>' + profiles.length + ' 个接口档案；只保存公共地址、模型和凭据变量引用。修改会影响引用此档案的工作台评测，不会覆盖小K、OpenClaw 等原生配置。</p></div></div><div class="panel-body">' + notice + poolCards + '</div></section><section class="panel"><div class="panel-header"><div><h3>已安装智能体的自身 API</h3><p>读取当前评测目录中的默认配置状态，不展示密钥、不发起模型请求。鉴权、连接与额度以实际调用为准。</p></div></div><div class="panel-body">' + nativeCards + '</div></section>' + configWizardMarkup() + (editing ? '<div class="edit-banner"><button class="link-button" data-cancel-edit type="button">取消编辑，返回新增</button></div>' : '');
   }
   function profileCard(profile) {
-    return '<article class="agent-registry-row profile-row"><span class="legend-dot blue"></span><div class="agent-registry-main"><strong>' + escapeHtml(profile.name) + '</strong><span>' + escapeHtml(profile.provider || "未分组") + ' · ' + escapeHtml(profile.model) + ' · ' + escapeHtml((profile.base_url || "") + (profile.endpoint || "")) + '</span></div><span class="mode-pill">API 档案</span><span class="' + (profile.credential === "configured" ? "credential-safe" : "credential-missing") + '">' + escapeHtml(profile.credential === "configured" ? "凭据已配置" : "未检测到凭据") + '</span><button class="button small" data-edit-profile="' + escapeHtml(profile.id) + '" type="button">编辑</button></article>';
+    return '<article class="agent-registry-row profile-row"><span class="legend-dot blue"></span><div class="agent-registry-main"><strong>' + escapeHtml(profile.name) + '</strong><span>' + escapeHtml(profile.provider || "未分组") + ' · ' + escapeHtml(profile.model) + ' · ' + escapeHtml((profile.base_url || "") + (profile.endpoint || "")) + '</span></div><span class="mode-pill">接口档案 · 不含密钥</span><span class="' + (profile.credential === "configured" ? "credential-safe" : "credential-missing") + '">' + escapeHtml(profile.credential === "configured" ? "本机凭据已加载 · 未验证" : "本机未加载凭据") + '</span><button class="button small" data-edit-profile="' + escapeHtml(profile.id) + '" type="button">编辑</button></article>';
   }
   function renderSettings() { const system = state.system || {}; const env = system.openkylin || {}; const capabilities = system.system_scenarios || {}; return '<div class="section-head"><div><p>环境和复现信息只读展示，敏感凭据不会从后端返回。</p></div></div><div class="grid two"><section class="panel"><div class="panel-header"><div><h3>运行环境</h3><p>来源：本地服务环境探针。</p></div></div><div class="panel-body"><div class="setting-list">' + settingLine("openKylin", env.detected ? "已检测：" + (env.distribution || "openKylin") : "未检测到 openKylin") + settingLine("平台", system.platform) + settingLine("机器架构", system.machine) + settingLine("Python", system.python) + settingLine("PyYAML", system.pyyaml) + settingLine("CLI 版本", system.cli_version) + settingLine("结果目录", system.results_directory) + settingLine("套件目录", system.suite_directory) + '</div></div></section><section class="panel"><div class="panel-header"><div><h3>系统级场景能力</h3><p>未执行的系统边界不会被 UI 显示为通过。</p></div></div><div class="panel-body"><div class="capability-list">' + Object.keys(capabilities).map((key) => '<div class="capability-line"><span>' + escapeHtml(key) + '</span><span class="mode-pill">' + escapeHtml(scenarioStatusLabel(capabilities[key].status)) + '</span></div>').join("") + '</div></div></section></div>'; }
   function settingLine(label, value) { return '<div class="setting-line"><span class="setting-label">' + escapeHtml(label) + '</span><span class="setting-value">' + escapeHtml(fmt(value)) + '</span></div>'; }
@@ -1363,7 +1381,7 @@
     const quickAuto = document.querySelector("[data-quick-auto]");
     if (quickAuto) quickAuto.addEventListener("click", startQuickCompareAuto);
     document.querySelectorAll("[data-agent-detail]").forEach((button) => button.addEventListener("click", () => { state.agentDetailPath = button.dataset.agentDetail; state.nativeAgentDetailId = null; render(); }));
-    document.querySelectorAll("[data-native-agent-detail]").forEach((button) => button.addEventListener("click", () => { state.nativeAgentDetailId = button.dataset.nativeAgentDetail; state.agentDetailPath = null; render(); }));
+    document.querySelectorAll("[data-native-agent-detail]").forEach((button) => button.addEventListener("click", () => { state.nativeAgentDetailId = button.dataset.nativeAgentDetail; state.agentDetailPath = null; if (state.view !== 'agents') setView('agents'); else render(); }));
     document.querySelectorAll("[data-provider-detail]").forEach((button) => button.addEventListener("click", () => { state.providerDetail = button.dataset.providerDetail; render(); }));
      document.querySelectorAll("[data-go-compare-tab]").forEach((button) => button.addEventListener("click", () => { state.resultTab = button.dataset.goCompareTab || "cases"; state.view = "results"; render(); }));
      document.querySelectorAll("[data-go-compare-case]").forEach((button) => button.addEventListener("click", () => { state.selectedCase = button.dataset.goCompareCase; state.resultTab = "cases"; state.view = "results"; render(); }));
@@ -1447,8 +1465,8 @@
     const editingId = state.editingProfileId;
     const wizardTitle = editingId ? "编辑 API 档案（" + editingId + "）" : "新增 API 配置档案";
     const wizardHelp = editingId
-      ? "修改会立即对所有引用此档案的智能体与评测生效（单一事实来源）。"
-      : "支持 OpenAI-compatible 的 Chat Completions 接口。只保存非敏感元数据，API Key 由运行环境安全加载；新增后所有需要 LLM 的智能体立即可选用。";
+      ? "修改只影响引用此档案的工作台评测，不修改已安装智能体自身的 API 配置。"
+      : "供工作台 HTTP 与记忆层评测配置选用。只保存接口、模型和凭据变量名，实际密钥由本机环境加载；不会更换已安装智能体的原生 API。";
     return '<section id="config-create-panel" class="panel config-wizard"><div class="panel-header"><div><div class="eyebrow">ADD PROVIDER PROFILE</div><h3>' + escapeHtml(wizardTitle) + '</h3><p>' + escapeHtml(wizardHelp) + '</p></div></div><div class="panel-body"><form id="config-create-form" class="form-grid" autocomplete="off"><div class="field"><label for="config-profile-id">配置标识</label><input id="config-profile-id" name="profile_id" value="' + escapeHtml(draft.profile_id) + '" placeholder="例如 openrouter" pattern="[A-Za-z0-9][A-Za-z0-9_.-]{0,63}" required><span class="field-help">API 档案 id：智能体通过它引用此档案；只能使用英文、数字、点、下划线和连字符。</span></div><div class="field"><label for="config-provider">提供商（可选）</label><input id="config-provider" name="provider" value="' + escapeHtml(draft.provider) + '" placeholder="例如 OpenRouter" maxlength="120"><span class="field-help">用于配置列表分组，不会改变协议或请求方式。</span></div><div class="field"><label for="config-name">显示名称</label><input id="config-name" name="name" value="' + escapeHtml(draft.name) + '" placeholder="例如 OpenRouter · GPT-4.1 mini" maxlength="120" required></div><div class="field"><label for="config-base-url">Base URL</label><input id="config-base-url" name="base_url" type="url" value="' + escapeHtml(draft.base_url) + '" placeholder="https://api.example.com/v1" required><span class="field-help">不得在 URL 中写用户名、密码或 API Key。</span></div><div class="field"><label for="config-endpoint">接口路径</label><input id="config-endpoint" name="endpoint" value="' + escapeHtml(draft.endpoint) + '" placeholder="/chat/completions" required></div><div class="field"><label for="config-model">模型 ID</label><input id="config-model" name="model" value="' + escapeHtml(draft.model) + '" placeholder="provider-model-id" required></div><div class="field"><label for="config-api-key-env">API Key 环境变量名</label><input id="config-api-key-env" name="api_key_env" value="' + escapeHtml(draft.api_key_env) + '" placeholder="OPENROUTER_API_KEY" pattern="[A-Z][A-Z0-9_]{1,62}" required><span class="field-help">只填变量名，不填密钥值；建议以 API_KEY、TOKEN 或 SECRET 结尾。</span></div><div class="field"><label for="config-timeout">请求超时（秒）</label><input id="config-timeout" name="timeout_seconds" type="number" min="1" max="900" step="1" value="' + escapeHtml(draft.timeout_seconds) + '" required></div><div class="field"><label for="config-temperature">Temperature</label><input id="config-temperature" name="temperature" type="number" min="0" max="2" step="0.1" value="' + escapeHtml(draft.temperature) + '" required></div><div class="field full"><label for="config-description">说明（可选）</label><input id="config-description" name="description" maxlength="500" value="' + escapeHtml(draft.description) + '" placeholder="例如公司内部 OpenAI-compatible 网关"></div><div class="full wizard-actions"><button class="button primary" id="config-create-submit" type="submit"' + disabled + '>' + (state.configSaving ? "保存中…" : "保存配置档案") + '</button><span class="field-help">保存后可在新建评测中选择该档案，并从配置卡片发起连接检查。</span></div></form>' + configWizardNotice() + '</div></section>';
   }
   function bindConfigWizard() {
@@ -1473,8 +1491,8 @@
         state.configNotice = {
           kind: "success",
           message: editingId
-            ? "API 档案已更新：所有引用它的智能体与评测立即按新配置解析（智能体文件不受影响）。"
-            : "API 档案已保存：所有需要 LLM 的智能体立即可选用此档案（不再生成或改写智能体文件）。",
+            ? "工作台 API 档案已更新：引用此档案的评测按新配置解析；已安装智能体自身配置不受影响。"
+            : "工作台 API 档案已保存：HTTP 与记忆层评测配置可选用；已安装智能体仍使用自身 API。",
         };
         state.configDraft = Object.assign({}, state.configDraft, { profile_id: "", provider: "", name: "", model: "", api_key_env: "", description: "" });
         state.editingProfileId = null;
