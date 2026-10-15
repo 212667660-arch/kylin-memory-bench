@@ -16,7 +16,7 @@ for folder in ("configs", "suites", "scripts"):
 
 setup(
     name="kylin-memory-bench",
-    version="0.2.4",
+    version="0.2.5",
     description="Evidence-based long-term memory benchmark for AI agents",
     packages=find_packages(),
     package_data={"kmb": ["web/*.html", "web/*.js", "web/*.css"]},

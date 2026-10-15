@@ -4,7 +4,7 @@ Section: utils
 Priority: optional
 Architecture: all
 Maintainer: KylinMemoryBench project contributors <unconfigured@example.invalid>
-Depends: python3 (>= 3.9), python3-yaml
+Depends: python3 (>= 3.9), python3-yaml, python3-tomli | python3 (>= 3.11)
 Description: Evidence-based long-term memory benchmark for AI agents
  KylinMemoryBench evaluates long-term memory behavior through structured
  evidence, deterministic scoring and six capability dimensions. It includes a

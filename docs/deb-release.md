@@ -1,6 +1,6 @@
 # Debian 技术验收包
 
-当前项目软件版本为 **0.2.2**（2026-10-13），已修复回答回合与 CLI 正文解析问题。现有 openKylin 3.0 上完成项目包 0.2.1→0.2.2 升级，包内 smoke、完整离线验收和普通用户工作台验证通过；Ubuntu CI 另验证 0.2.2 安装/升级/卸载和残留检查。详细范围见 [修复报告](answer-evidence-fix-20261013.md)。0.2.1 的九步主系统生命周期及下文 release1–release7 均为历史记录，原系统版本保持不变。
+当前软件提交版为 **0.2.5**（2026-10-15），包含已核对的原生 API 状态增量。Python 3.9/3.10 的 TOML 依赖由 Debian 的 `python3-tomli | python3 (>= 3.11)` 条件满足。本轮构建和验证范围见 [当前提交说明](submission-current.md) 与随包清单；没有升级原 VM 系统或安装包。历史 0.2.2 的升级、离线验收和工作台验证见 [修复报告](answer-evidence-fix-20261013.md)，下文带日期的旧记录保持其当时事实。
 
 该目录的 `.deb` 流程用于 openKylin 的可复现技术验收。包名为
 `kylin-memory-bench`，架构为 `all`，依赖 `python3 (>= 3.9)` 与
@@ -13,14 +13,14 @@
 
 ```bash
 bash scripts/build_deb.sh dist
-dpkg-deb --info dist/kylin-memory-bench_0.2.2_all.deb
-dpkg-deb --contents dist/kylin-memory-bench_0.2.2_all.deb
+dpkg-deb --info dist/kylin-memory-bench_0.2.5_all.deb
+dpkg-deb --contents dist/kylin-memory-bench_0.2.5_all.deb
 ```
 
 如需模拟升级，使用一个有效的 Debian 版本号构建新包：
 
 ```bash
-KMB_DEB_VERSION=0.2.2+test1 bash scripts/build_deb.sh dist
+KMB_DEB_VERSION=0.2.5+test1 bash scripts/build_deb.sh dist
 ```
 
 ### 历史发布候选（2026-09-08）
@@ -38,12 +38,12 @@ release5 技术候选（2026-09-09）纳入 no-memory 聚合器字段修复和 r
 ## 安装、验证、升级与卸载
 
 ```bash
-sudo bash scripts/install_deb.sh dist/kylin-memory-bench_0.2.2_all.deb
+sudo bash scripts/install_deb.sh dist/kylin-memory-bench_0.2.5_all.deb
 kmb validate --strict --suite /usr/share/kylin-memory-bench/suites/core-zh.yaml
 bash scripts/verify_deb.sh /tmp/kmb-deb-smoke
 
 # 新版本使用同一安装入口，dpkg 会执行升级。
-sudo bash scripts/upgrade_deb.sh dist/kylin-memory-bench_0.2.2+test1_all.deb
+sudo bash scripts/upgrade_deb.sh dist/kylin-memory-bench_0.2.5+test1_all.deb
 sudo bash scripts/uninstall_deb.sh
 ```
 

@@ -17,7 +17,7 @@ OpenClaw 缓存模型文件的非密钥标记不算真实凭据；显式环境�
 
 Python 3.9/3.10 通过条件依赖 `tomli` 解析 TOML，Python 3.11 以上使用标准库。标准 JSON/TOML/YAML 为本轮支持范围；JSON5 等扩展、其他自定义目录或自动路由无法确认时会明确标为未知。未知状态不会伪装成配置成功。
 
-这是 v0.2.4 冻结附件发布之后的源码增量，不重写已发布包、视频或历史分数。更新源码后必须重启工作台进程、刷新浏览器才能加载新的后端；只有页面刷新不能替换已经导入的 Python 模块。本轮仅做不调用真实 Agent 的离线验证，没有新模型调用或 VM 部署。
+这份增量已统一纳入 0.2.5 提交版。Windows 与 openKylin 3.0 VM 已完成检测修订版 2 的真实接口和网页核对，见 [核对记录](native-api-checklist-20261015.md)；没有新增模型调用。升级源码后仍需重启后端并刷新页面。下文各历史版本段落保留当时验证范围，不作为当前发布状态。
 
 格式依据：[OpenClaw SecretRef 说明](https://docs.openclaw.ai/reference/secretref-credential-surface)、[OpenClaw 原生认证存储](https://docs.openclaw.ai/gateway/config-secrets-env)、[Hermes 模型配置](https://hermes-agent.nousresearch.com/docs/integrations/providers)。线上文档可能领先于已安装版本；未识别结构按未知处理，不据此改写原生配置。
 

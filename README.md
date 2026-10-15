@@ -6,29 +6,28 @@
 
 KylinMemoryBench 是面向 openKylin 的智能体长期记忆自动化评测 Benchmark。它不是聊天机器人或 RAG 产品，而是通过统一适配器收集真实运行事件，并以可审计的确定性规则评估六类能力：长期保持、记忆调用、动态更新、相近区分、边界识别、任务复用。
 
-**当前系统：openKylin 3.0（huanghe）；源码项目版本：KylinMemoryBench 0.2.4；历史完整发行验证版本：0.2.2。** 操作系统保持原状。0.2.4 统一网页智能体发现与评测入口，已完成一批真实六案例演练；本轮参赛附件发布为预发行，未运行新的全量回归或安装生命周期。当前材料与视频见 [0.2.4 提交说明](docs/submission-final-20261014.md)，操作见 [工作台说明](docs/workbench.md)，环境见 [版本说明](docs/current-environment.md)。
+**当前系统：openKylin 3.0（huanghe）；软件提交版：KylinMemoryBench 0.2.5。** 本轮统一打包已核对的原生 API 状态增量与测试准备修复，操作系统保持原状。当前全部材料和视频见 [唯一提交说明](docs/submission-current.md)，操作见 [工作台说明](docs/workbench.md)，实际部署范围见 [版本说明](docs/current-environment.md)。
 
-2026-10-15 源码增加原生智能体 API 状态读取：显示默认服务商、模型和凭据是否存在，区分宿主机与独立评测目录，不显示密钥、不验证余额或发起模型调用。工作台 API 档案与原生智能体配置分开说明。此增量尚未打入已冻结的 v0.2.4 附件，更新源码后需重启服务；详见 [状态与作用域](docs/workbench.md#原生智能体-api-状态2026-10-15-源码增量)。
+原生 API 检测显示默认服务商、模型和凭据存在状态，区分宿主机与独立 HOME，不显示密钥或发起模型调用，工作台档案不覆盖原生配置。Windows/VM 的检测修订版 2 与实际页面已经核对，见 [核对记录](docs/native-api-checklist-20261015.md)。完整离线测试运行 203 项，本机 202 项通过、1 项因符号链接权限跳过；各发布包的具体验证范围以本轮清单和发布页为准。
 
-2026-10-13 的 0.2.2 修复有 176 项测试及跨平台 CI 记录，见 [历史修复报告](docs/answer-evidence-fix-20261013.md)。0.2.4 演练结果保留小K 22.22、OpenClaw 36.11。负责人已提供 4 分 50 秒视频；片中启动 19:32 任务，结果回溯使用 12:40 有效历史样例，部分口播存在批次对应限制，详见 [最新作品介绍](docs/project-introduction-20261014.md)。不修改真实分数，也不将历史结果写成新任务实测。
+原视频约 4 分 50 秒：片中启动 19:32 任务，结果回溯使用 12:40 的历史有效样例，小K 22.22、OpenClaw 36.11。该限制随视频披露，不把历史分数写成 0.2.5 新评测；视频也未完整展示后来新增的 API 分区。详见 [作品介绍](docs/作品介绍文档.md)。
 
 ## 下载与评审入口
 
 | 入口 | 内容 |
 |---|---|
-| [0.2.4 参赛附件（预发行）](https://github.com/212667660-arch/kylin-memory-bench/releases/tag/v0.2.4) | 演示视频、当前源码、安装包、作品介绍与哈希清单 |
-| [演示视频下载](https://github.com/212667660-arch/kylin-memory-bench/releases/download/v0.2.4/KylinMemoryBench-introduction-20261014.mp4) | 真实桌面功能展示；同时参阅批次说明 |
-| [0.2.2 发布页](https://github.com/212667660-arch/kylin-memory-bench/releases/tag/v0.2.2) | 完整非视频材料 ZIP、openKylin `.deb`、Python wheel 和验证证据 |
-| [作品介绍 PDF（0.2.4）](https://github.com/212667660-arch/kylin-memory-bench/releases/download/v0.2.4/project-introduction-0.2.4.pdf) | 当前网页流程、架构、应用场景、真实分数与观测限制 |
-| [完成度审计 PDF](https://github.com/212667660-arch/kylin-memory-bench/releases/download/v0.2.2/completion-audit-20261013.pdf) | 官网/PDF 对应、修复记录、验证范围与尚待交付内容 |
+| [0.2.5 全部提交材料](https://github.com/212667660-arch/kylin-memory-bench/releases/tag/v0.2.5) | 唯一当前入口，含完整 ZIP、文档、安装包、视频与哈希 |
+| [完整 ZIP（包含视频）](https://github.com/212667660-arch/kylin-memory-bench/releases/download/v0.2.5/KylinMemoryBench-submission-0.2.5-20261015.zip) | 下载一份即可获取全部材料 |
+| [演示视频下载](https://github.com/212667660-arch/kylin-memory-bench/releases/download/v0.2.5/KylinMemoryBench-demo-20261014.mp4) | 原始成片；同时参阅批次限制 |
+| [作品介绍 PDF](https://github.com/212667660-arch/kylin-memory-bench/releases/download/v0.2.5/project-introduction-0.2.5.pdf) | 背景、架构、应用、创新、验证和观测限制 |
 | [评委复现卡](docs/judge-reproduction-card.md) | 无云凭据的离线对比、结果与雷达图 |
 | [真实 Agent 快速对比](docs/quick-start.md) | 在 openKylin 中比较已安装的 Agent |
 
 非视频赛题要求与代码/命令/证据的逐项对应见 [`docs/requirements-traceability.md`](docs/requirements-traceability.md)。
 
-2026-10-13 的历史复核与官网/PDF 差异见 [`docs/completion-audit-20261013.md`](docs/completion-audit-20261013.md)。当前 0.2.4 材料与隐私处置见 [提交说明](docs/submission-final-20261014.md)。项目自评分与 GitHub 上传均不代表官方评审或正式邮件提交成功。
+历史复核与官网/PDF 对应见 [`docs/completion-audit-20261013.md`](docs/completion-audit-20261013.md)，本轮材料与隐私范围见 [当前提交说明](docs/submission-current.md)。工程自评分与 GitHub 上传不代表官方评审或正式邮件提交成功。
 
-仓库已按负责人授权公开；报名已确认。正式邮件由负责人按确认邮件指引填写身份并发送；本轮不发送邮件。历史 0.2.2 的 [邮件草稿](docs/submission-email-draft.md) 保留供参考，应以当前提交说明中的版本、链接和视频限制为准。旧包和历史证据保留，旧版本分数不改写为当前版本实测。
+仓库公开、报名已确认。负责人按确认邮件补齐身份并发送 [最新邮件草稿](docs/submission-email-draft.md)；本轮不代发邮件。旧提交材料按负责人要求清理，更早的软件历史标签和技术证据保留，历史分数不改写为新版本实测。
 
 ## 快速开始
 
