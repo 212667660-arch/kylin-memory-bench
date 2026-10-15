@@ -1,6 +1,6 @@
 # KylinMemoryBench 当前提交材料
 
-日期：2026-10-15。唯一提交版：软件 0.2.5；实际系统仍为 openKylin 3.0。报名已确认；邮件未发送。
+日期：2026-10-15。唯一提交版：软件 0.2.5；实际系统仍为 openKylin 3.0。按负责人提供的组委会反馈，项目材料已收到，现补充视频网站在线观看链接；本工具未代发补交邮件。
 
 ## 正式入口
 
@@ -8,7 +8,10 @@
 - 全部材料：https://github.com/212667660-arch/kylin-memory-bench/releases/tag/v0.2.5
 - 完整 ZIP（含视频）：https://github.com/212667660-arch/kylin-memory-bench/releases/download/v0.2.5/KylinMemoryBench-submission-0.2.5-20261015.zip
 - 作品介绍 PDF：https://github.com/212667660-arch/kylin-memory-bench/releases/download/v0.2.5/project-introduction-0.2.5.pdf
-- 视频：https://github.com/212667660-arch/kylin-memory-bench/releases/download/v0.2.5/KylinMemoryBench-demo-20261014.mp4
+- 演示视频在线观看（正式补交使用）：https://www.bilibili.com/video/BV133J16wEsF/
+- 原视频归档下载：https://github.com/212667660-arch/kylin-memory-bench/releases/download/v0.2.5/KylinMemoryBench-demo-20261014.mp4
+
+负责人已自行上传至哔哩哔哩。本轮独立未登录浏览器检查：作品页 HTTP 200、标题为 KylinMemoryBench介绍视频、视频时长约 4 分 51 秒，播放器实际播放并持续推进，无媒体错误。正式回复组委会使用上面的 B站作品页链接。
 
 官网 https://www.oschina.net/os2026/ 要求完整可运行代码的仓库链接、作品介绍（推荐 PDF）与展示核心功能/使用流程的视频链接，按报名确认邮件指引于北京时间 2026-10-16 24:00 前发送至 oscc@oschina.cn。确认邮件若要求项目编号或特定格式，以其指引为准。本轮不填造身份、不发送邮件；上传附件不等于正式提交成功。
 
@@ -27,13 +30,16 @@
 | delivery-manifest-0.2.5.json / CONTENTS-SHA256.txt | ZIP 内来源与校验值 |
 | SHA256SUMS-0.2.5.txt | 含完整 ZIP 在内的独立附件校验，不含其自身 |
 | submission-email-draft.txt | 未发送草稿，身份占位须由负责人填写 |
+| VIDEO-ONLINE.md / submission-video-reply.txt（发布页补充附件） | B站正式观看入口与当前补交邮件草稿；原 ZIP 保留冻结版本 |
 
 ## 发送步骤
 
-1. 查看报名确认邮件，补齐已报名团队名、负责人、邮箱和项目编号，不要把占位符原样发出。
-2. 使用最新草稿中的仓库、材料和视频链接。建议邮件附介绍 PDF、说明 PDF 和校验清单，避免把大视频直接塞进邮件。
-3. 在未登录状态确认下载可用。本地打包上传使用包含视频的完整 ZIP；完整 ZIP 与独立视频无需重复下载。
-4. 在截止前由负责人发送，保存已发送记录和回执。材料准备与 GitHub 发布均不能代替此步骤。
+1. 在组委会要求补充在线观看链接的原邮件中点“回复”，保留原主题与参赛身份。
+2. 使用更新后的 `docs/submission-email-draft.md` 或本机补交草稿，提供 B站作品页链接；不要把后台投稿页、带时间参数的分享链接或下载直链当作补交的观看地址。
+3. 发送前用未登录/无痕浏览器打开 B站作品页，检查能播放且没有仅自己可见的限制。
+4. 在截止前由负责人回复，保存已发送记录和回执；补交邮件由负责人发送。
+
+v0.2.5 原完整 ZIP、介绍 PDF、源码和安装包保留原冻结快照与哈希。其材料中原 MP4 链接为归档下载；当前观看入口和补交邮件以本页及发布页置顶 B站链接为准。
 
 ## 版本和视频限制
 

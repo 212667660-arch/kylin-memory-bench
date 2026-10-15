@@ -16,6 +16,7 @@ KylinMemoryBench 是面向 openKylin 的智能体长期记忆自动化评测 Ben
 
 | 入口 | 内容 |
 |---|---|
+| [演示视频在线观看（哔哩哔哩）](https://www.bilibili.com/video/BV133J16wEsF/) | 评审视频入口，直接在网页观看；同时参阅批次限制 |
 | [0.2.5 全部提交材料](https://github.com/212667660-arch/kylin-memory-bench/releases/tag/v0.2.5) | 唯一当前入口，含完整 ZIP、文档、安装包、视频与哈希 |
 | [完整 ZIP（包含视频）](https://github.com/212667660-arch/kylin-memory-bench/releases/download/v0.2.5/KylinMemoryBench-submission-0.2.5-20261015.zip) | 下载一份即可获取全部材料 |
 | [演示视频下载](https://github.com/212667660-arch/kylin-memory-bench/releases/download/v0.2.5/KylinMemoryBench-demo-20261014.mp4) | 原始成片；同时参阅批次限制 |
@@ -195,7 +196,7 @@ bash scripts/uninstall_deb.sh
 
 `verify_deb.sh` 先运行包内最小离线测试，再使用 reference/flawed 校验包内 CLI/评分链路，不是正式真实 Agent 结果。项目级 LICENSE 为 MIT（2026-10-05 负责人确认生效），`.deb` 分发边界见 `docs/deb-release.md` 与 `THIRD_PARTY_NOTICES.md`。
 
-具备 `sudo/root` 的 openKylin 终端可用 `bash scripts/record_deb_lifecycle.sh` 一次性记录安装、升级、验证、卸载和残留检查。真实桌面视频仍待录制；脚本预检不能作为已录制视频的证据。
+具备 `sudo/root` 的 openKylin 终端可用 `bash scripts/record_deb_lifecycle.sh` 一次性记录安装、升级、验证、卸载和残留检查。当前真实桌面成片见本页“演示视频在线观看”；脚本预检与视频中展示结果的验证范围分别记录。
 
 重复运行稳定性可用只读聚合工具生成：
 
@@ -249,7 +250,7 @@ python -m kmb.cli run \
 
 ## 当前边界
 
-内置 `reference` 和 `flawed` 是离线、确定性的演示基线，用于验证 Benchmark 能区分正确行为与错误持久化/混淆/复用。它们不是赛事最终指定的两款真实 Agent，结果会标为 `simulated_baseline`。`kylinbot-process` 是本机已跑通的 openKylin 生态**进程适配器**（`source=process`，系统级）。最新 openKylin 3.0 VM 批次已在独立 HOME 中完成 KylinBot/OpenClaw 六案例快速对比；两者的结果仍只能表述为系统级行为，`native_memory_events=0`，不能归因模型原生记忆。桌面演示视频尚未录制，负责人暂缓录制并已清理旧稿件；项目级 LICENSE 为 MIT（已生效）。
+内置 `reference` 和 `flawed` 是离线、确定性的演示基线，用于验证 Benchmark 能区分正确行为与错误持久化/混淆/复用。它们不是赛事最终指定的两款真实 Agent，结果会标为 `simulated_baseline`。`kylinbot-process` 是本机已跑通的 openKylin 生态**进程适配器**（`source=process`，系统级）。最新 openKylin 3.0 VM 批次已在独立 HOME 中完成 KylinBot/OpenClaw 六案例快速对比；两者的结果仍只能表述为系统级行为，`native_memory_events=0`，不能归因模型原生记忆。桌面演示视频已发布至哔哩哔哩，入口及批次限制见本页；项目级 LICENSE 为 MIT（已生效）。
 
 详细流程、评分规则和复现说明见 [`docs/solution.md`](docs/solution.md)。
 外部 Agent 的 JSONL 证据格式见 [`docs/evidence-protocol.md`](docs/evidence-protocol.md)。
