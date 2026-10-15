@@ -31,6 +31,8 @@ class WorkbenchTests(unittest.TestCase):
         (self.root / "suites" / "core.yaml").write_text(
             "cases:\n  - id: c1\n    capability: retention\n    title: one\n    turns: []\n    checks: []\n", encoding="utf-8"
         )
+        quick_suite = Path(__file__).resolve().parents[1] / "suites" / "quick.yaml"
+        (self.root / "suites" / "quick.yaml").write_bytes(quick_suite.read_bytes())
         result = {
             "run_id": "sample-run", "started_at": "2026-09-09T00:00:00+00:00",
             "agent": "reference", "cases": 1, "seed": 42, "retries": 1,
